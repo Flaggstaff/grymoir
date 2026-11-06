@@ -98,6 +98,14 @@ int main(void) {
          "Afficher le 3e élément des étapes puis le 1er élément des étapes.\n"
          "Afficher le premier élément des étapes puis le dernier élément des m.\nAfficher l'élément de rang 1 + 1 des étapes.\n"
          "Les étapes deviennent la liste « x » et « x ».\n");
+    FIXE("Le carré d'un nombre vaut nombre × nombre.\nLa r vaut « FA; ».\nAfficher la r après « F » avant « ; ».\n"
+         "Afficher le 2e caractère de (la r après « F ») puis les caractères (le carré de 1) à 2 de la r.\n"
+         "Afficher les 2 premiers caractères de la r puis le dernier caractère de la r puis le caractère de rang 1 + 1 de la r.\n"
+         "Afficher la position de « A » dans la r.\nLes c valent les morceaux de la r séparés par « A ».\n");
+    COMP("La r vaut « FA; ».\nAfficher le 2e caractère de la r puis les caractères 1 à 2 de la r puis la r après « F ».\n"
+         "Les c valent les morceaux de la r séparés par « A ».\n",
+         "_la r << « FA; »\n_afficher _caractère(r ; 2) ; _caractères(r ; 1 ; 2) ; r _après « F »\n"
+         "_les c << _morceaux(r ; « A »)\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

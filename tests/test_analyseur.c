@@ -206,6 +206,19 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Découper un texte (§ 4.6) */
+    V("La r vaut « FA; ».\nAfficher la r après « F » avant « ; ».\nAfficher les caractères 1 à 2 de la r.\n"
+      "Afficher le 2e caractère de la r puis le dernier caractère de la r.\nAfficher les 2 premiers caractères de la r.\n"
+      "Afficher la position de « A » dans la r.\nLes c valent les morceaux de la r séparés par « A ».",
+      "(créer [r] «FA;»)\n(afficher (avant (après [r] «F») «;»))\n(afficher (caractères [r] 1 2))\n"
+      "(afficher (caractère [r] 2) (dernier-caractère [r]))\n(afficher (début [r] 2))\n(afficher (position «A» [r]))\n"
+      "(créer [c] (morceaux [r] «A»))");
+    V("Le jour après vaut 1.\nLe jour avant vaut jour après + 1.", "(créer [jour après] 1)\n(créer [jour avant] (+ [jour après] 1))");
+    VE("Afficher le 0e caractère de « a ».", 1, 13, "Le premier caractère a le rang 1 : « le 1er caractère ».");
+    VE("Afficher le 1re caractère de « a ».", 1, 13, "« caractère » est masculin : écris « 1er ».");
+    VE("Afficher les caractères 1 2 de « a ».", 1, 27, "« à » attendu : « les caractères 3 à 7 de t ».");
+    VE("Afficher la position de « a » en « b ».", 1, 31, "« dans » attendu : « la position de « x » dans t ».");
+    VE("Afficher les morceaux de « a » par « b ».", 1, 32, "« séparés par » attendu");
     V("Les étapes valent la liste « a », « b » et « a ».\nLes v valent une liste vide.\nAfficher le 3e élément des étapes.\n"
       "Afficher le premier élément des étapes puis le dernier élément des v.\nAfficher l'élément de rang 1 + 1 des étapes.",
       "(créer [étapes] (liste «a» «b» «a»))\n(créer [v] (liste))\n(afficher (rang [étapes] 3))\n"

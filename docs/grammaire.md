@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.89 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.90 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -320,8 +320,33 @@ Le prix vaut le texte saisi en nombre.
 - Aucun mot réservé : `contient`, `commence`, `finit` et `en` ne comptent qu'après une valeur, et seulement suivis de ce qu'ils annoncent (`par`, `pas`, un texte, une cible de conversion). L'aide à la saisie (§ 8) propose `contient`, `commence par`, `finit par` après une valeur dont le type texte est connu à l'analyse.
 - **Remplacer** *(2.81)*. `t en remplaçant « a » par « b »` rend le texte `t` où chaque occurrence de `« a »` devient `« b »`, de gauche à droite, sans revenir sur ce qui vient d'être remplacé : `« CQ CQ de HB9 » en remplaçant « CQ » par « appel »` donne `appel appel de HB9`. Il se lie comme `sans`, à la valeur qui le précède, et se répète : `t en remplaçant « - » par « » en remplaçant « a » par « x »`. Un remplaçant vide retire, comme `sans`. Les refus : « « en remplaçant » s'applique à un texte, pas à un nombre. » ; « « en remplaçant » cherche un texte vide : rien à remplacer. » ; « « par » attendu : « t en remplaçant « a » par « b » ». » En forme compacte : `t _remplaçant « a » _par « b »`.
 - **Les mots d'un texte** *(2.81)*. `Pour chaque mot parmi les mots de t :` parcourt les mots de `t` dans l'ordre, **doublons compris** (« CQ CQ » fait deux tours, ce qu'un ensemble aurait fusionné, § 13.9) ; le texte est lu une fois, au début. Les mots sont séparés par les espaces, tabulations, retours à la ligne et espaces insécables (U+00A0, U+202F) ; la ponctuation reste collée au mot (« Neuf, ») et `sans « , »` l'ôte ; les marques invisibles de la relecture d'une transcription (U+2062 à U+2064, § 15.8) sont retirées des mots. `le nombre de mots de t` les compte. `de`, `d'` et `du` s'écrivent comme ailleurs : `les mots du texte`. Un texte vide n'a aucun mot. `les mots de t` est une liste (§ 13.10) : `Les morceaux valent les mots de t.` En forme compacte : `_pour_chaque m _parmi _mots t`, `_nombre_mots t`.
-- Extraire un morceau d'un texte (le 3e caractère, les 5 premiers) : reporté.
+- Extraire un morceau d'un texte, le couper : § 4.6.
 - En forme compacte : `t.longueur`, `t _en_majuscules`, `t _en_minuscules`, `t _en_nombre`, `t _en_nombre_entier`, `t _en_date`, `t _en_année`, `t _en_vrai_ou_faux` ; `t _inclut p`, `t _commence p`, `t _finit p`, et `_non (t _inclut p)`. `_contient` reste réservé au champ multiple (§ 16.13).
+
+### 4.6 Découper un texte *(2.90)*
+
+```
+La réponse vaut « FA014074000; ».
+Afficher (la réponse après « FA » avant « ; ») en nombre.                 →  14'074'000
+Afficher les caractères 3 à 11 de la réponse.                             →  014074000
+Afficher les 2 premiers caractères de la réponse puis le dernier caractère de la réponse.   →  FA ;
+Afficher le 3e caractère de « été » puis la position de « 4 » dans la réponse.               →  é 5
+Les cellules valent les morceaux de « Ana;Bob;;Zoé » séparés par « ; ».
+Afficher le nombre de cellules puis le 4e élément des cellules.           →  4 Zoé
+```
+
+- Un **caractère** est une lettre, un chiffre, un signe, une espace : `« été »` en compte 3, comme `la longueur de` (§ 4.5). Le premier a le rang 1.
+- **Un caractère.** `le 3e caractère de t`, `le 1er caractère de t`, `le premier caractère de t`, `le dernier caractère de t`, `le caractère de rang k de t`, comme les éléments d'une liste (§ 13.10). Le rang suit les règles du § 13.10 : un entier d'au moins 1. Au-delà : « Pas de 20e caractère : le texte n'en a que 12. » ; dans un texte vide : « Pas de premier caractère : le texte est vide. »
+- **Un début, une fin.** `les 5 premiers caractères de t`, `les 3 derniers caractères de t`. Le nombre se calcule (`les n premiers caractères de t`, l'expression finit avant `premiers` ou `derniers`) ; c'est un entier positif ou nul, sinon : « Un nombre de caractères est un nombre entier positif ou nul, pas 2,5. » Un texte plus court se rend entier : `les 5 premiers caractères de « abc »` vaut `abc`, comme la fonction `GAUCHE` d'un tableur (citée de mémoire). C'est la règle de `sur` (§ 4.2), qui coupe sans se plaindre.
+- **Un morceau.** `les caractères 3 à 7 de t` : du 3e au 7e, bornes comprises. Les bornes se calculent (`les caractères a à a + 3 de t` ; la première finit avant `à`, la seconde avant `de`, un calcul dans la seconde se parenthèse). Il faut 1 ≤ a ≤ b ≤ la longueur : « Les caractères 7 à 3 : la première borne dépasse la seconde. », « Pas de 20e caractère : le texte n'en a que 12. »
+- **Avant, après.** `t après « FA »` rend ce qui suit la **première** occurrence de `« FA »` ; `t avant « ; »`, ce qui précède sa première occurrence. Ils se lient comme `sans` (§ 4.5), à la valeur qui précède, et s'enchaînent de gauche à droite : `r après « FA » avant « ; »` vaut `(r après « FA ») avant « ; »`. Ils sont suivis d'un texte, d'un nom entre crochets ou d'un nom avec son article. Absent du texte, le repère est une erreur, rattrapable par `Essayer` : « « ; » n'est pas dans « FA0140 » : vérifie-le d'abord avec « contient ». » Un programme qui découpe une réponse mal formée s'arrête au lieu de calculer sur un morceau faux (charte, art. 8). Un repère vide : « « après » cherche un texte vide : rien à trouver. »
+- **Trouver.** `la position de « 4 » dans t` : le rang du premier caractère de la première occurrence, ou 0 si elle n'y est pas. 0 n'est pas une erreur : c'est la réponse à « où ? », et `Si la position de « x » dans t est nulle` se lit bien.
+- **Couper.** `les morceaux de t séparés par « ; »` est une liste (§ 13.10) : les textes entre les séparateurs, dans l'ordre, **vides compris** (`« a;;b »` en donne trois, le deuxième vide), comme une ligne de tableur. Un texte vide donne un morceau vide ; un texte sans séparateur, un morceau, lui-même. Elle se range dans une liste : `Les cellules valent les morceaux de ligne séparés par « ; ».` Un séparateur vide : « « séparés par » attend un séparateur, pas un texte vide. »
+- **Comparaison exacte.** `après`, `avant`, `la position de` et `séparés par` cherchent le texte tel qu'il est écrit, casse et accents compris, comme `=` et `en remplaçant`. Seuls `contient`, `commence par` et `finit par` les ignorent (§ 4.5).
+- Sur autre chose qu'un texte : « « le 3e caractère de » s'applique à un texte, pas à un nombre. », de même pour chaque tournure ; une valeur absente est l'erreur habituelle (§ 16.9).
+- Un calcul les emploie librement.
+- Aucun mot réservé : `caractère`, `caractères`, `premiers`, `derniers`, `après`, `avant`, `position`, `morceaux`, `séparés` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ déclaré l'emporte.
+- En forme compacte : `_caractère(t ; 3)`, `_premier_caractère(t)`, `_dernier_caractère(t)`, `_premiers_caractères(t ; 5)`, `_derniers_caractères(t ; 3)`, `_caractères(t ; 3 ; 7)`, `t _après « FA »`, `t _avant « ; »`, `_position(« x » ; t)`, `_les c << _morceaux(t ; « ; »)`. Un rang constant revient en chiffres (`le 3e caractère`), un rang calculé en `le caractère de rang … de …`.
 
 ## 5. Décider
 
@@ -2721,3 +2746,4 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 | 2.87 | 2026-11-06 | § 16.19 : `Signer le journal avec t.`, l'auteur des lignes du journal ; l'historique le montre |
 | 2.88 | 2026-11-06 | § 22.26 : `les décodages WSJT [du port p]`, les décodages de WSJT-X reçus en UDP, en textes JSON |
 | 2.89 | 2026-11-06 | Nouveau § 13.10 : les listes (`Les étapes valent la liste … .`, `une liste vide`), qui gardent leurs doublons ; `gagnent` ajoute à la fin, `perdent` retire la première occurrence ; les rangs, dans une liste ou un ensemble : `le 3e élément des …`, `le 1er`, `le premier`, `le dernier`, `l'élément de rang k des …` (instructions `LISTE` et `RANG`) ; les ordinaux `1er`, `2e` au lexeur, et la bonne graphie proposée pour `3ème`, `2nd`… ; `les mots de t`, `les éléments du champ « … » de r` et `les décodages WSJT` se rangent dans une liste ; égalité des listes dans l'ordre ; correction : `les e = les f` entre deux ensembles plantait la machine. Formes compactes `_liste`, `_liste_vide`, `_élément(l ; k)`, `_premier(l)`, `_dernier(l)`, `_mots t`, `_éléments « c » r` |
+| 2.90 | 2026-11-06 | Nouveau § 4.6 : découper un texte. `le 3e caractère de t`, `le premier`, `le dernier`, `le caractère de rang k de t` ; `les 5 premiers caractères de t`, `les 3 derniers` (un texte plus court se rend entier) ; `les caractères 3 à 7 de t` ; `t après « x »`, `t avant « x »` (la première occurrence ; absente, une erreur) ; `la position de « x » dans t` (0 si absente) ; `les morceaux de t séparés par « ; »`, une liste, vides compris (instruction `EXTRAIRE`). Comparaison exacte. Compatibilité (charte, art. 13.2) : `après` et `avant` suivis d'un texte, d'un nom entre crochets ou de `le`, `la`, `l'`, et `séparés par`, ferment désormais un nom, comme `sans` depuis la 2.64 ; aucun programme du dépôt n'en avait dans un nom. Formes compactes `_caractère`, `_premier_caractère`, `_dernier_caractère`, `_premiers_caractères`, `_derniers_caractères`, `_caractères`, `_après`, `_avant`, `_position`, `_morceaux` |

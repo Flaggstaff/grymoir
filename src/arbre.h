@@ -199,8 +199,13 @@ typedef enum {
                         le journal des entités journalisées, en texte, le plus récent d'abord */
     N_LANGUE,        /* « la langue reconnue de t » (2.86) : enfant : le texte ; son code ISO 639-1, ou absent */
     N_WSJTX,         /* « les décodages WSJT [du port p] » (2.88) : enfant facultatif : le port ; une liste de textes JSON */
-    N_RANG           /* « le 3e élément des étapes » (§ 13.10) : enfants[0] la liste ou l'ensemble, enfants[1] le rang (formes 0
+    N_RANG,          /* « le 3e élément des étapes » (§ 13.10) : enfants[0] la liste ou l'ensemble, enfants[1] le rang (formes 0
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
+    N_EXTRAIRE       /* découper un texte (§ 4.6) ; forme, et enfants : 0 « le 3e caractère de t » (t, k), 1 « le caractère de rang
+                        k de t » (t, k), 2 « le premier caractère de t » (t), 3 « le dernier » (t), 4 « les n premiers caractères
+                        de t » (t, n), 5 « les n derniers » (t, n), 6 « les caractères a à b de t » (t, a, b), 7 « t après x »
+                        (t, x), 8 « t avant x » (t, x), 9 « la position de x dans t » (x, t), 10 « les morceaux de t séparés
+                        par s » (t, s), une liste */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

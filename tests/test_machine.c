@@ -2355,6 +2355,37 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Découper un texte (§ 4.6) */
+    PROG("La r vaut « FA014074000; ».\nAfficher (la r après « FA » avant « ; ») en nombre.\nAfficher les caractères 3 à 11 de la r.\n"
+         "Afficher les 2 premiers caractères de la r puis le dernier caractère de la r.\n"
+         "Afficher le 3e caractère de « été » puis la position de « 4 » dans la r.\n"
+         "Les cellules valent les morceaux de « Ana;Bob;;Zoé » séparés par « ; ».\n"
+         "Afficher le nombre de cellules puis le 4e élément des cellules.\nLe n vaut 2.\n"
+         "Afficher le caractère de rang n + 1 de la r puis les n derniers caractères de la r.",
+         "14'074'000\n014074000\nFA ;\né 5\n4 Zoé\n0 0;");
+    PROG("Afficher les 5 premiers caractères de « abc » puis les 0 derniers caractères de « abc » suivi de « | ».\n"
+         "Afficher la position de « z » dans « abc » puis la position de « bc » dans « abcbc » puis le 1er caractère de « œuf ».\n"
+         "Les v valent les morceaux de « » séparés par « ; ».\nLes u valent les morceaux de « a » séparés par « ; ».\n"
+         "Afficher le nombre de v puis le nombre de u puis « ÉTÉ » après « É ».",
+         "abc |\n0 2 œ\n1 1 TÉ");
+    /* un nom déclaré l'emporte sur les tournures (§ 4.6, § 13.10) : Praxis a « la position d'essai » */
+    PROG("La position d'essai vaut 3.\nLe premier caractère de rang vaut 4.\nLe dernier élément vaut 5.\n"
+         "Afficher la position d'essai puis le premier caractère de rang puis le dernier élément.", "3 4 5");
+    PROG("Afficher « a;b » après « ; » avant « x ».",
+         "ERREUR 1:10 « x » n'est pas dans « b » : vérifie-le d'abord avec « contient ».");
+    PROG("Afficher « abc » après « ».", "ERREUR 1:10 « après » cherche un texte vide : rien à trouver.");
+    PROG("Afficher les morceaux de « a » séparés par « ».",
+         "ERREUR 1:10 « séparés par » attend un séparateur, pas un texte vide.");
+    PROG("Afficher le 4e caractère de « abc ».", "ERREUR 1:10 Pas de 4e caractère : le texte n'en a que 3.");
+    PROG("Afficher le premier caractère de « ».", "ERREUR 1:10 Pas de premier caractère : le texte est vide.");
+    PROG("Afficher les caractères 3 à 2 de « abc ».",
+         "ERREUR 1:10 Les caractères 3 à 2 : la première borne dépasse la seconde.");
+    PROG("Afficher les caractères 2 à 9 de « abc ».", "ERREUR 1:10 Pas de 9e caractère : le texte n'en a que 3.");
+    PROG("Afficher les 2,5 premiers caractères de « abc ».",
+         "ERREUR 1:10 Un nombre de caractères est un nombre entier positif ou nul, pas 2,5.");
+    PROG("Afficher le caractère de rang 0 de « abc ».", "ERREUR 1:10 Un rang est un nombre entier à partir de 1, pas 0.");
+    PROG("Afficher le 1er caractère de 12.", "ERREUR 1:10 « le 3e caractère de » s'applique à un texte, pas à un nombre.");
+    PROG("Afficher la position de 1 dans « a ».", "ERREUR 1:10 « la position de » cherche un texte, pas un nombre.");
     PROG("Les étapes valent la liste « tri », « lavage », « tri » et « séchage ».\nLes étapes gagnent « tri ».\n"
          "Afficher les étapes puis le nombre d'étapes.\nAfficher le 3e élément des étapes puis le premier élément des étapes "
          "puis le dernier élément des étapes.\nLe n vaut 1.\nAfficher l'élément de rang n + 1 des étapes.\n"

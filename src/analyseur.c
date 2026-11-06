@@ -740,6 +740,16 @@ static int mot_de_nom(const Analyse *a, size_t k) {
             || (u->type == J_ELISION && strcmp(u->valeur, "l") == 0))
             return 0;
     }
+    /* « séparés par » ferme le texte de « les morceaux de t séparés par « ; » » (§ 4.6), hors du nom */
+    if (t->type == J_MOT && est_mot(t, "séparés") && k + 1 < a->n && est_mot(&a->j[k + 1], "par")) return 0;
+    /* « après », « avant » suivis d'un texte, d'un nom entre crochets ou d'un article singulier ouvrent « … après « FA » »
+     * (§ 4.6), hors du nom */
+    if (t->type == J_MOT && (est_mot(t, "après") || est_mot(t, "avant")) && k + 1 < a->n) {
+        const Jeton *u = &a->j[k + 1];
+        if (u->type == J_TEXTE || u->type == J_CROCHETS || est_mot(u, "le") || est_mot(u, "la")
+            || (u->type == J_ELISION && strcmp(u->valeur, "l") == 0))
+            return 0;
+    }
     /* « en remplaçant » ouvre « … en remplaçant « a » par « b » » (2.81), hors du nom */
     if (t->type == J_MOT && est_mot(t, "en") && k + 1 < a->n && est_mot(&a->j[k + 1], "remplaçant")) return 0;
     if (t->type == J_MOT) return !est_reserve(t);
@@ -860,6 +870,7 @@ static const char *type_statique(const Noeud *n) {
     case N_FICHIER: case N_DOCUMENT: return "fichier";
     case N_CADRE: return "texte";
     case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
+    case N_EXTRAIRE: return n->forme == 9 ? "nombre entier" : n->forme == 10 ? NULL : "texte";   /* § 4.6 */
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
@@ -2257,6 +2268,148 @@ static Noeud *port_serie(Analyse *a) {
     return n;
 }
 
+/* Vrai si les mots qui commencent à l'index k forment un nom déclaré : une variable, une formule ou un champ, le plus long
+ * d'abord (§ 2.2). Les tournures sans mot réservé (§ 4.6, § 13.10) s'effacent devant lui : « la position d'essai ». */
+static int nom_declare_en(Analyse *a, size_t k) {
+    if (k >= a->n) return 0;
+    if (a->j[k].type == J_CROCHETS) return 1;
+    size_t f = k;
+    while (f < a->n && mot_de_nom(a, f)) f++;
+    for (size_t q = f; q > k; q--) {
+        char *c = cle(a, k, q);
+        Genre g;
+        const int connu = visible(a, c) != NULL || champ_connu(a->portee, c, &g);
+        free(c);
+        if (connu) return 1;
+    }
+    return 0;
+}
+
+/* Le texte après « de », « d' » ou « du » (§ 4.6), comme « les mots de » ; NULL si la préposition manque. */
+static Noeud *texte_apres_de(Analyse *a, const char *tournure) {
+    if (!(de_ou_d(cour(a)) || est_mot(cour(a), "du")))
+        return erreur(a, cour(a), grym_formater("« de » attendu : « %s ».", tournure));
+    return mots_de(a);
+}
+
+/* Découper un texte (§ 4.6) : « le 3e caractère de t », « le premier caractère de t », « le caractère de rang k de t »,
+ * « les 5 premiers caractères de t », « les caractères 3 à 7 de t », « la position de x dans t », « les morceaux de t séparés
+ * par « ; » ». NULL sans erreur si le jeton courant n'en commence aucune ; « t après x », « t avant x » : conversion(). */
+static Noeud *extraire(Analyse *a) {
+    const Jeton *t = cour(a);
+    const int m_le = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+    const int m_la = est_mot(t, "la") ? 1 : a->article_force == ART_LA ? 0 : -1;
+    const int m_les = est_mot(t, "les") ? 1 : a->article_force == ART_LES ? 0 : -1;
+    int forme = -1, saut = 0;
+    if (m_le >= 0 && voir(a, m_le)->type == J_ORDINAL && est_mot(voir(a, m_le + 1), "caractère")) { forme = 0; saut = m_le; }
+    else if (m_le >= 0 && est_mot(voir(a, m_le), "caractère") && est_mot(voir(a, m_le + 1), "de") && est_mot(voir(a, m_le + 2), "rang"))
+        { forme = 1; saut = m_le + 3; }
+    else if (m_le >= 0 && (est_mot(voir(a, m_le), "premier") || est_mot(voir(a, m_le), "dernier"))
+             && est_mot(voir(a, m_le + 1), "caractère") && (de_ou_d(voir(a, m_le + 2)) || est_mot(voir(a, m_le + 2), "du")))
+        { forme = est_mot(voir(a, m_le), "premier") ? 2 : 3; saut = m_le + 2; }
+    else if (m_les >= 0 && est_mot(voir(a, m_les), "caractères") && !ensemble_en(a, a->i + (size_t)m_les, &(size_t){0}))
+        { forme = 6; saut = m_les + 1; }
+    else if (m_les >= 0 && est_mot(voir(a, m_les), "morceaux") && (de_ou_d(voir(a, m_les + 1)) || est_mot(voir(a, m_les + 1), "du"))
+             && !ensemble_en(a, a->i + (size_t)m_les, &(size_t){0}))
+        { forme = 10; saut = m_les + 1; }
+    else if (m_la >= 0 && est_mot(voir(a, m_la), "position") && (de_ou_d(voir(a, m_la + 1)) || est_mot(voir(a, m_la + 1), "du")))
+        { forme = 9; saut = m_la + 1; }
+    else if (m_les >= 0) {   /* « les 5 premiers caractères de t » : « premiers caractères » plus loin sur la phrase */
+        for (int q = m_les; q < m_les + 12; q++) {
+            const Jeton *j = voir(a, q);
+            if (j->type == J_POINT || j->type == J_FIN || j->type == J_DEUX_POINTS || j->type == J_VIRGULE) break;
+            if ((est_mot(j, "premiers") || est_mot(j, "derniers")) && est_mot(voir(a, q + 1), "caractères") && q > m_les) {
+                forme = est_mot(j, "premiers") ? 4 : 5;
+                saut = m_les;
+                break;
+            }
+        }
+    }
+    if (forme < 0) return NULL;
+    {   /* un nom déclaré l'emporte : le premier mot de la tournure, après l'article */
+        const int m = forme == 9 ? m_la : forme == 6 || forme == 10 || forme == 4 || forme == 5 ? m_les : m_le;
+        if (forme != 0 && forme != 4 && forme != 5 && nom_declare_en(a, a->i + (size_t)m)) return NULL;
+    }
+    Noeud *n = noeud_creer(N_EXTRAIRE, t->ligne, t->colonne, t->debut);
+    n->forme = forme;
+    a->article_force = ART_AUCUN;
+    Noeud *k = NULL, *k2 = NULL;
+    if (forme == 0) {
+        const Jeton *o = voir(a, saut);
+        if (strstr(o->valeur, "re")) { noeud_liberer(n); return erreur(a, o, grym_dupliquer("« caractère » est masculin : écris « 1er »."));}
+        const long r = strtol(o->valeur, NULL, 10);
+        if (r < 1) { noeud_liberer(n); return erreur(a, o, grym_dupliquer("Le premier caractère a le rang 1 : « le 1er caractère »."));}
+        k = noeud_creer(N_NOMBRE, o->ligne, o->colonne, o->debut);
+        k->fin = fin_jeton(o);
+        k->texte = grym_formater("%ld", r);
+        for (int q = 0; q < saut + 2; q++) avancer(a);
+    } else if (forme == 1) {
+        for (int q = 0; q < saut; q++) avancer(a);
+        k = expression_avant(a, "de", "du");
+        if (!k) { noeud_liberer(n); return NULL; }
+    } else if (forme == 4 || forme == 5) {
+        for (int q = 0; q < saut; q++) avancer(a);
+        k = expression_avant(a, "premiers", "derniers");
+        if (!k) { noeud_liberer(n); return NULL; }
+        avancer(a);   /* premiers */
+        avancer(a);   /* caractères */
+    } else if (forme == 6) {
+        for (int q = 0; q < saut; q++) avancer(a);
+        k = expression_avant(a, "à", NULL);
+        if (!k) { noeud_liberer(n); return NULL; }
+        if (!est_mot(cour(a), "à")) {
+            noeud_liberer(k);
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« à » attendu : « les caractères 3 à 7 de t »."));
+        }
+        avancer(a);
+        k2 = expression_avant(a, "de", "du");
+        if (!k2) { noeud_liberer(k); noeud_liberer(n); return NULL; }
+    } else for (int q = 0; q < saut; q++) avancer(a);
+    static const char *const TOURNURES[] = { "le 3e caractère de t", "le caractère de rang k de t", "le premier caractère de t",
+                                             "le dernier caractère de t", "les 5 premiers caractères de t",
+                                             "les 3 derniers caractères de t", "les caractères 3 à 7 de t", "", "",
+                                             "la position de « x » dans t", "les morceaux de t séparés par « ; »" };
+    if (forme == 9) {   /* « la position de x dans t » : x, puis t */
+        const Jeton *p = cour(a);
+        avancer(a);
+        if (est_mot(p, "du")) { a->article_force = ART_LE; a->jeton_force = p; }
+        Noeud *x = expression_avant(a, "dans", NULL);
+        a->article_force = ART_AUCUN;
+        if (!x) { noeud_liberer(n); return NULL; }
+        if (!est_mot(cour(a), "dans")) {
+            noeud_liberer(x);
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« dans » attendu : « la position de « x » dans t »."));
+        }
+        avancer(a);
+        Noeud *tx = base(a);
+        if (!tx) { noeud_liberer(x); noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, x);
+        noeud_ajouter(n, tx);
+        n->fin = tx->fin;
+        return n;
+    }
+    Noeud *tx = texte_apres_de(a, TOURNURES[forme]);
+    if (!tx) { noeud_liberer(k); noeud_liberer(k2); noeud_liberer(n); return NULL; }
+    noeud_ajouter(n, tx);
+    n->fin = tx->fin;
+    if (k) noeud_ajouter(n, k);
+    if (k2) noeud_ajouter(n, k2);
+    if (forme == 10) {
+        if (!est_mot(cour(a), "séparés") || !est_mot(voir(a, 1), "par")) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« séparés par » attendu : « les morceaux de t séparés par « ; » »."));
+        }
+        a->i += 2;
+        Noeud *s = base(a);
+        if (!s) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, s);
+        n->fin = s->fin;
+    }
+    return n;
+}
+
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
     {
@@ -2716,6 +2869,7 @@ static Noeud *base(Analyse *a) {
                 apres = m_le + 2;
             } else if (m_l >= 0 && est_mot(voir(a, m_l), "élément") && est_mot(voir(a, m_l + 1), "de")
                        && est_mot(voir(a, m_l + 2), "rang")) { forme = 1; apres = m_l + 3; }
+            if (forme >= 1 && nom_declare_en(a, a->i + (size_t)(forme == 1 ? m_l : m_le))) forme = -1;   /* un nom l'emporte */
             if (forme >= 0) {
                 Noeud *n = noeud_creer(N_RANG, t->ligne, t->colonne, t->debut);
                 n->forme = forme;
@@ -2756,6 +2910,10 @@ static Noeud *base(Analyse *a) {
                 n->fin = l->fin;
                 return n;
             }
+        }
+        {
+            Noeud *x = extraire(a);   /* découper un texte (§ 4.6) */
+            if (x || a->echec) return x;
         }
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && ensemble_en(a, a->i + 3, &fe)) {
             Noeud *n = noeud_creer(N_TAILLE, t->ligne, t->colonne, t->debut);   /* « le nombre de couleurs » */
@@ -3118,6 +3276,23 @@ static Noeud *conversion(Analyse *a, Noeud *g) {
             && (suite->type == J_TEXTE || est_mot(suite, "le") || est_mot(suite, "la") || est_mot(suite, "les")
                 || (suite->type == J_ELISION && strcmp(suite->valeur, "l") == 0) || suite->type == J_CROCHETS)) {
             Noeud *n = noeud_creer(N_SANS, g->ligne, g->colonne, g->debut);
+            n->op_ligne = cour(a)->ligne;
+            n->op_colonne = cour(a)->colonne;
+            avancer(a);
+            Noeud *x = base(a);
+            if (!x) { noeud_liberer(n); noeud_liberer(g); return NULL; }
+            noeud_ajouter(n, g);
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            g = n;
+            continue;
+        }
+        if (g && (est_mot(cour(a), "après") || est_mot(cour(a), "avant"))
+            && (suite->type == J_TEXTE || est_mot(suite, "le") || est_mot(suite, "la")
+                || (suite->type == J_ELISION && strcmp(suite->valeur, "l") == 0) || suite->type == J_CROCHETS)) {
+            /* « la réponse après « FA » avant « ; » » (§ 4.6) : la première occurrence ; se lie comme « sans » */
+            Noeud *n = noeud_creer(N_EXTRAIRE, g->ligne, g->colonne, g->debut);
+            n->forme = est_mot(cour(a), "après") ? 7 : 8;
             n->op_ligne = cour(a)->ligne;
             n->op_colonne = cour(a)->colonne;
             avancer(a);
@@ -3978,7 +4153,8 @@ static Noeud *affichage(Analyse *a) {
             if (!el) { noeud_liberer(n); return NULL; }
         } else if (e->type == J_TEXTE && !est_mot(voir(a, 1), "en") && !est_mot(voir(a, 1), "contient")
                    && !est_mot(voir(a, 1), "commence") && !est_mot(voir(a, 1), "finit")
-                   && !est_mot(voir(a, 1), "ne") && !est_mot(voir(a, 1), "sans")) {   /* « « 3 » en nombre », « « a » contient … »,
+                   && !est_mot(voir(a, 1), "ne") && !est_mot(voir(a, 1), "sans")
+                   && !est_mot(voir(a, 1), "après") && !est_mot(voir(a, 1), "avant")) {   /* « « 3 » en nombre », « « a » contient … »,
                                                                                          « « a.b » sans « . » » (2.64) : une expression */
             el = feuille(N_TEXTE, e);
             avancer(a);
@@ -9639,8 +9815,11 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
             valeur_n->nb_enfants = 0;
             noeud_liberer(valeur_n);
             valeur_n = x;
-        } else if (valeur_n->nb_enfants == 1 && valeur_n->enfants[0]->type == N_WSJTX && !ecrit_liste) {
-            /* « Les décodages valent les décodages WSJT. » : la liste elle-même (§ 13.10, 2.88) */
+        } else if (valeur_n->nb_enfants == 1 && !ecrit_liste
+                   && (valeur_n->enfants[0]->type == N_WSJTX
+                       || (valeur_n->enfants[0]->type == N_EXTRAIRE && valeur_n->enfants[0]->forme == 10))) {
+            /* « Les décodages valent les décodages WSJT. », « les morceaux de t séparés par « ; » » : la liste elle-même
+             * (§ 13.10, 2.88, § 4.6) */
             if (changer && !s->liste) {
                 Noeud *x = erreur_a(a, valeur_n->enfants[0]->ligne, valeur_n->enfants[0]->colonne,
                                    grym_formater("« %s » est un ensemble : il ne devient pas une liste.", nom));

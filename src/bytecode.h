@@ -158,10 +158,12 @@ typedef enum {
     I_SIGNER,           /* dépile un texte (ou absent) : l'auteur des lignes suivantes du journal (2.87) */
     I_WSJTX,            /* opérande 1 : dépile le port (sinon 2237) ; empile la liste des nouveaux décodages (2.88) */
     I_LISTE,            /* opérande : n ; dépile n valeurs, empile la liste de ces valeurs, doublons compris (§ 13.10) */
-    I_RANG              /* opérande 0 : dépile le rang, puis la liste ; 1 : le premier, 2 : le dernier ; empile l'élément (§ 13.10) */
+    I_RANG,             /* opérande 0 : dépile le rang, puis la liste ; 1 : le premier, 2 : le dernier ; empile l'élément (§ 13.10) */
+    I_EXTRAIRE          /* opérande : la forme de N_EXTRAIRE (0 à 10) ; dépile ses valeurs (dans l'ordre des enfants) ; empile un
+                           texte, un nombre (9 : la position) ou une liste (10 : les morceaux) (§ 4.6) */
 } CodeInstruction;
 
-#define I_DERNIER I_RANG
+#define I_DERNIER I_EXTRAIRE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

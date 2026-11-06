@@ -330,6 +330,10 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "après") || est_cle(t, "avant")) {   /* r _après « FA » → r après « FA » (§ 4.6) */
+            mot(r, t->valeur, t);
+            continue;
+        }
         if (est_cle(t, "sans")) {   /* numéro_AVS _sans « . » → le numéro AVS sans « . » (2.64) */
             mot(r, "sans", t);
             continue;
@@ -520,6 +524,92 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
             k = fin;
             continue;
+        }
+        {
+            /* Découper un texte (§ 4.6) : _caractère(t ; 3) → le 3e caractère de (t) ; _caractère(t ; n + 1) → le caractère de
+             * rang (n + 1) de (t) ; _premier_caractère(t), _dernier_caractère(t) ; _premiers_caractères(t ; 5) → les (5) premiers
+             * caractères de (t) ; _caractères(t ; 3 ; 7) → les caractères (3) à (7) de (t) ; _position(x ; t) → la position de
+             * (x) dans (t) ; _morceaux(t ; « ; ») → les morceaux de (t) séparés par (« ; »). Parenthèses synthétiques. */
+            static const struct { const char *cle; size_t nb; } F[] = {
+                { "caractère", 2 }, { "premier_caractère", 1 }, { "dernier_caractère", 1 }, { "premiers_caractères", 2 },
+                { "derniers_caractères", 2 }, { "caractères", 3 }, { "position", 2 }, { "morceaux", 2 } };
+            size_t qf = sizeof F / sizeof *F;
+            for (size_t q = 0; q < sizeof F / sizeof *F; q++) if (est_cle(t, F[q].cle)) qf = q;
+            if (qf < sizeof F / sizeof *F && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+                size_t fin = fermante(r, k + 1, f);
+                if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+                size_t bornes[4] = { k + 1, 0, 0, 0 }, nb = 0;   /* bornes[i] : le jeton qui précède l'argument i */
+                int p = 0, vide = 0;
+                for (size_t q = k + 2; q <= fin; q++) {
+                    if (q < fin && r->e[q].type == J_PAR_OUV) p++;
+                    else if (q < fin && r->e[q].type == J_PAR_FERM) p--;
+                    else if (q == fin || (p == 0 && r->e[q].type == J_POINT_VIRGULE)) {
+                        if (q == bornes[nb] + 1) vide = 1;
+                        if (++nb < 4) bornes[nb] = q;
+                        if (nb >= 4) break;
+                    }
+                }
+                if (nb != F[qf].nb || vide) {
+                    static const char *const MODELE[] = { "_caractère(t ; 3)", "_premier_caractère(t)", "_dernier_caractère(t)",
+                                                          "_premiers_caractères(t ; 5)", "_derniers_caractères(t ; 3)",
+                                                          "_caractères(t ; 3 ; 7)", "_position(« x » ; t)", "_morceaux(t ; « ; »)" };
+                    echouer(r, t, grym_formater("« _%s » s'écrit ainsi : %s.", F[qf].cle, MODELE[qf]));
+                    return;
+                }
+                #define ARG(i) do { emettre(r, J_PAR_OUV, NULL, &r->e[bornes[i] + 1], 1); expression(r, bornes[i] + 1, bornes[(i) + 1]); \
+                                    emettre(r, J_PAR_FERM, NULL, &r->e[bornes[(i) + 1]], 1); } while (0)
+                const char *c = F[qf].cle;
+                const Jeton *k1 = nb >= 2 ? &r->e[bornes[1] + 1] : NULL;
+                const int ordinal = !strcmp(c, "caractère") && bornes[1] + 2 == bornes[2] && k1->type == J_NOMBRE && k1->valeur
+                                    && strspn(k1->valeur, "0123456789") == strlen(k1->valeur) && strtol(k1->valeur, NULL, 10) >= 1;
+                if (!strcmp(c, "caractère") && ordinal) {
+                    char *o = grym_formater("%s%s", k1->valeur, strcmp(k1->valeur, "1") == 0 ? "er" : "e");
+                    mot(r, "le", t);
+                    emettre(r, J_ORDINAL, o, k1, 1);
+                    free(o);
+                    mot(r, "caractère", t);
+                    mot(r, "de", t);
+                    ARG(0);
+                } else if (!strcmp(c, "caractère")) {
+                    mot(r, "le", t); mot(r, "caractère", t); mot(r, "de", t); mot(r, "rang", t);
+                    ARG(1);
+                    mot(r, "de", t);
+                    ARG(0);
+                } else if (!strcmp(c, "premier_caractère") || !strcmp(c, "dernier_caractère")) {
+                    mot(r, "le", t);
+                    mot(r, c[0] == 'p' ? "premier" : "dernier", t);
+                    mot(r, "caractère", t);
+                    mot(r, "de", t);
+                    ARG(0);
+                } else if (!strcmp(c, "premiers_caractères") || !strcmp(c, "derniers_caractères")) {
+                    mot(r, "les", t);
+                    ARG(1);
+                    mot(r, c[0] == 'p' ? "premiers" : "derniers", t);
+                    mot(r, "caractères", t);
+                    mot(r, "de", t);
+                    ARG(0);
+                } else if (!strcmp(c, "caractères")) {
+                    mot(r, "les", t); mot(r, "caractères", t);
+                    ARG(1);
+                    mot(r, "à", t);
+                    ARG(2);
+                    mot(r, "de", t);
+                    ARG(0);
+                } else if (!strcmp(c, "position")) {
+                    mot(r, "la", t); mot(r, "position", t); mot(r, "de", t);
+                    ARG(0);
+                    mot(r, "dans", t);
+                    ARG(1);
+                } else {   /* morceaux */
+                    mot(r, "les", t); mot(r, "morceaux", t); mot(r, "de", t);
+                    ARG(0);
+                    mot(r, "séparés", t); mot(r, "par", t);
+                    ARG(1);
+                }
+                #undef ARG
+                k = fin;
+                continue;
+            }
         }
         if ((est_cle(t, "élément") || est_cle(t, "premier") || est_cle(t, "dernier")) && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _élément(étapes ; 3) → le 3e élément des étapes ; _élément(étapes ; n + 1) → l'élément de rang n + 1 des étapes ;

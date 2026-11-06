@@ -219,6 +219,15 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_EXTRAIRE: {   /* (caractère t k), (début t n), (avant t x)… (§ 4.6) */
+        static const char *const NOMS[] = { "caractère", "caractère", "premier-caractère", "dernier-caractère", "début", "fin",
+                                            "caractères", "après", "avant", "position", "morceaux" };
+        chaine_ajouter(c, "(");
+        chaine_ajouter(c, n->forme >= 0 && n->forme <= 10 ? NOMS[n->forme] : "?");
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
+    }
     case N_RANG:   /* (rang l k), (premier l), (dernier l) (§ 13.10) */
         chaine_ajouter(c, n->forme == 2 ? "(premier " : n->forme == 3 ? "(dernier " : "(rang ");
         decrire(n->enfants[0], c);

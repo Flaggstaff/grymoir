@@ -465,6 +465,10 @@ static void expression(Compilation *c, const Noeud *n) {
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
         emettre(c, n->forme == 1 ? I_LISTE : I_ENSEMBLE, (long)n->nb_enfants, n->ligne, n->colonne);   /* liste : § 13.10 */
         return;
+    case N_EXTRAIRE:   /* les enfants dans l'ordre, puis EXTRAIRE forme (§ 4.6) */
+        for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+        emettre(c, I_EXTRAIRE, n->forme, n->ligne, n->colonne);
+        return;
     case N_RANG:   /* la liste, [le rang], puis RANG 0 (un rang), 1 (le premier), 2 (le dernier) (§ 13.10) */
         expression(c, n->enfants[0]);
         if (n->nb_enfants > 1) expression(c, n->enfants[1]);

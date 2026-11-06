@@ -3676,6 +3676,38 @@ static Valeur ensemble_vide(void) {
     return v;
 }
 
+/* Le nombre de caractères d'un texte UTF-8, et l'octet où commence le k-ième (0 pour le premier ; la fin du texte au-delà)
+ * (§ 4.5, § 4.6). */
+static size_t caracteres_compter(const char *s) {
+    size_t n = 0;
+    for (const unsigned char *p = (const unsigned char *)s; *p; p++) n += (*p & 0xC0) != 0x80;
+    return n;
+}
+/* Le nombre de caractères des n premiers octets de s. */
+static size_t caracteres_compter_n(const char *s, size_t n) {
+    size_t c = 0;
+    for (size_t i = 0; i < n && s[i]; i++) c += ((unsigned char)s[i] & 0xC0) != 0x80;
+    return c;
+}
+static size_t caractere_octet(const char *s, size_t k) {
+    const unsigned char *p = (const unsigned char *)s;
+    size_t vu = 0, i = 0;
+    for (; p[i]; i++) {
+        if ((p[i] & 0xC0) == 0x80) continue;
+        if (vu == k) return i;
+        vu++;
+    }
+    return i;
+}
+/* Le texte des caractères a à b (0 pour le premier, b exclu) de s. */
+static char *caracteres_extraire(const char *s, size_t a, size_t b) {
+    const size_t d = caractere_octet(s, a), f = caractere_octet(s, b);
+    char *r = grym_allouer(f - d + 1);
+    memcpy(r, s + d, f - d);
+    r[f - d] = 0;
+    return r;
+}
+
 /* Une liste vide : un ensemble qui garde ses doublons (§ 13.10). */
 static Valeur liste_vide(void) {
     Valeur v = ensemble_vide();
@@ -6955,6 +6987,114 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&e);
             if (mp) { valeur_liberer(&x); ok = echouer(diag, b, debut, mp); break; }
             empiler(&pile, x);
+            break;
+        }
+        case I_EXTRAIRE: {   /* découper un texte (§ 4.6) ; op : la forme de N_EXTRAIRE */
+            static const char *const TOURNURE[] = { "le 3e caractère de", "le caractère de rang k de", "le premier caractère de",
+                                                    "le dernier caractère de", "les premiers caractères de",
+                                                    "les derniers caractères de", "les caractères de", "après", "avant",
+                                                    "la position de", "les morceaux de" };
+            const size_t nb = op == 2 || op == 3 ? 1 : op == 6 ? 3 : 2;
+            Valeur v[3];
+            for (size_t q = nb; q > 0; q--) v[q - 1] = depiler(&pile);
+            const size_t it = op == 9 ? 1 : 0;   /* le texte : le premier, sauf pour la position */
+            char *mp = NULL;
+            Valeur r = valeur_nombre(dec_zero());
+            for (size_t q = 0; q < nb && !mp; q++) if (v[q].type == V_ABSENT) mp = message_absent(&v[q]);
+            if (!mp && v[it].type != V_TEXTE)
+                mp = grym_formater("« %s » s'applique à un texte, pas à %s.", TOURNURE[op], nom_type(v[it].type));
+            const char *s = !mp && v[it].texte ? v[it].texte : "";
+            const size_t lg = mp ? 0 : caracteres_compter(s);
+            /* un rang, un nombre de caractères ou une borne : un entier ; plancher 1 (rang) ou 0 (nombre) */
+            long e[2] = { 0, 0 };
+            const size_t premier_entier = op <= 1 || op == 4 || op == 5 || op == 6 ? 1 : 3, nb_entiers = op == 6 ? 2 : 1;
+            for (size_t q = 0; premier_entier < 3 && q < nb_entiers && !mp; q++) {
+                Valeur *k = &v[premier_entier + q];
+                const long plancher = op == 4 || op == 5 ? 0 : 1;
+                Decimal pl = dec_depuis_long(plancher);
+                if (k->type != V_NOMBRE || !dec_est_entier(&k->nombre) || dec_comparer(&k->nombre, &pl) < 0) {
+                    char *x = k->type == V_NOMBRE ? dec_afficher(&k->nombre) : grym_dupliquer(nom_type(k->type));
+                    mp = grym_formater(plancher ? "Un rang est un nombre entier à partir de 1, pas %s."
+                                                : "Un nombre de caractères est un nombre entier positif ou nul, pas %s.", x);
+                    free(x);
+                } else {
+                    char *c = dec_canonique(&k->nombre);
+                    const char *point = strchr(c, '.');
+                    e[q] = (point ? (size_t)(point - c) : strlen(c)) > 15 ? 999999999999999L : strtol(c, NULL, 10);
+                    free(c);
+                }
+                dec_liberer(&pl);
+            }
+            if (!mp) switch (op) {
+            case 0: case 1: case 2: case 3: {
+                const long k = op == 2 ? 1 : op == 3 ? (long)lg : e[0];
+                char *quel = op == 2 ? grym_dupliquer("premier") : op == 3 ? grym_dupliquer("dernier")
+                                                                 : grym_formater("%ld%s", k, k == 1 ? "er" : "e");
+                if (lg == 0) mp = grym_formater("Pas de %s caractère : le texte est vide.", quel);
+                else if ((size_t)k > lg) mp = grym_formater("Pas de %s caractère : le texte n'en a que %lu.", quel, (unsigned long)lg);
+                else { valeur_liberer(&r); r = vi_texte_pris(caracteres_extraire(s, (size_t)k - 1, (size_t)k)); }
+                free(quel);
+                break;
+            }
+            case 4: case 5: {
+                const size_t n = (size_t)e[0] > lg ? lg : (size_t)e[0];
+                valeur_liberer(&r);
+                r = vi_texte_pris(op == 4 ? caracteres_extraire(s, 0, n) : caracteres_extraire(s, lg - n, lg));
+                break;
+            }
+            case 6:
+                if (e[0] > e[1]) mp = grym_formater("Les caractères %ld à %ld : la première borne dépasse la seconde.", e[0], e[1]);
+                else if ((size_t)e[1] > lg)
+                    mp = lg ? grym_formater("Pas de %ld%s caractère : le texte n'en a que %lu.", e[1], e[1] == 1 ? "er" : "e", (unsigned long)lg)
+                            : grym_formater("Pas de %ld%s caractère : le texte est vide.", e[1], e[1] == 1 ? "er" : "e");
+                else { valeur_liberer(&r); r = vi_texte_pris(caracteres_extraire(s, (size_t)e[0] - 1, (size_t)e[1])); }
+                break;
+            case 7: case 8: case 9: case 10: {
+                const Valeur *x = &v[op == 9 ? 0 : 1];
+                const char *quoi = op == 10 ? "« séparés par »" : op == 9 ? "« la position de »" : op == 7 ? "« après »" : "« avant »";
+                if (x->type != V_TEXTE) { mp = grym_formater("%s cherche un texte, pas %s.", quoi, nom_type(x->type)); break; }
+                const char *m = x->texte ? x->texte : "";
+                if (!*m) {
+                    mp = op == 10 ? grym_dupliquer("« séparés par » attend un séparateur, pas un texte vide.")
+                                  : grym_formater("%s cherche un texte vide : rien à trouver.", quoi);
+                    break;
+                }
+                const char *o = strstr(s, m);
+                if (op == 9) {
+                    valeur_liberer(&r);
+                    r = valeur_nombre(dec_depuis_long(o ? (long)caracteres_compter_n(s, (size_t)(o - s)) + 1 : 0));
+                } else if (op == 10) {
+                    valeur_liberer(&r);
+                    r = liste_vide();
+                    const char *p = s;
+                    for (;;) {
+                        const char *q = strstr(p, m);
+                        const size_t l = q ? (size_t)(q - p) : strlen(p);
+                        char *morceau = grym_allouer(l + 1);
+                        memcpy(morceau, p, l);
+                        morceau[l] = 0;
+                        ensemble_gagner(&r, vi_texte_pris(morceau));
+                        if (!q) break;
+                        p = q + strlen(m);
+                    }
+                } else if (!o) {
+                    mp = grym_formater("« %s » n'est pas dans « %s » : vérifie-le d'abord avec « contient ».", m, s);
+                } else {
+                    valeur_liberer(&r);
+                    if (op == 7) r = vi_texte(o + strlen(m));
+                    else {
+                        char *d = grym_allouer((size_t)(o - s) + 1);
+                        memcpy(d, s, (size_t)(o - s));
+                        d[o - s] = 0;
+                        r = vi_texte_pris(d);
+                    }
+                }
+                break;
+            }
+            }
+            for (size_t q = 0; q < nb; q++) valeur_liberer(&v[q]);
+            if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
             break;
         }
         case I_AJOUTER: {   /* « Les élus gagnent m. », « perdent » */

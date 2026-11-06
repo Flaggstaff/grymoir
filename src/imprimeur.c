@@ -269,6 +269,15 @@ static const char *adjectif_compact(char op) {
 static void expression(Impression *im, const Noeud *n);
 
 /* Un argument de calcul se lie plus fort que les opérateurs (§ 9.1) : parenthèses si besoin. */
+/* Un calcul fait de nombres, de noms et d'opérations : il se lit jusqu'au mot qui le suit (« de », « à », « premiers »)
+ * sans parenthèses (§ 4.6). */
+static int calcul_nu(const Noeud *n) {
+    if (n->type == N_GROUPE) return 1;   /* ses parenthèses s'écrivent déjà */
+    if (n->type != N_NOMBRE && n->type != N_NOM && n->type != N_OPERATION && n->type != N_NEGATION && n->type != N_TEXTE) return 0;
+    for (size_t k = 0; k < n->nb_enfants; k++) if (!calcul_nu(n->enfants[k])) return 0;
+    return 1;
+}
+
 static int argument_simple(const Noeud *n) {
     switch (n->type) {
     case N_OPERATION: return n->op == '^';
@@ -928,6 +937,82 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_EXTRAIRE: {   /* découper un texte (§ 4.6) ; forme compacte : « _caractère(t ; 3) », « t _après « x » »… */
+        const int f = n->forme;
+        const Noeud *tx = n->enfants[f == 9 ? 1 : 0];
+        if (im->compact) {
+            if (f == 7 || f == 8) {
+                expression(im, tx);
+                aj(im, f == 7 ? " _après " : " _avant ");
+                expression(im, n->enfants[1]);
+                return;
+            }
+            static const char *const C[] = { "_caractère(", "_caractère(", "_premier_caractère(", "_dernier_caractère(",
+                                             "_premiers_caractères(", "_derniers_caractères(", "_caractères(", "", "",
+                                             "_position(", "_morceaux(" };
+            aj(im, C[f]);
+            for (size_t k = 0; k < n->nb_enfants; k++) {
+                if (k) aj(im, " ; ");
+                expression(im, n->enfants[k]);
+            }
+            aj(im, ")");
+            return;
+        }
+        /* le texte après « de » : un nom, un texte, un champ, une parenthèse ; sinon entre parenthèses, car « après »,
+         * « sans », « en … » ne se lient pas après « de » */
+        const int simple = !(tx->type == N_OPERATION || tx->type == N_NEGATION || tx->type == N_COMPARAISON
+                             || tx->type == N_LOGIQUE || tx->type == N_COLLAGE || tx->type == N_SANS || tx->type == N_REMPLACER
+                             || tx->type == N_CONVERSION || tx->type == N_CADRE || tx->type == N_JOINDRE
+                             || (tx->type == N_EXTRAIRE && (tx->forme == 7 || tx->forme == 8)));
+        switch (f) {
+        case 0:
+            aj(im, "le ");
+            aj(im, n->enfants[1]->texte);
+            aj(im, strcmp(n->enfants[1]->texte, "1") == 0 ? "er caractère " : "e caractère ");
+            break;
+        case 1:
+            aj(im, "le caractère de rang ");
+            if (calcul_nu(n->enfants[1])) expression(im, n->enfants[1]);
+            else { aj(im, "("); expression(im, n->enfants[1]); aj(im, ")"); }
+            aj(im, " ");
+            break;
+        case 2: case 3: aj(im, f == 2 ? "le premier caractère " : "le dernier caractère "); break;
+        case 4: case 5:
+            aj(im, "les ");
+            if (calcul_nu(n->enfants[1])) expression(im, n->enfants[1]);
+            else { aj(im, "("); expression(im, n->enfants[1]); aj(im, ")"); }
+            aj(im, f == 4 ? " premiers caractères " : " derniers caractères ");
+            break;
+        case 6:
+            aj(im, "les caractères ");
+            if (calcul_nu(n->enfants[1])) expression(im, n->enfants[1]);
+            else { aj(im, "("); expression(im, n->enfants[1]); aj(im, ")"); }
+            aj(im, " à ");
+            if (calcul_nu(n->enfants[2])) expression(im, n->enfants[2]);
+            else { aj(im, "("); expression(im, n->enfants[2]); aj(im, ")"); }
+            aj(im, " ");
+            break;
+        case 7: case 8:
+            expression(im, tx);
+            aj(im, f == 7 ? " après " : " avant ");
+            expression(im, n->enfants[1]);
+            return;
+        case 9:
+            aj(im, "la position ");
+            de_expression(im, n->enfants[0]);
+            aj(im, " dans ");
+            if (simple) expression(im, tx); else { aj(im, "("); expression(im, tx); aj(im, ")"); }
+            return;
+        case 10: aj(im, "les morceaux "); break;
+        }
+        if (simple) preposition(im, "de", tx);
+        else { aj(im, "de ("); expression(im, tx); aj(im, ")"); }
+        if (f == 10) {
+            aj(im, " séparés par ");
+            expression(im, n->enfants[1]);
+        }
+        return;
+    }
     case N_RANG:   /* « le 3e élément des étapes », « l'élément de rang k des … », « le premier », « le dernier » ;
                     * « _élément(étapes ; 3) », « _premier(étapes) », « _dernier(étapes) » (§ 13.10) */
         if (im->compact) {

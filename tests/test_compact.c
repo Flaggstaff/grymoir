@@ -258,6 +258,12 @@ int main(void) {
                  "Les étapes deviennent la liste 1 et 1.\nLes m valent les mots de « a b ».\n"
                  "Afficher le 3e élément des étapes puis le 1er élément des étapes puis le premier élément des m "
                  "puis le dernier élément des m.\nAfficher l'élément de rang 1 + 1 des étapes.\n");
+    ALLER_RETOUR("_la r << « FA014074000; »\n_afficher r _après « FA » _avant « ; »\n"
+                 "_afficher _caractère(r ; 3) ; _caractère(r ; 1 + 1) ; _premier_caractère(r) ; _dernier_caractère(r)\n"
+                 "_afficher _premiers_caractères(r ; 2) ; _derniers_caractères(r ; 3) ; _caractères(r ; 3 ; 11)\n"
+                 "_afficher _position(« 4 » ; r)\n_les c << _morceaux(r ; « 0 »)\n", NULL);
+    ERR("_afficher _caractère(« a »)\n", 1, 11, "« _caractère » s'écrit ainsi : _caractère(t ; 3).");
+    ERR("_afficher _morceaux(« a » ; ; « b »)\n", 1, 11, "« _morceaux » s'écrit ainsi : _morceaux(t ; « ; »).");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"
