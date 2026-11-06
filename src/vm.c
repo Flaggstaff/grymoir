@@ -230,6 +230,7 @@ struct Machine {
     char *mdp_base;         /* le mot de passe de la base chiffrée (§ 16.18), en mémoire seulement, ou NULL */
     char *(*demander_mdp)(void *contexte, int nouveau);   /* l'hôte le demande (2.37) ; NULL : pas d'hôte pour cela */
     void *contexte_mdp;
+    int essais_mdp;         /* plus de 1 : un mot de passe faux se redemande, l'hôte le sachant (6 novembre 2026) */
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
@@ -423,6 +424,8 @@ void machine_demande_mot_de_passe(Machine *m, char *(*demander)(void *contexte, 
     m->contexte_mdp = contexte;
 }
 
+void machine_essais_mot_de_passe(Machine *m, int essais) { m->essais_mdp = essais; }
+
 /* La base, ouverte au premier besoin ; chiffrée (« La base est chiffrée. », 2.37), avec son mot de passe : celui que
  * l'hôte a donné, sinon la variable d'environnement GRYM_MOT_DE_PASSE_BASE (les essais automatiques), sinon celui que
  * l'hôte demande (nouveau : le fichier des clés n'existe pas encore). Un mot de passe refusé est oublié. */
@@ -431,13 +434,25 @@ static Base *ouvrir_la_base(Machine *m, const Module *module, char **erreur) {
     /* un essai de migration ne crée ni clés ni chiffrement : une base encore en clair s'y lit telle quelle */
     if (m->essai_migration && !base_cles_existent(m->chemin_base)) return base_ouvrir(m->chemin_base, erreur);
     if (!m->mdp_base && getenv("GRYM_MOT_DE_PASSE_BASE")) m->mdp_base = grym_dupliquer(getenv("GRYM_MOT_DE_PASSE_BASE"));
-    if (!m->mdp_base && m->demander_mdp) m->mdp_base = m->demander_mdp(m->contexte_mdp, !base_cles_existent(m->chemin_base));
-    if (!m->mdp_base) { *erreur = grym_dupliquer("Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre."); return NULL; }
+    /* un mot de passe faux se redemande (6 novembre 2026), si l'hôte l'a demandé : le bit 2 de « nouveau » lui dit que le
+     * précédent a été refusé ; sinon, une seule demande, comme avant */
+    const int demande = !m->mdp_base && m->demander_mdp;
+    const int essais = demande && m->essais_mdp > 1 ? m->essais_mdp : 1;
     unsigned char publique[32];   /* étape 3 : la clé publique de secours du projet, s'il en a une */
     const int secours = base_lire_cle_publique(m->dossier, publique);
-    Base *b = base_ouvrir_chiffree(m->chemin_base, m->mdp_base, secours ? publique : NULL, erreur);
-    if (!b) oublier_mdp(m);
-    return b;
+    for (int k = 0; k < essais; k++) {
+        if (demande) {
+            const int nouveau = !base_cles_existent(m->chemin_base);
+            m->mdp_base = m->demander_mdp(m->contexte_mdp, nouveau | (k > 0 ? 2 : 0));
+        }
+        if (!m->mdp_base) { *erreur = grym_dupliquer("Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre."); return NULL; }
+        Base *b = base_ouvrir_chiffree(m->chemin_base, m->mdp_base, secours ? publique : NULL, erreur);
+        if (b) return b;
+        oublier_mdp(m);
+        if (k + 1 < essais && *erreur && !strcmp(*erreur, "Mot de passe faux.")) { free(*erreur); *erreur = NULL; continue; }
+        return NULL;
+    }
+    return NULL;
 }
 
 void machine_dossier(Machine *m, const char *dossier) {

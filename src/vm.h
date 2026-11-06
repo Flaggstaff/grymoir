@@ -51,6 +51,8 @@ void machine_base(Machine *m, const char *chemin);
  * libérer, ou NULL si l'utilisateur renonce. Le mot de passe reste en mémoire seulement. */
 void machine_mot_de_passe_base(Machine *m, const char *mdp);
 void machine_demande_mot_de_passe(Machine *m, char *(*demander)(void *contexte, int nouveau), void *contexte);
+/* Plus de 1 : un mot de passe faux se redemande jusqu'à ce nombre de fois ; « nouveau » porte alors le bit 2 (6 novembre 2026). */
+void machine_essais_mot_de_passe(Machine *m, int essais);
 
 /* La sortie est un terminal : « Effacer l'écran. » n'écrit sa séquence que dans ce cas (§ 4.3). */
 void machine_terminal(Machine *m, int terminal);

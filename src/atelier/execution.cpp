@@ -384,10 +384,16 @@ static char *iface_transcrire(void *contexte, const unsigned char *octets, size_
 
 // « La base est chiffrée. » (2.37) : le mot de passe, demandé dans une fenêtre du fil de l'interface, qui attend ; la
 // première fois, choisi puis confirmé, au moins huit caractères. Rien n'est gardé ici : la machine le garde en mémoire.
-static QString demande_mot_de_passe(bool nouveau) {
+// Le 6 novembre 2026 : sous macOS, une saisie rapide pouvait refermer la fenêtre sans mot de passe, et l'application
+// s'arrêtait (« sans son mot de passe, rien ne s'ouvre »). Seul « Renoncer » renonce désormais : une fenêtre refermée
+// autrement revient, la saisie prend le clavier dès l'ouverture, et un mot de passe faux se redemande ici, motif affiché.
+// Ce qui a refermé la fenêtre s'écrit sur la sortie d'erreur, pour trouver la cause.
+static QString demande_mot_de_passe(bool nouveau, bool refuse, bool *renonce) {
+    *renonce = false;
     QDialog d;
     d.setWindowTitle(nouveau ? QString("Choisir le mot de passe de la base") : QString("Mot de passe de la base"));
     d.setMinimumWidth(520);   // le titre entier, sous macOS aussi
+    d.setWindowModality(Qt::ApplicationModal);
     auto *l = new QVBoxLayout(&d);
     auto *texte = new QLabel(nouveau ? QString("Les données de cette application sont chiffrées. Choisis leur mot de passe "
                                                "et note-le en lieu sûr : sans lui, rien ne les ouvrira.")
@@ -404,28 +410,49 @@ static QString demande_mot_de_passe(bool nouveau) {
     if (nouveau) formulaire->addRow("Confirmation", b);
     else b->hide();
     l->addLayout(formulaire);
-    auto *motif = new QLabel;
+    auto *motif = new QLabel(refuse ? QString("Mot de passe faux : essaie encore.") : QString());
     motif->setStyleSheet("color: #B3261E;");
     l->addWidget(motif);
     auto *boutons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    boutons->button(QDialogButtonBox::Ok)->setText(nouveau ? "Choisir" : "Ouvrir");
-    boutons->button(QDialogButtonBox::Ok)->setDefault(true);   // Entrée ; le bouton principal du thème
-    boutons->button(QDialogButtonBox::Ok)->setProperty("role", "principal");   // la feuille du thème : fond d'accent
-    boutons->button(QDialogButtonBox::Cancel)->setText("Renoncer");
+    auto *ok = boutons->button(QDialogButtonBox::Ok), *renoncer = boutons->button(QDialogButtonBox::Cancel);
+    ok->setText(nouveau ? "Choisir" : "Ouvrir");
+    ok->setDefault(true);   // Entrée ; le bouton principal du thème
+    ok->setProperty("role", "principal");   // la feuille du thème : fond d'accent
+    renoncer->setText("Renoncer");
+    renoncer->setAutoDefault(false);   // Entrée ne le choisit jamais, même s'il a le clavier
     l->addWidget(boutons);
-    QObject::connect(boutons, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    bool par_renoncer = false;
+    QObject::connect(renoncer, &QPushButton::clicked, &d, [&] { par_renoncer = true; d.reject(); });
     QObject::connect(boutons, &QDialogButtonBox::accepted, &d, [&] {
-        if (a->text().isEmpty()) { motif->setText("Donne le mot de passe."); return; }
+        if (a->text().isEmpty()) { motif->setText("Donne le mot de passe."); a->setFocus(); return; }
         if (nouveau && a->text().size() < 8) { motif->setText("Au moins huit caractères."); return; }
         if (nouveau && a->text() != b->text()) { motif->setText("Les deux saisies diffèrent."); return; }
         d.accept();
     });
-    return d.exec() == QDialog::Accepted ? a->text() : QString();
+    // la saisie prend le clavier dès que la fenêtre paraît, l'application passant devant (macOS)
+    QTimer::singleShot(0, &d, [&] {
+        d.raise();
+        d.activateWindow();
+        a->setFocus(Qt::ActiveWindowFocusReason);
+    });
+    for (int fois = 0; fois < 5; fois++) {
+        const int r = d.exec();
+        if (r == QDialog::Accepted) return a->text();
+        if (par_renoncer) { *renonce = true; return QString(); }
+        std::fprintf(stderr, "Mot de passe de la base : fenêtre refermée sans « Renoncer » (saisie de %d caractères) : "
+                             "elle revient.\n", (int)a->text().size());
+        std::fflush(stderr);
+        motif->setText("La fenêtre s'était refermée : donne le mot de passe, puis « Ouvrir ».");
+        QTimer::singleShot(0, &d, [&] { d.raise(); d.activateWindow(); a->setFocus(Qt::ActiveWindowFocusReason); });
+    }
+    *renonce = true;
+    return QString();
 }
 
 char *atelier_demander_mot_de_passe(void *, int nouveau) {
     QString mdp;
-    auto faire = [&] { mdp = demande_mot_de_passe(nouveau != 0); };
+    bool renonce = false;
+    auto faire = [&] { mdp = demande_mot_de_passe((nouveau & 1) != 0, (nouveau & 2) != 0, &renonce); };
     if (QThread::currentThread() == qApp->thread()) faire();
     else QMetaObject::invokeMethod(qApp, faire, Qt::BlockingQueuedConnection);
     return mdp.isEmpty() ? nullptr : grym_dupliquer(mdp.toUtf8().constData());
@@ -633,6 +660,7 @@ void Travail::run() {
                    iface_ecran_signaler, iface_amorcer, iface_ecran_choix};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
+    machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
     grym_interruption = 0;

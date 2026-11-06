@@ -6725,7 +6725,8 @@ int main(int argc, char **argv) {
 
     // La base chiffrée (2.37) : l'exécution demande le mot de passe dans une fenêtre, choisi puis confirmé la première
     // fois ; trop court, refusé dans la fenêtre ; accepté, le programme tourne et les clés naissent à côté de la base ;
-    // au lancement suivant, une fenêtre d'un seul champ, et un mot de passe faux arrête l'exécution. La fenêtre tourne
+    // au lancement suivant, une fenêtre d'un seul champ ; un mot de passe faux s'y redemande, « Renoncer » arrête
+    // l'exécution, une fenêtre refermée autrement revient (6 novembre 2026). La fenêtre tourne
     // dans sa propre boucle : une minuterie la remplit de l'intérieur, comme une personne.
     {
         QTemporaryDir d;
@@ -6744,7 +6745,7 @@ int main(int argc, char **argv) {
         // les gestes, dans l'ordre : chaque passage de la minuterie en fait un si la fenêtre est là
         struct Geste { QString a, b; };
         QList<Geste> gestes;
-        QStringList titres;
+        QStringList titres, motifs;
         int champs_premiere = 0;
         bool motif_vu = false;
         QTimer minuterie;
@@ -6756,7 +6757,14 @@ int main(int argc, char **argv) {
             if (titres.isEmpty() || titres.last() != dl->windowTitle() || gestes.size() == 1) titres << dl->windowTitle();
             const auto zones = dl->findChildren<QLineEdit *>();
             if (!champs_premiere) for (QLineEdit *z : zones) champs_premiere += z->isVisibleTo(dl) ? 1 : 0;
+            for (QLabel *l : dl->findChildren<QLabel *>()) motifs << l->text();
             const Geste g = gestes.takeFirst();
+            // « <renoncer> » : le bouton Renoncer ; « <fermer> » : la fenêtre refermée autrement (Échap, croix, macOS)
+            if (g.a == "<renoncer>") {
+                for (QPushButton *bt : dl->findChildren<QPushButton *>()) if (bt->text() == "Renoncer") { bt->click(); break; }
+                return;
+            }
+            if (g.a == "<fermer>") { dl->reject(); return; }
             if (zones.size() >= 1) zones[0]->setText(g.a);
             if (zones.size() >= 2) zones[1]->setText(g.b);
             for (QPushButton *bt : dl->findChildren<QPushButton *>())
@@ -6801,23 +6809,38 @@ int main(int argc, char **argv) {
             VERIFIER(a.startsWith(QString::fromUtf8("La base est chiffrée")));
             gestes.clear();
         }
-        {
-            gestes = { { "faux-faux", "" } };
+        {   // un mot de passe faux se redemande dans la fenêtre, motif affiché, sans arrêter l'exécution (6 novembre
+            // 2026) ; seul « Renoncer » arrête, sans mot de passe
+            gestes = { { "faux-faux", "" }, { "<renoncer>", "" } };
             titres.clear();
+            motifs.clear();
             champs_premiere = 0;
             Execution e(d.filePath("app.grym"));
             e.demarrer();
             auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
-            auto arrete = [&] {
-                if (fil().contains(QString::fromUtf8("Mot de passe faux."))) return true;
-                for (QLabel *l : e.findChildren<QLabel *>()) if (l->text().contains(QString::fromUtf8("Mot de passe faux."))) return true;
-                return false;
-            };
+            auto arrete = [&] { return fil().contains(QString::fromUtf8("sans son mot de passe, rien ne s'ouvre")); };
             attendre(arrete, 60000);
             VERIFIER(arrete());
+            VERIFIER(gestes.isEmpty());
+            VERIFIER(motifs.contains(QString::fromUtf8("Mot de passe faux : essaie encore.")));
             VERIFIER(!titres.isEmpty() && titres.first() == QString::fromUtf8("Mot de passe de la base"));
             VERIFIER(champs_premiere == 1);
             VERIFIER(!fil().contains("notes"));
+            e.close();
+        }
+        {   // une fenêtre refermée sans « Renoncer » (Échap, croix, la saisie rapide sous macOS) revient ; un mot de passe
+            // faux, puis le bon : le programme tourne, sans relancer l'application (6 novembre 2026)
+            gestes = { { "<fermer>", "" }, { "faux-faux", "" }, { "essai-essai", "" } };
+            titres.clear();
+            motifs.clear();
+            Execution e(d.filePath("app.grym"));
+            e.demarrer();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            attendre([&] { return fil().contains("fin des essais"); }, 60000);
+            VERIFIER(gestes.isEmpty());
+            VERIFIER(motifs.contains(QString::fromUtf8("La fenêtre s'était refermée : donne le mot de passe, puis « Ouvrir ».")));
+            VERIFIER(motifs.contains(QString::fromUtf8("Mot de passe faux : essaie encore.")));
+            VERIFIER(fil().contains("notes 2"));
             e.close();
         }
         minuterie.stop();
