@@ -511,7 +511,13 @@ static int traduire(const char *chemin) {
     FILE *f = grym_fopen(cible, "wb");
     int ok = f && fputs(t, f) >= 0;
     if (f && fclose(f) != 0) ok = 0;
-    if (ok) printf("%s\n", cible);
+    if (ok) {
+        printf("%s\n", cible);
+        /* Les deux formes côte à côte : « Utiliser » refuse ce nom tant qu'elles coexistent (§ 21). */
+        fprintf(stderr, "Remarque : « %s » et « %s » sont maintenant côte à côte. Un fichier qui les utilise "
+                        "(« Utiliser … ») refusera tant que les deux formes existent : garde celle que tu travailles.\n",
+                chemin, cible);
+    }
     else fprintf(stderr, "Impossible d'écrire « %s ».\n", cible);
     free(cible);
     free(t);

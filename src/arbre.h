@@ -277,6 +277,7 @@ typedef struct Noeud {
                                       un texte, en caractères (§ 22.6) ; NULL sans borne */
     struct Noeud **enfants;
     size_t nb_enfants;
+    int hauteur;          /* 0 pour une feuille, 1 + la plus haute des branches sinon ; tenue par noeud_ajouter */
     int ligne, colonne;   /* position du premier jeton */
     int op_ligne, op_colonne; /* position de l'opérateur (N_OPERATION), pour les erreurs d'exécution */
     size_t debut, fin;    /* en points de code dans la source normalisée */

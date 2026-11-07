@@ -18,6 +18,9 @@
 #include <string.h>
 
 #define PROFONDEUR_MAX 500
+/* Hauteur d'arbre au-delà de laquelle une chaîne « x + x + … » est refusée : le compilateur, l'imprimeur et la
+ * forme compacte descendent l'arbre récursivement, et une pile de 1 Mo (Windows) cède vers 2000 niveaux. */
+#define HAUTEUR_MAX 1000
 
 /* ---------------------------------------------------------------- */
 /* Portée : noms déclarés et leur genre (§ 2.3)                     */
@@ -3754,6 +3757,14 @@ static Noeud *unaire(Analyse *a) {
 }
 
 /* terme = unaire { ( "×" | "÷" ) unaire } */
+/* Une chaîne trop longue est refusée dès sa construction, avant qu'un parcours récursif n'épuise la pile. */
+static Noeud *borner(Analyse *a, Noeud *g, const Jeton *t) {
+    if (!g || g->hauteur <= HAUTEUR_MAX) return g;
+    noeud_liberer(g);
+    return erreur(a, t, grym_formater("Expression trop longue : plus de %d opérations enchaînées. Découpe-la en "
+                                      "plusieurs phrases, avec des valeurs intermédiaires.", HAUTEUR_MAX));
+}
+
 static Noeud *terme(Analyse *a) {
     Noeud *g = unaire(a);
     while (g) {
@@ -3764,7 +3775,7 @@ static Noeud *terme(Analyse *a) {
         avancer(a);
         Noeud *d = unaire(a);
         if (!d) { noeud_liberer(g); return NULL; }
-        g = operation(op, top, g, d);
+        g = borner(a, operation(op, top, g, d), top);
     }
     return g;
 }
@@ -3834,7 +3845,7 @@ static Noeud *expression_simple(Analyse *a) {
         Noeud *d = terme(a);
         if (d) d = duree(a, d);
         if (!d) { noeud_liberer(g); return NULL; }
-        g = operation(op, top, g, d);
+        g = borner(a, operation(op, top, g, d), top);
     }
     return g;
 }
@@ -3883,7 +3894,7 @@ static Noeud *coller(Analyse *a, Noeud *g) {
         noeud_ajouter(n, g);
         noeud_ajouter(n, d);
         n->fin = d->fin;
-        g = n;
+        g = borner(a, n, ts);
     }
     return g;
 }
@@ -4479,7 +4490,7 @@ static Noeud *valeur(Analyse *a) {
         noeud_ajouter(n, g);
         noeud_ajouter(n, d);
         n->fin = d->fin;
-        g = n;
+        g = borner(a, n, t);
     }
     return g;
 }

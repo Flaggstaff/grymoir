@@ -138,6 +138,24 @@ static void verifier_suites(int l, const char *src, const char *attendu) {
 
 #define APT "Une chose horodatée a : une date.\nUne chose numérotée a : un numéro.\nUne personne a : un nom.\n"
 
+/* Limites d'une expression (3.13) : « avant », puis n fois « motif », puis « apres ». */
+static char *chaine_longue(const char *avant, const char *motif, int n, const char *apres) {
+    Chaine c = {0};
+    chaine_ajouter(&c, avant);
+    for (int k = 0; k < n; k++) chaine_ajouter(&c, motif);
+    chaine_ajouter(&c, apres);
+    return chaine_rendre(&c);
+}
+
+static void verifier_sans_erreur(int l, const char *src) {
+    total++;
+    Portee *p = portee_creer();
+    char *r = arbre(p, src, 0);
+    if (strncmp(r, "ERREUR", 6) == 0) signaler(l, "(chaîne longue)", "aucune erreur", r);
+    free(r);
+    portee_detruire(p);
+}
+
 int main(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
@@ -1132,6 +1150,28 @@ int main(void) {
     VP("Le a vaut 1.\nAfficher a.\n", "aucune");
     VP("Le a vaut 1 +.\n", "1:14");   /* une seule : rien après */
     VP("Une note, conservée, a :\n    un texte (texte),\n    un rang (nombre entier.\nAfficher 1 +.\n", "3:27|4:13");
+    /* limites d'une expression (3.13) : 1000 opérations enchaînées passent, la 1001e est refusée à son opérateur */
+    {
+        char *t = chaine_longue("Le x vaut 1.\nAfficher x ", "+ x ", 1000, ".\n");
+        verifier_sans_erreur(__LINE__, t);
+        free(t);
+        t = chaine_longue("Le x vaut 1.\nAfficher x ", "+ x ", 1001, ".\n");
+        VE(t, 2, 4012, "Expression trop longue : plus de 1000 opérations enchaînées");
+        free(t);
+        t = chaine_longue("Le x vaut 1.\nAfficher x ", "× x ", 5000, ".\n");
+        VE(t, 2, 4012, "Expression trop longue");
+        free(t);
+        t = chaine_longue("Le x vaut vrai.\nAfficher x ", "et x ", 1001, ".\n");
+        VE(t, 2, 5012, "Expression trop longue");
+        free(t);
+        t = chaine_longue("Le t vaut « a » ", "suivi de « a » ", 1001, ".\n");
+        VE(t, 1, 15017, "Expression trop longue");
+        free(t);
+        /* les parenthèses comptent dans la hauteur : 1000 opérations sous une parenthèse dépassent */
+        t = chaine_longue("Le x vaut 1.\nAfficher (x ", "+ x ", 1000, ") + x.\n");
+        VE(t, 2, 4015, "Expression trop longue");
+        free(t);
+    }
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

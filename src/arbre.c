@@ -8,6 +8,7 @@
 
 Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     Noeud *n = grym_allouer(sizeof *n);
+    memset(n, 0, sizeof *n);   /* tout champ ajouté naît à zéro, même oublié plus bas */
     n->type = type;
     n->op = 0;
     n->negation = 0;
@@ -59,6 +60,7 @@ void noeud_ajouter(Noeud *parent, Noeud *enfant) {
     }
     parent->enfants = e;
     parent->enfants[parent->nb_enfants++] = enfant;
+    if (enfant && enfant->hauteur + 1 > parent->hauteur) parent->hauteur = enfant->hauteur + 1;
 }
 
 static char *dup_ou_nul(const char *s) { return s ? grym_dupliquer(s) : NULL; }

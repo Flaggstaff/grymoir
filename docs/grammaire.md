@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.12 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.13 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -141,6 +141,8 @@ De la plus forte à la plus faible :
 5. `+` et `−` (associatives à gauche)
 
 La puissance passe avant la négation, comme en mathématiques : `−2 ^ 2` vaut `−4`, et `(−2) ^ 2` vaut `4`. L'exposant peut être négatif : `2 ^ −1` vaut `0,5`.
+
+**Limites** *(3.13)*. Une expression ne s'imbrique pas sans fin : au-delà de 500 parenthèses, négations ou puissances emboîtées, « Expression trop imbriquée. » ; au-delà de 1000 opérations enchaînées (`+`, `−`, `×`, `÷`, `et`, `ou`, `suivi de`), « Expression trop longue : plus de 1000 opérations enchaînées. Découpe-la en plusieurs phrases, avec des valeurs intermédiaires. », signalée à l'opérateur qui dépasse. Le compilateur, l'imprimeur et la forme compacte parcourent l'arbre d'une expression récursivement : sans la seconde limite, `Afficher x + x + … .` avec quelques milliers de termes épuisait la pile, qui ne fait qu'un mégaoctet sous Windows (mesuré le 7 novembre 2026 : 1000 opérations passent avec une pile de 1 Mo, 4000 plantaient les trois commandes `lancer`, `formater` et `traduire`). Aucun programme écrit à la main n'approche ces limites ; un programme fabriqué par un outil, si.
 
 ### 3.2 Arithmétique
 
@@ -3103,3 +3105,4 @@ Pour rappeler un patient :
 | 3.10 | 2026-11-07 | § 9.7 : `Ces scénarios éprouvent « Praxis ».`, un fichier de scénarios à côté du programme ; `vrai` et `faux` à l'appel d'un paramètre facultatif ; l'exemple `est parmi les documents sortis` de la 3.09 était faux (`parmi` ne vaut encore que dans `dont`), corrigé. Première suite : `projets/Praxis/Praxis/scenarios.grym`, neuf parcours d'argent |
 | 3.11 | 2026-11-07 | § 9.7 : précision, un exemplaire gardé qu'on rouvre ne compte pas parmi `les documents sortis`. La suite de Praxis passe à quatorze scénarios : la facturation (une facture réunit les séances dues du patient et seulement elles ; refacturer rouvre la même), les relances numérotées, la facture au comptoir |
 | 3.12 | 2026-11-07 | § 9.7 : les gestes de l'agenda, `On choisit le créneau du … à …` et `On déplace X au … à …` ; les créations de premier niveau du programme s'exécutent avant chaque scénario, son état de départ. La suite de Praxis passe à quinze scénarios : une séance prévue se déplace dans le calendrier. Formes compactes `_on_créneau`, `_on_déplace` |
+| 3.13 | 2026-11-07 | § 3.1 : limites d'une expression ; plus de 1000 opérations enchaînées sont refusées (« Expression trop longue »), au lieu d'épuiser la pile du compilateur et de l'imprimeur. `grym traduire` signale que les deux formes sont désormais côte à côte |
