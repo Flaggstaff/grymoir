@@ -7201,6 +7201,63 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, x);
             break;
         }
+        case I_COMMANDE: {   /* « la sortie de la commande « p » [avec les a] » : sans shell, 30 s au plus (§ 15.10) */
+            Valeur l = op ? depiler(&pile) : vi_absent(NULL), pr = depiler(&pile);
+            char *mp = NULL;
+            const char **args = NULL;
+            char **a_liberer = NULL;
+            size_t nb = 0;
+            if (pr.type == V_ABSENT) mp = message_absent(&pr);
+            else if (pr.type != V_TEXTE || !pr.texte || !*pr.texte) mp = grym_dupliquer("Le programme d'une commande est un texte, son nom : « rigctl ».");
+            else if (op && l.type != V_ENSEMBLE) mp = grym_formater("Les arguments d'une commande sont une liste, pas %s.", nom_type(l.type));
+            if (!mp && op) {
+                nb = l.liste->n;
+                args = grym_allouer((nb ? nb : 1) * sizeof *args);
+                a_liberer = grym_allouer((nb ? nb : 1) * sizeof *a_liberer);
+                for (size_t q = 0; q < nb && !mp; q++) {
+                    const Valeur *x = &l.liste->valeurs[q];
+                    a_liberer[q] = NULL;
+                    if (x->type == V_TEXTE) args[q] = x->texte ? x->texte : "";
+                    else if (x->type == V_NOMBRE) { a_liberer[q] = dec_canonique(&x->nombre); args[q] = a_liberer[q]; }
+                    else mp = grym_formater("L'argument %lu d'une commande est un texte ou un nombre, pas %s.", (unsigned long)q + 1, nom_type(x->type));
+                }
+            }
+            Valeur r = vi_absent(NULL);
+            if (!mp && !m->iface.commande) mp = grym_dupliquer("Une commande se lance dans la console, l'atelier ou une application fabriquée, pas dans le navigateur.");
+            else if (!mp) {
+                char *sortie = NULL, *erreurs = NULL, *e = NULL;
+                size_t taille = 0;
+                int code = 0;
+                if (!m->iface.commande(m->iface.contexte, pr.texte, args, nb, &sortie, &taille, &erreurs, &code, &e))
+                    mp = e ? e : grym_formater("La commande « %s » n'a pas pu tourner.", pr.texte);
+                else if (code != 0) {
+                    char *ligne = erreurs ? grym_dupliquer(erreurs) : NULL;
+                    if (ligne) { char *nl = strchr(ligne, '\n'); if (nl) *nl = 0; }
+                    mp = ligne && *ligne ? grym_formater("La commande « %s » a échoué (code %d) : %s", pr.texte, code, ligne)
+                                         : grym_formater("La commande « %s » a échoué (code %d).", pr.texte, code);
+                    free(ligne);
+                    free(e);
+                } else if (!utf8_bien_forme((const unsigned char *)(sortie ? sortie : ""), taille))
+                    mp = grym_formater("La sortie de la commande « %s » n'est pas un texte en UTF-8.", pr.texte);
+                else {
+                    char *t = grym_allouer(taille + 1);
+                    if (taille) memcpy(t, sortie, taille);
+                    t[taille] = 0;
+                    valeur_liberer(&r);   /* vi_absent alloue : à libérer avant de la remplacer */
+                    r = vi_texte_pris(t);
+                }
+                free(sortie);
+                free(erreurs);
+            }
+            for (size_t q = 0; a_liberer && q < nb; q++) free(a_liberer[q]);
+            free(a_liberer);
+            free(args);
+            valeur_liberer(&l);
+            valeur_liberer(&pr);
+            if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
+            break;
+        }
         case I_MINUTERIE:   /* l'intervalle de la minuterie, pour l'attente qui suit (3.03) */
             m->minuterie = (long)op;
             break;
@@ -8662,6 +8719,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         if (!ok && !m->sorte_fixee) {   /* les instructions au contexte sans ambiguïté fixent la sorte (§ 18.2) */
             if (code == I_ENVOI || code == I_COURRIEL) m->sorte_fixee = "réseau";
+            else if (code == I_COMMANDE) m->sorte_fixee = "commande";   /* § 15.10 */
             else if (code == I_PORTS || code == I_PORT_SERIE || code == I_WSJTX) m->sorte_fixee = "port";
             else if (code == I_REFUSER) m->sorte_fixee = "refus";
             else if (code == I_LIRE_FICHIER || code == I_ENREGISTRER) m->sorte_fixee = "fichier";

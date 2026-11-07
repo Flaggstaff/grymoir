@@ -943,6 +943,19 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_COMMANDE:   /* « la sortie de la commande « p » avec les a » ; « _commande(« p » ; a) » (§ 15.10) */
+        if (im->compact) {
+            aj(im, "_commande(");
+            expression(im, n->enfants[0]);
+            if (n->nb_enfants > 1) { aj(im, " ; "); ecrire_nom(im, n->enfants[1]->texte, 0); }
+            aj(im, ")");
+            return;
+        }
+        aj(im, "la sortie de la commande ");
+        if (argument_simple(n->enfants[0])) expression(im, n->enfants[0]);
+        else { aj(im, "("); expression(im, n->enfants[0]); aj(im, ")"); }
+        if (n->nb_enfants > 1) { aj(im, " avec les "); ecrire_nom(im, n->enfants[1]->texte, 0); }
+        return;
     case N_LIGNES: case N_JSON_ECRIT:   /* « les lignes de x », « le JSON de x » ; « _lignes x », « _json(x) » (§ 15.9) */
         if (im->compact) {
             if (n->type == N_LIGNES) { aj(im, "_lignes "); expression(im, n->enfants[0]); }

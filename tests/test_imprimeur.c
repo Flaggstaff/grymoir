@@ -182,6 +182,9 @@ int main(void) {
          "Les l valent les lignes du x.\nPour chaque ligne parmi les lignes de x, afficher ligne.\n");
     COMP("Les t valent la table où « a » vaut 1.\nAfficher le JSON des t.\nLes l valent les lignes de « a ».\n",
          "_les t << _table « a » _vaut 1\n_afficher _json(t)\n_les l << _lignes « a »\n");
+    FIXE("Les arguments valent la liste « -n » et « a ».\nAfficher la sortie de la commande « echo » avec les arguments.\n"
+         "Le x vaut la sortie de la commande « date ».\nLe p vaut « ls ».\nLe y vaut la sortie de la commande p.\n");
+    COMP("Le x vaut la sortie de la commande « date ».\n", "_le x << _commande(« date »)\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

@@ -267,6 +267,12 @@ typedef struct {
      * l'écran attendu, en millisecondes, 0 sans minuterie ; l'interface rend alors EVENEMENT_MINUTERIE à chaque échéance,
      * comptée depuis la précédente, pas depuis le dernier geste. NULL : pas de minuterie. */
     void (*ecran_minuterie)(void *contexte, long ms);
+    /* « la sortie de la commande « rigctl » avec les arguments » (3.04, § 15.10) : le programme, lancé sans shell avec ses
+     * arguments, attendu 30 secondes au plus. Rend 1 s'il a tourné : *sortie (allouée, *taille octets), *erreurs (allouée,
+     * sa sortie d'erreur), *code (son code de sortie) ; 0 s'il n'a pas pu tourner ou a dépassé le délai : *erreur (allouée).
+     * NULL : l'interface ne lance rien (le navigateur). */
+    int (*commande)(void *contexte, const char *programme, const char *const *arguments, size_t nb, char **sortie,
+                    size_t *taille, char **erreurs, int *code, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.
@@ -284,5 +290,9 @@ typedef struct {
 
 /* Interface console sur c (qui doit vivre aussi longtemps qu'elle). */
 Interface console_interface(Console *c);
+
+/* La commande de la console (3.04) : fork et exec sous Mac et Linux ; sous Windows, refusée pour l'instant. */
+int console_commande(void *contexte, const char *programme, const char *const *arguments, size_t nb, char **sortie,
+                     size_t *taille, char **erreurs, int *code, char **erreur);
 
 #endif

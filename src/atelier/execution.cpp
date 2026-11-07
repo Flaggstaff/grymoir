@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "courriel.h"
 #include <QDateTime>
+#include <QProcess>
 #include "execution.h"
 #include "agenda.h"
 #include "ecoute.h"
@@ -335,6 +336,41 @@ static void iface_ecran_texte(void *contexte, size_t k, const char *texte) {   /
 static void iface_ecran_signature(void *contexte, const unsigned char *octets, size_t taille, const char *) {
     auto *t = static_cast<Travail *>(contexte);
     emit t->signature(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille));
+}
+
+// « la sortie de la commande « rigctl » avec les arguments » (3.04, § 15.10) : QProcess, sans shell, 30 s au plus ; Mac,
+// Windows et Linux
+static int iface_commande(void *contexte, const char *programme, const char *const *arguments, size_t nb, char **sortie,
+                          size_t *taille, char **erreurs, int *code, char **erreur) {
+    (void)contexte;
+    QStringList args;
+    for (size_t k = 0; k < nb; k++) args << QString::fromUtf8(arguments[k]);
+    QProcess p;
+    p.setProcessChannelMode(QProcess::SeparateChannels);
+    p.setStandardInputFile(QProcess::nullDevice());
+    p.start(QString::fromUtf8(programme), args);
+    if (!p.waitForStarted(10000)) {
+        *erreur = grym_dupliquer((p.error() == QProcess::FailedToStart
+                                      ? QStringLiteral("La commande « %1 » est introuvable.")
+                                      : QStringLiteral("La commande « %1 » ne peut pas démarrer.")).arg(QString::fromUtf8(programme)).toUtf8().constData());
+        return 0;
+    }
+    if (!p.waitForFinished(30000)) {
+        p.kill();
+        p.waitForFinished(2000);
+        *erreur = grym_dupliquer(QStringLiteral("La commande « %1 » n'a pas fini en 30 secondes : arrêtée.").arg(QString::fromUtf8(programme)).toUtf8().constData());
+        return 0;
+    }
+    const QByteArray o = p.readAllStandardOutput(), e = p.readAllStandardError();
+    QByteArray sans_nul = o;
+    if (sans_nul.contains('\0')) { sans_nul.replace('\0', ""); sans_nul.append('\xff'); }   // un octet nul : pas du texte
+    *taille = (size_t)sans_nul.size();
+    *sortie = static_cast<char *>(grym_allouer(*taille + 1));
+    memcpy(*sortie, sans_nul.constData(), *taille);
+    (*sortie)[*taille] = 0;
+    *erreurs = grym_dupliquer(QString::fromUtf8(e).toUtf8().constData());
+    *code = p.exitStatus() == QProcess::CrashExit ? -1 : p.exitCode();
+    return 1;
 }
 
 // « Toutes les 10 secondes dans l'écran X : » (3.03) : l'intervalle de l'écran attendu ; un changement repart de maintenant
@@ -693,7 +729,7 @@ void Travail::run() {
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
                    1,    // les écoutes captent le son (2.69)
-                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel, iface_ecran_minuterie};
+                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel, iface_ecran_minuterie, iface_commande};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)

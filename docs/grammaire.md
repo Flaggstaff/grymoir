@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.03 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.04 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1509,6 +1509,24 @@ Afficher le JSON des données.         →  {"client": "Ana", "total": 12.50, "a
 - Un calcul les emploie librement. `lignes` et `JSON` ne comptent qu'ainsi placés ; un nom déclaré l'emporte.
 - En forme compacte : `_lignes x`, `_json(x)`.
 
+### 15.10 Une commande *(3.04)*
+
+```
+Les arguments valent la liste « -m », « 2 » et « f ».
+La fréquence vaut la sortie de la commande « rigctl » avec les arguments.
+Essayer :
+    Pour chaque ligne parmi les lignes de la sortie de la commande « wsjtx-decodes », afficher ligne.
+En cas d'échec de commande :
+    Afficher « Le décodeur ne répond pas : » puis le motif de l'échec.
+```
+
+- **`la sortie de la commande « p »`**, et **`… avec les arguments`** : lance le programme `p`, attend qu'il finisse, et rend ce qu'il a écrit, en texte, tel quel, retour à la ligne final compris (`les lignes de` s'en charge, § 15.9). Les arguments sont une liste (§ 13.10) de textes ou de nombres.
+- **Sans shell.** Le programme et chaque argument passent tels quels au système : rien n'y est interprété, ni `;`, ni `|`, ni `*`, ni `$`. Un texte saisi par un utilisateur, mis dans les arguments, reste un texte : `« deux ; rm -rf / »` arrive au programme comme ces mots-là. Le programme est cherché dans le chemin du système (`PATH`), ou donné par son chemin complet. Son entrée est vide.
+- **Les échecs**, rattrapables, de sorte `commande` (§ 18.2) : « La commande « x » est introuvable. » ; un code de sortie non nul, avec la première ligne de ce qu'il a écrit en erreur, « La commande « sh » a échoué (code 3) : oups » ; « … n'a pas fini en 30 secondes : arrêtée. » (le programme est arrêté) ; plus de 16 Mo écrits ; une sortie qui n'est pas du texte en UTF-8.
+- **Où.** Dans la console (`grym lancer`), sous Mac et Linux ; dans l'atelier et l'application fabriquée, sous Mac, Windows et Linux. La console sous Windows refuse pour l'instant ; le navigateur refuse (« Une commande se lance dans la console, l'atelier ou une application fabriquée, pas dans le navigateur. »).
+- Un calcul ne lance pas de commande (« Un calcul ne lance pas de commande : lance-la dans une action. ») : elle a des effets hors du programme, comme un envoi. Pour la même raison, une transaction annulée n'annule pas ce qu'une commande a fait.
+- En forme compacte : `_commande(« rigctl » ; arguments)`.
+
 ## 16. Entités *(v0.3)*
 
 ### 16.1 Déclaration
@@ -2025,12 +2043,13 @@ En cas d'échec :
 | `port` | tout échec d'un port série ou de l'écoute de WSJT-X (§ 22.25, § 22.26) |
 | `saisie` | une question annulée par « . » (§ 17) |
 | `refus` | un `Refuser « … ».` (§ 18.1) |
+| `commande` | une commande (§ 15.10) : programme introuvable, échoué (code non nul), trop lente, sortie qui n'est pas du texte *(3.04)* |
 | `autre` | tout le reste : en général une faute du programme plutôt qu'un aléa |
 
 - **Les blocs.** Après le bloc `Essayer`, un ou plusieurs blocs `En cas d'échec de … :`, alignés sur lui, chacun en forme courte ou en bloc ; la sorte suit `de` ou `d'` (`d'unicité`, `d'absence`), plusieurs se séparent par `ou` (`de réseau ou de fichier`). Le premier bloc dont une sorte convient s'exécute ; les autres sont sautés. Un bloc `En cas d'échec` sans sorte prend tout ce qui reste ; il vient en dernier : « « En cas d'échec » sans sorte vient après les blocs qui en ont une. »
 - **Rien n'est avalé.** Sans bloc qui convienne, l'échec **remonte** : à l'essai englobant, sinon il arrête le programme, avec son motif et sa position d'origine. Ce qu'a fait le bloc essayé reste annulé.
 - `la sorte de l'échec` vaut la sorte, en texte (`« unicité »`), dans tout bloc `En cas d'échec`, comme `le motif de l'échec`. Elle se compare : `Si la sorte de l'échec est « réseau », …`.
-- Les refus à l'analyse : une sorte inconnue (« « unicite » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, rang, texte, unicité, lien, fichier, réseau, port, saisie, refus ou autre. »), une sorte nommée deux fois dans le même essai (« La sorte « réseau » a déjà son bloc, ligne 4. »).
+- Les refus à l'analyse : une sorte inconnue (« « unicite » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, rang, texte, unicité, lien, fichier, réseau, port, saisie, refus, commande ou autre. »), une sorte nommée deux fois dans le même essai (« La sorte « réseau » a déjà son bloc, ligne 4. »).
 - **Comment la machine trouve la sorte.** Les instructions dont le contexte est clair la fixent (un envoi : `réseau` ; un port : `port` ; `Refuser` : `refus`) ; pour les autres, une table relie des fragments de motif à leur sorte (`src/vm.c`, `SORTES`). Chaque sorte a son essai dans `test_machine` : reformuler un motif sans mettre la table à jour fait échouer les essais, la sorte ne change jamais en silence.
 - Un `Essayer` de la 2.91, avec son seul `En cas d'échec`, se lit et se comporte comme avant.
 - En forme compacte : `_échec_de unicité`, `_échec_de réseau _ou fichier`, après le bloc essayé ; `_sorte` pour la sorte de l'échec.
@@ -3021,3 +3040,4 @@ Pour rappeler un patient :
 | 3.01 | 2026-11-06 | Nouveau § 13.7 bis : les contrats d'aptitude, `Une chose payable doit savoir : le montant dû d'une chose payable.` ; une version abstraite, sans code ; à la fin de l'analyse, chaque classe qui adopte l'aptitude a une version concrète (la sienne, d'un ancêtre ou d'une aptitude), hors boucle interactive. Forme compacte `_contrat payable _calcul …` |
 | 3.02 | 2026-11-06 | Nouveau § 15.9 (points 12 et 13 de l'audit) : `les lignes de x`, une liste, d'un texte ou d'un fichier en UTF-8 ; `le JSON de x`, une valeur écrite en JSON, récursivement (tables en objets, listes en tableaux). Instructions `LIGNES` et `JSON`. Formes compactes `_lignes x`, `_json(x)` |
 | 3.03 | 2026-11-06 | § 22.2 : la minuterie (point 18 de l'audit), `Toutes les 10 secondes dans l'écran X :` ; instruction `MINUTERIE` avant `ÉCRAN_ATTENDRE`, fonction d'interface `ecran_minuterie`, événement `EVENEMENT_MINUTERIE` ; l'atelier attend à échéance, le navigateur renvoie son formulaire par `grym.js`. Forme compacte `_toutes_les 10 _secondes _dans X` |
+| 3.04 | 2026-11-06 | Nouveau § 15.10 (point 17 de l'audit) : `la sortie de la commande « p » avec les arguments`, sans shell, 30 secondes au plus ; nouvelle sorte d'échec `commande` (§ 18.2). Console (Mac, Linux : fork et exec), atelier (QProcess) ; le navigateur et la console sous Windows refusent. Instruction `COMMANDE`. Forme compacte `_commande(« p » ; arguments)` |

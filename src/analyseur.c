@@ -910,7 +910,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
     case N_EXTRAIRE: return n->forme == 9 ? "nombre entier" : n->forme == 10 ? NULL : "texte";   /* § 4.6 */
     case N_REPONSE: return n->texte2;
-    case N_MOTIF: case N_SORTE: case N_GABARIT: case N_JSON_ECRIT: return "texte";
+    case N_MOTIF: case N_SORTE: case N_GABARIT: case N_JSON_ECRIT: case N_COMMANDE: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
@@ -3138,6 +3138,28 @@ static Noeud *base(Analyse *a) {
                 return n;
             }
         }
+        if ((est_mot(t, "la") || a->article_force == ART_LA) && !visible(a, "sortie")) {
+            /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) */
+            const int m = est_mot(t, "la") ? 1 : 0;
+            if (est_mot(voir(a, m), "sortie") && de_ou_d(voir(a, m + 1)) && est_mot(voir(a, m + 2), "la") && est_mot(voir(a, m + 3), "commande")) {
+                if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul ne lance pas de commande : lance-la dans une action."));
+                Noeud *n = noeud_creer(N_COMMANDE, t->ligne, t->colonne, t->debut);
+                a->article_force = ART_AUCUN;
+                for (int q = 0; q < m + 4; q++) avancer(a);
+                Noeud *x = unaire(a);
+                if (!x) { noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, x);
+                n->fin = x->fin;
+                if (est_mot(cour(a), "avec")) {
+                    avancer(a);
+                    Noeud *l = nom_ensemble(a);
+                    if (!l) { noeud_liberer(n); return NULL; }
+                    noeud_ajouter(n, l);
+                    n->fin = l->fin;
+                }
+                return n;
+            }
+        }
         {
             /* « les lignes de x », « le JSON de x » (§ 15.9) : un nom déclaré l'emporte */
             const int m_les = est_mot(t, "les") ? 1 : a->article_force == ART_LES ? 0 : -1;
@@ -4922,7 +4944,7 @@ static Noeud *essayer(Analyse *a, int colonne) {
     n->local = sorte;
     noeud_ajouter(n, corps);
     static const char *const SORTES[] = { "division", "nombre", "lecture", "absence", "clé", "rang", "texte", "unicité", "lien",
-                                          "fichier", "réseau", "port", "saisie", "refus", "autre" };
+                                          "fichier", "réseau", "port", "saisie", "refus", "commande", "autre" };
     int seul_vu = 0, ligne_vue[sizeof SORTES / sizeof *SORTES] = { 0 };
     while (en_cas_d_echec(a, a->i) && premier_de_ligne(a, a->i) && cour(a)->retrait == colonne) {
         const Jeton *te = cour(a);
@@ -4942,7 +4964,7 @@ static Noeud *essayer(Analyse *a, int colonne) {
                 free(chaine_rendre(&sortes));
                 noeud_liberer(n);
                 return erreur(a, ts, grym_formater("« %s » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, "
-                                                   "rang, texte, unicité, lien, fichier, réseau, port, saisie, refus ou autre.",
+                                                   "rang, texte, unicité, lien, fichier, réseau, port, saisie, refus, commande ou autre.",
                                                    ts->valeur));
             }
             if (ligne_vue[q]) {

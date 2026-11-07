@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 2.04 de la spécification, révisée le 6 novembre 2026.
+Version 2.05 de la spécification, révisée le 6 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -159,6 +159,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 139 | `LIGNES` | aucun | remplace un texte, ou un fichier en UTF-8 (marque BOM ôtée), par la liste de ses lignes ; `\r` de fin de ligne ôté, pas de ligne vide après un dernier retour (grammaire 3.02, § 15.9) |
 | 140 | `JSON` | aucun | remplace une valeur par son texte JSON, récursivement : table en objet, liste ou ensemble en tableau, 64 niveaux au plus (§ 15.9) |
 | 141 | `MINUTERIE` | secondes | l'intervalle de la minuterie de l'écran, pour l'`ÉCRAN_ATTENDRE` qui suit, qui l'annonce à l'interface (`ecran_minuterie`, en millisecondes ; 0 sans) et le remet à 0 ; une échéance (`EVENEMENT_MINUTERIE`) rend le code 30001, que le code compilé aiguille vers l'action. Une instruction à part : `ÉCRAN_ATTENDRE` n'a pas d'opérande, et lui en donner un changerait le format des programmes déjà compilés (grammaire 3.03, § 22.2) |
+| 142 | `COMMANDE` | 1 avec des arguments | dépile [la liste des arguments, puis] le programme ; la fonction d'interface `commande` le lance sans shell, 30 s au plus ; empile sa sortie (texte UTF-8) ; un échec est de sorte `commande` (grammaire 3.04, § 15.10) |
 
 ### 3.1 Boucles et Selon
 
@@ -499,3 +500,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 2.02 | 2026-11-06 | `PERMIS` vérifie aussi un type simple (grammaire 3.00, annotations) |
 | 2.03 | 2026-11-06 | Instructions `LIGNES` (139) et `JSON` (140) |
 | 2.04 | 2026-11-06 | Instruction `MINUTERIE` (141) ; événement `EVENEMENT_MINUTERIE`, code 30001 |
+| 2.05 | 2026-11-06 | Instruction `COMMANDE` (142) ; fonction d'interface `commande` |

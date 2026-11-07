@@ -300,6 +300,8 @@ int main(void) {
         "Forme attendue : « _contrat payable _calcul _le montant_dû(_une chose_payable) »");
     ALLER_RETOUR("_le x << « a »\n_afficher _json(_nu x) ; _json(_nu x _suivi « b »)\n_les l << _lignes _nu x\n"
                  "_pour_chaque ligne _parmi _lignes _nu x\n    _afficher ligne\n_fin\n", NULL);
+    ALLER_RETOUR("_les arguments << _liste « -n » ; « a »\n_afficher _commande(« echo » ; arguments)\n_le x << _commande(« date »)\n", NULL);
+    ERR("_afficher _commande(« echo » ; 3)\n", 1, 11, "« _commande » s'écrit ainsi : _commande(« rigctl »), _commande(« rigctl » ; arguments).");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

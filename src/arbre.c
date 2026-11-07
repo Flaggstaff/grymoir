@@ -244,6 +244,12 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_COMMANDE:   /* (commande p [arguments]) (§ 15.10) */
+        chaine_ajouter(c, "(commande ");
+        decrire(n->enfants[0], c);
+        if (n->nb_enfants > 1) { chaine_ajouter(c, " "); decrire(n->enfants[1], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_LIGNES: case N_JSON_ECRIT:   /* (lignes x), (json x) (§ 15.9) */
         chaine_ajouter(c, n->type == N_LIGNES ? "(lignes " : "(json ");
         decrire(n->enfants[0], c);

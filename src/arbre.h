@@ -210,6 +210,7 @@ typedef enum {
     N_WSJTX,         /* « les décodages WSJT [du port p] » (2.88) : enfant facultatif : le port ; une liste de textes JSON */
     N_RANG,          /* « le 3e élément des étapes » (§ 13.10) : enfants[0] la liste ou l'ensemble, enfants[1] le rang (formes 0
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
+    N_COMMANDE,      /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) : enfants : le programme [, la liste] */
     N_LIGNES,        /* « les lignes de x » (§ 15.9) : enfants[0] : un texte ou un fichier ; une liste */
     N_JSON_ECRIT,    /* « le JSON de x » (§ 15.9) : enfants[0] : la valeur ; un texte */
     N_TRI,           /* « les notes triées [par ordre décroissant] », « les inscrits triés par nom [décroissant] » (§ 13.12) :

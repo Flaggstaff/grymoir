@@ -405,6 +405,32 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 continue;
             }
         }
+        if (est_cle(t, "commande") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _commande(« p » ; arguments) → la sortie de la commande (« p ») avec les arguments (§ 15.10) */
+            size_t fin = fermante(r, k + 1, f), pv = k + 2;
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            int p = 0;
+            while (pv < fin && !(p == 0 && r->e[pv].type == J_POINT_VIRGULE)) {
+                if (r->e[pv].type == J_PAR_OUV) p++;
+                else if (r->e[pv].type == J_PAR_FERM) p--;
+                pv++;
+            }
+            if (pv == k + 2 || (pv < fin && (pv + 2 != fin || r->e[pv + 1].type != J_CROCHETS))) {
+                echouer(r, t, grym_dupliquer("« _commande » s'écrit ainsi : _commande(« rigctl »), _commande(« rigctl » ; arguments)."));
+                return;
+            }
+            mot(r, "la", t);
+            mot(r, "sortie", t);
+            mot(r, "de", t);
+            mot(r, "la", t);
+            mot(r, "commande", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, pv);
+            emettre(r, J_PAR_FERM, NULL, &r->e[pv < fin ? pv : fin], 1);
+            if (pv < fin) { mot(r, "avec", &r->e[pv]); mot(r, "les", &r->e[pv]); copier(r, &r->e[pv + 1]); }
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "lignes")) {   /* _lignes x → les lignes de x (§ 15.9) ; après « _parmi », « parmi les » est écrit */
             if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);
             mot(r, "lignes", t);

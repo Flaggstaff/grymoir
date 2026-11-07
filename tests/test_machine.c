@@ -250,7 +250,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1273,6 +1273,30 @@ static char *avec_courriel(const char *src) {
         free(r_); \
     } while (0)
 
+/* La commande (3.04, § 15.10) : la console la lance pour de vrai ; ces essais emploient echo et sh, hors Windows. */
+static int commande_absente;   /* l'interface du navigateur : pas de commande */
+static char *avec_commande(const char *src) {
+    Interface i;
+    memset(&i, 0, sizeof i);
+    i.disponible = page_disponible;
+    i.formulaire = page_formulaire;
+    i.effacer = page_effacer;
+    i.commande = commande_absente ? NULL : console_commande;
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_interface(m, &i);
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    return r;
+}
+#define COMMANDE(src, att) do { \
+        total++; \
+        char *r_ = avec_commande(src); \
+        if (strcmp(r_, att) != 0) signaler(__LINE__, src, att, r_); \
+        free(r_); \
+    } while (0)
+
 static int transcrire_vraiment = 0;   /* essai de l'écoute : un transcripteur factice (2.69) */
 static char *scene_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
     (void)contexte; (void)octets; (void)erreur;
@@ -1284,7 +1308,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -2440,6 +2464,25 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* La commande (§ 15.10) : sans shell ; les échecs, de sorte « commande » ; le navigateur refuse */
+#ifndef _WIN32
+    COMMANDE("Les arguments valent la liste « -n », « un », « deux ; rm -rf / » et 3.\n"
+             "Afficher la sortie de la commande « echo » avec les arguments.\nLes v valent les lignes de la sortie de la commande « echo ».\n"
+             "Afficher le nombre de v.", "un deux ; rm -rf / 3\n1");
+    COMMANDE("Essayer :\n    Afficher la sortie de la commande « grymoir-inexistant ».\nEn cas d'échec de commande :\n"
+             "    Afficher le motif de l'échec.", "La commande « grymoir-inexistant » est introuvable.");
+    COMMANDE("Les a valent la liste « -c » et « echo oups >&2 ; exit 3 ».\nEssayer :\n    Afficher la sortie de la commande « sh » avec les a.\n"
+             "En cas d'échec, afficher la sorte de l'échec puis le motif de l'échec.", "commande La commande « sh » a échoué (code 3) : oups");
+    COMMANDE("Les a valent la liste « -c » et « printf 'a\\000b' ».\nAfficher la sortie de la commande « sh » avec les a.",
+             "ERREUR 2:10 La sortie de la commande « sh » n'est pas un texte en UTF-8.");
+    COMMANDE("Un client a : un nom.\nLe c vaut un nouveau client.\nLes a valent la liste c.\nAfficher la sortie de la commande « echo » avec les a.",
+             "ERREUR 4:10 L'argument 1 d'une commande est un texte ou un nombre, pas un objet.");
+#endif
+    commande_absente = 1;
+    COMMANDE("Afficher la sortie de la commande « echo ».",
+             "ERREUR 1:10 Une commande se lance dans la console, l'atelier ou une application fabriquée, pas dans le navigateur.");
+    commande_absente = 0;
+    PROG("Le texte d'un x vaut la sortie de la commande « echo ».", "ERREUR 1:22 Un calcul ne lance pas de commande : lance-la dans une action.");
     /* Les lignes, le JSON (§ 15.9) */
     PROG("Les articles valent la liste « pain » et « lait ».\n"
          "Les données valent la table où « client » vaut « Ana », « total » vaut 12,50 et « articles » vaut les articles.\n"

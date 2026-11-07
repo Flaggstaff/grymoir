@@ -418,6 +418,11 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_COMMANDE:   /* le programme, [la liste des arguments,] puis COMMANDE 0 ou 1 (§ 15.10) */
+        expression(c, n->enfants[0]);
+        if (n->nb_enfants > 1) expression(c, n->enfants[1]);
+        emettre(c, I_COMMANDE, n->nb_enfants > 1, n->ligne, n->colonne);
+        return;
     case N_LIGNES: case N_JSON_ECRIT:   /* la valeur, puis LIGNES ou JSON (§ 15.9) */
         expression(c, n->enfants[0]);
         emettre(c, n->type == N_LIGNES ? I_LIGNES : I_JSON, 0, n->ligne, n->colonne);
