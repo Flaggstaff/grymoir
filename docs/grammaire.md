@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.06 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.07 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2247,6 +2247,20 @@ Quand on clique sur « Fermer » dans l'écran des compositeurs :
 Ouvrir l'écran des compositeurs.
 ```
 
+### Plan du § 22 *(3.07)*
+
+Le § 22 a grandi avec les besoins de Praxis et d'Écoutille : il traite des écrans, mais aussi de ce que fait une application autour d'eux. Ses numéros ne changent pas, puisque messages, essais et code les citent ; ce plan les range par thème.
+
+| Thème | Sections |
+|-------|----------|
+| **Un écran** : le déclarer, ses éléments | 22.1 Déclaration ; 22.4 Mots et forme compacte ; 22.6 États des éléments ; 22.7 Groupes et valeurs permises ; 22.8 Images ; 22.9 Position libre ; 22.10 Onglets ; 22.11 Graphiques ; 22.12 Menus ; 22.13 Courriel, téléphone, adresse web ; 22.14 Mots de passe ; 22.16 Code QR ; 22.23 Bouton destructif ; 22.24 Agenda |
+| **Son déroulement** | 22.2 Événements (minuterie comprise, 3.03) ; 22.3 Ouvrir, fermer, transactions ; 22.22 Signaler |
+| **Son apparence** | 22.5 Apparence |
+| **Ce qu'il imprime** | 22.15 Documents |
+| **Les données sensibles** | 22.17 Secrets |
+| **Les échanges avec l'extérieur** | 22.18 Envoi à un service web ; 22.19 XML déclaré ; 22.27 Les courriels. Ailleurs : § 15.9 (les lignes, le JSON), § 15.10 (une commande) |
+| **Le matériel et la radio** | 22.20 Écoutes ; 22.21 Les écoutes d'une entité ; 22.25 Ports série ; 22.26 Les décodages de WSJT-X |
+
 ### 22.1 Déclaration
 
 - `le texte « Aujourd'hui », en petites capitales` *(2.20)* : un titre de section ou un surtitre, en capitales espacées, petites, en couleur secondaire. Forme compacte : `_capitales`.
@@ -3064,3 +3078,4 @@ Pour rappeler un patient :
 | 3.04 | 2026-11-06 | Nouveau § 15.10 (point 17 de l'audit) : `la sortie de la commande « p » avec les arguments`, sans shell, 30 secondes au plus ; nouvelle sorte d'échec `commande` (§ 18.2). Console (Mac, Linux : fork et exec), atelier (QProcess) ; le navigateur et la console sous Windows refusent. Instruction `COMMANDE`. Forme compacte `_commande(« p » ; arguments)` |
 | 3.05 | 2026-11-06 | Nouveau § 9.7 (point 20 de l'audit) : les scénarios, `Scénario « titre » :`, `Vérifier que condition.`, joués par `grym scenarios`, chacun seul sur une base neuve en mémoire, sans exécuter le programme ; sans écran pour l'instant. Instruction `VÉRIFIER`. Forme compacte `_scénario`, `_vérifier` |
 | 3.06 | 2026-11-07 | Ménage (points 21 à 23 de l'audit, première part) : `vrai` et `faux` comme éléments d'un ensemble ou d'une liste (§ 13.9) ; sept fuites de mémoire préexistantes corrigées dans la machine et le serveur, que l'audit avait relevées (25 et 49 octets) : les dix programmes d'essai tournent désormais sans aucune fuite |
+| 3.07 | 2026-11-07 | Plan du § 22 : ses 27 sections rangées par thème (un écran, son déroulement, son apparence, ses documents, les données sensibles, les échanges avec l'extérieur, le matériel et la radio), sans renumérotation, ses numéros étant cités par les messages, les essais et le code (point 21 de l'audit) |
