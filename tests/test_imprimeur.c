@@ -178,6 +178,10 @@ int main(void) {
          "Une chose payable doit savoir : la remise d'une chose payable et d'un taux.\nUne chose payable doit savoir : encaisser une chose payable et un mode.\n");
     COMP("Une chose payable a :\n    un montant.\n\nUne chose payable doit savoir : le montant dû d'une chose payable.\n",
          "_aptitude payable\n    _un montant\n_fin\n\n_contrat payable _calcul _le montant_dû(_une chose_payable)\n");
+    FIXE("Les t valent la table où « a » vaut 1.\nLe x vaut « a ».\nAfficher le JSON des t puis le JSON du x puis le JSON de (x suivi de « b »).\n"
+         "Les l valent les lignes du x.\nPour chaque ligne parmi les lignes de x, afficher ligne.\n");
+    COMP("Les t valent la table où « a » vaut 1.\nAfficher le JSON des t.\nLes l valent les lignes de « a ».\n",
+         "_les t << _table « a » _vaut 1\n_afficher _json(t)\n_les l << _lignes « a »\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

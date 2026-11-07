@@ -405,6 +405,24 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 continue;
             }
         }
+        if (est_cle(t, "lignes")) {   /* _lignes x → les lignes de x (§ 15.9) ; après « _parmi », « parmi les » est écrit */
+            if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);
+            mot(r, "lignes", t);
+            mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "json") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {   /* _json(x) → le JSON de (x) (§ 15.9) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            mot(r, "le", t);
+            mot(r, "json", t);
+            mot(r, "de", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, fin);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "trier") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _trier(notes) → les notes triés ; _trier(notes ; _décroissant) → … triés par ordre décroissant ;
              * _trier(inscrits ; nom ; _décroissant) → … triés par nom décroissant (§ 13.12) */

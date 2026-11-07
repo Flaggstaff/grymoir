@@ -262,6 +262,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_MATH:           return "MATH";
     case I_TRIER:          return "TRIER";
     case I_PERMIS:         return "PERMIS";
+    case I_LIGNES:         return "LIGNES";
+    case I_JSON:           return "JSON";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -283,7 +285,8 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_ECRAN_FILTRE || code == I_JSON_LISTE || code == I_HISTORIQUE || code == I_WSJTX
         || code == I_LISTE || code == I_RANG || code == I_EXTRAIRE
         || code == I_TABLE || code == I_TABLE_LIRE || code == I_TABLE_ECRIRE || code == I_TABLE_LISTE
-        || code == I_COURRIEL || code == I_MATH || code == I_TRIER || code == I_PERMIS;
+        || code == I_COURRIEL || code == I_MATH || code == I_TRIER || code == I_PERMIS
+        || code == I_LIGNES || code == I_JSON;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -484,6 +487,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_MATH: besoin = (long)(op >> 3); effet = 1 - besoin; break;
             case I_TRIER: besoin = op & 6 ? 2 : 1; effet = 1 - besoin; break;
             case I_PERMIS: besoin = 1; effet = 0; break;
+            case I_LIGNES: case I_JSON: besoin = 1; effet = 0; break;
             case I_REMPLACER: besoin = 3; effet = -2; break;
             case I_MOTS: besoin = 1; effet = 0; break;
             case I_PORTS: besoin = 0; effet = 1; break;

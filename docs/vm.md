@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 2.02 de la spécification, révisée le 6 novembre 2026.
+Version 2.03 de la spécification, révisée le 6 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -156,6 +156,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 136 | `MATH` | forme (3 bits) + nombre d'arguments × 8 | 0 la racine carrée (`dec_racine`, exacte si finie, sinon 28 chiffres) ; 1, 2 le plus grand, le plus petit de n arguments ; 3, 4 la somme, la moyenne d'une liste ; 5, 6 son plus grand, son plus petit élément (grammaire 2.95, § 3.7) |
 | 137 | `TRIER` | 1 décroissant, 2 par un champ, 4 par des clés | dépile [le nom du champ ou la liste des clés, puis] la liste ou l'ensemble ; empile une nouvelle liste, triée par fusion, stable ; les textes par `base_comparer_textes`, l'ordre de la base (grammaire 2.96, § 13.12) ; forme 4 (2.97) : les clés, une par élément, rangées par une boucle que le compilateur écrit autour de l'appel du calcul |
 | 138 | `PERMIS` | une constante texte « type␝valeurs » ou « ␜type␜nom » | la valeur au sommet, qui reste, doit être l'une des valeurs d'un type nommé (§ 16.16), ou du type simple dit (3.00 : texte, nombre, date, heure, vrai ou faux) ; un paramètre typé se vérifie en tête de sa formule par `LIRE_LOCAL`, `PERMIS`, `ECRIRE_LOCAL` |
+| 139 | `LIGNES` | aucun | remplace un texte, ou un fichier en UTF-8 (marque BOM ôtée), par la liste de ses lignes ; `\r` de fin de ligne ôté, pas de ligne vide après un dernier retour (grammaire 3.02, § 15.9) |
+| 140 | `JSON` | aucun | remplace une valeur par son texte JSON, récursivement : table en objet, liste ou ensemble en tableau, 64 niveaux au plus (§ 15.9) |
 
 ### 3.1 Boucles et Selon
 
@@ -494,3 +496,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 2.00 | 2026-11-06 | `TRIER` forme 4 : par des clés (grammaire 2.97, trier par un calcul) |
 | 2.01 | 2026-11-06 | Instruction `PERMIS` (138) : la vérification d'une variable d'un type nommé, à chaque écriture |
 | 2.02 | 2026-11-06 | `PERMIS` vérifie aussi un type simple (grammaire 3.00, annotations) |
+| 2.03 | 2026-11-06 | Instructions `LIGNES` (139) et `JSON` (140) |

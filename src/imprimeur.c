@@ -943,6 +943,22 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_LIGNES: case N_JSON_ECRIT:   /* « les lignes de x », « le JSON de x » ; « _lignes x », « _json(x) » (§ 15.9) */
+        if (im->compact) {
+            if (n->type == N_LIGNES) { aj(im, "_lignes "); expression(im, n->enfants[0]); }
+            else {   /* ses parenthèses suffisent : un groupe n'en ajoute pas d'autres */
+                const Noeud *x = n->enfants[0];
+                if (x->type == N_GROUPE && x->nb_enfants == 1) x = x->enfants[0];
+                aj(im, "_json(");
+                expression(im, x);
+                aj(im, ")");
+            }
+            return;
+        }
+        aj(im, n->type == N_LIGNES ? "les lignes " : "le JSON ");
+        if (argument_simple(n->enfants[0]) && n->enfants[0]->type != N_APPEL) preposition(im, "de", n->enfants[0]);
+        else { aj(im, "de ("); expression(im, n->enfants[0]); aj(im, ")"); }
+        return;
     case N_TRI: {   /* « les notes triées [par ordre décroissant] », « triés par nom [décroissant] » ; compacte : « _trier(notes ;
                      * nom ; _décroissant) » (§ 13.12) */
         const Noeud *l = n->enfants[0];

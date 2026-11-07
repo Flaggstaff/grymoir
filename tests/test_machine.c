@@ -2399,6 +2399,22 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Les lignes, le JSON (§ 15.9) */
+    PROG("Les articles valent la liste « pain » et « lait ».\n"
+         "Les données valent la table où « client » vaut « Ana », « total » vaut 12,50 et « articles » vaut les articles.\n"
+         "Afficher le JSON des données.\nLe b vaut 1 > 2.\nLes vides valent une table vide.\n"
+         "Afficher le JSON de « a\"b\\c » puis le JSON de 01.01.2026 puis le JSON de 9:05 puis le JSON du b.\n"
+         "Afficher le JSON des vides.",
+         "{\"client\": \"Ana\", \"total\": 12.50, \"articles\": [\"pain\", \"lait\"]}\n\"a\\\"b\\\\c\" \"2026-01-01\" \"09:05\" false\n{}");
+    PROG("Le t vaut le texte suivant :\n    alpha\n    beta\n\n    gamma\n"
+         "Pour chaque ligne parmi les lignes de t, afficher « [ » suivi de ligne suivi de « ] ».\nLes ls valent les lignes de t.\n"
+         "Les v valent les lignes de « ».\nAfficher le nombre de ls puis le nombre de v.\nLes n valent la table où 1 vaut les ls.\nAfficher le JSON des n.",
+         "[alpha]\n[beta]\n[]\n[gamma]\n4 0\n{\"1\": [\"alpha\", \"beta\", \"\", \"gamma\"]}");
+    PROG("Un client a : un nom.\nLe c vaut un nouveau client.\nLes t valent la table où « c » vaut c.\nAfficher le JSON des t.",
+         "ERREUR 4:10 Un objet ne s'écrit pas en JSON : range ses champs dans une table.");
+    PROG("Le b vaut 1 > 2.\nLes t valent une table vide.\nDans les t, b vaut 3.\nAfficher le JSON des t.",
+         "ERREUR 4:10 Une clé JSON est un texte, un nombre ou une date, pas un booléen.");
+    PROG("Afficher les lignes de 3.", "ERREUR 1:10 « les lignes de » se lisent dans un texte ou un fichier, pas dans un nombre.");
     /* Contrats d'aptitude (§ 13.7 bis) */
     PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nUne chose payable doit savoir : encaisser une chose payable et un mode.\nUne facture est une chose payable.\n"
          "Un abonnement est une chose payable.\nLe montant dû d'une facture vaut montant de la facture.\n"

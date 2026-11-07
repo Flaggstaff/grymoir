@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.01 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.02 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1489,6 +1489,25 @@ Pour chaque ligne du tableau « import.csv » :
 - `Afficher ligne.` montre ses cellules, séparées par « ; ».
 - Un calcul ne lit pas de tableau (§ 9.4). Aucun mot réservé : `colonne` et `tableau` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ `colonne` déclaré l'emporte.
 - En forme compacte : `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)`.
+
+### 15.9 Les lignes, le JSON *(3.02)*
+
+```
+Pour chaque ligne parmi les lignes du fichier « journal.log » :
+    Si ligne contient « ERREUR », afficher ligne.
+Les relevés valent les lignes de la réponse.
+
+Les articles valent la liste « pain » et « lait ».
+Les données valent la table où « client » vaut « Ana », « total » vaut 12,50 et « articles » vaut les articles.
+Afficher le JSON des données.         →  {"client": "Ana", "total": 12.50, "articles": ["pain", "lait"]}
+```
+
+- **`les lignes de x`** est une liste (§ 13.10) : les lignes d'un texte, ou d'un fichier lu comme un texte en UTF-8. Le séparateur est le retour à la ligne ; un `\r` qui le précède (fichier Windows) tombe ; un dernier retour à la ligne ne fait pas de ligne vide de plus. Un texte vide n'a aucune ligne. Elle se parcourt (`Pour chaque ligne parmi …`), se range, se trie, comme toute liste. Un fichier qui n'est pas du texte : « Le fichier « photo.png » n'est pas un texte en UTF-8. »
+- **`le JSON de x`** est un texte : la valeur écrite en JSON, récursivement. Une **table** (§ 13.11) devient un objet, ses clés dans leur ordre d'arrivée ; une **liste** ou un **ensemble**, un tableau ; un texte, une chaîne, échappée (`\"`, `\\`, `\n`, les caractères de contrôle en `\u00XX`, les autres en UTF-8) ; un nombre, sa forme canonique (`12.50`) ; vrai ou faux, `true`, `false` ; une date, `"AAAA-MM-JJ"` ; une heure, `"HH:MM"` ; une valeur absente, `null`. Une clé de table est un texte, un nombre ou une date, écrits comme ci-dessus.
+- **Les refus** : un objet (« Un objet ne s'écrit pas en JSON : range ses champs dans une table. »), un fichier, une clé qui n'est ni texte ni nombre ni date, une imbrication de plus de 64 niveaux.
+- `le JSON de x` est un texte : il s'écrit dans un fichier (`… en fichier`), s'affiche, se range. Dans un envoi (§ 22.18), il resterait une chaîne JSON comme tout texte : l'envoi n'a pas encore de corps brut, ce qui permettrait d'y poser un document imbriqué ; reporté. La lecture d'un JSON reste celle du § 22.18 (`le champ « a.b » de r`, `les éléments du champ … de r`).
+- Un calcul les emploie librement. `lignes` et `JSON` ne comptent qu'ainsi placés ; un nom déclaré l'emporte.
+- En forme compacte : `_lignes x`, `_json(x)`.
 
 ## 16. Entités *(v0.3)*
 
@@ -2997,3 +3016,4 @@ Pour rappeler un patient :
 | 2.99 | 2026-11-06 | Nouveau § 16.16 : les types nommés, `Un état est « à faire », « en cours » ou « fini ».` ; un champ `(état)` prend ses valeurs permises (§ 16.15) ; une variable `Le prochain (état) vaut …` est vérifiée à chaque écriture (`devient`, `qui donne`), à l'analyse pour un texte écrit en clair, à l'exécution sinon (instruction `PERMIS`). Formes compactes `_type _un état « a » ; « b »`, `_le p (état) << …` |
 | 3.00 | 2026-11-06 | § 16.16 : les annotations (point 8 de l'audit) ; une variable ou un paramètre de formule se type, `(nombre)`, `(texte)`, `(date)`, `(heure)`, `(vrai ou faux)` ou un type nommé ; constante vérifiée à l'analyse, à la ligne de l'appel pour un argument ; le reste à l'exécution (`PERMIS`, étendu aux types simples ; en tête de formule pour un paramètre) |
 | 3.01 | 2026-11-06 | Nouveau § 13.7 bis : les contrats d'aptitude, `Une chose payable doit savoir : le montant dû d'une chose payable.` ; une version abstraite, sans code ; à la fin de l'analyse, chaque classe qui adopte l'aptitude a une version concrète (la sienne, d'un ancêtre ou d'une aptitude), hors boucle interactive. Forme compacte `_contrat payable _calcul …` |
+| 3.02 | 2026-11-06 | Nouveau § 15.9 (points 12 et 13 de l'audit) : `les lignes de x`, une liste, d'un texte ou d'un fichier en UTF-8 ; `le JSON de x`, une valeur écrite en JSON, récursivement (tables en objets, listes en tableaux). Instructions `LIGNES` et `JSON`. Formes compactes `_lignes x`, `_json(x)` |

@@ -3812,6 +3812,76 @@ static void trier_indices(size_t *idx, size_t *tmp, size_t d, size_t f, const Va
     memcpy(idx + d, tmp + d, (f - d) * sizeof *idx);
 }
 
+/* ---------- Les lignes, le JSON (§ 15.9) ---------- */
+
+/* Vrai si les n octets sont de l'UTF-8 bien formé (sans octet nul). */
+static int utf8_bien_forme(const unsigned char *s, size_t n) {
+    for (size_t i = 0; i < n;) {
+        const unsigned char c = s[i];
+        size_t l = c < 0x80 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 0;
+        if (!l || c == 0 || (l == 2 && c < 0xC2) || i + l > n) return 0;
+        for (size_t k = 1; k < l; k++) if ((s[i + k] & 0xC0) != 0x80) return 0;
+        i += l;
+    }
+    return 1;
+}
+
+static void json_chaine(Chaine *c, const char *s) {
+    chaine_ajouter(c, "\"");
+    for (const unsigned char *p = (const unsigned char *)s; *p; p++) {
+        char u[8];
+        if (*p == '"') chaine_ajouter(c, "\\\"");
+        else if (*p == '\\') chaine_ajouter(c, "\\\\");
+        else if (*p == '\n') chaine_ajouter(c, "\\n");
+        else if (*p == '\r') chaine_ajouter(c, "\\r");
+        else if (*p == '\t') chaine_ajouter(c, "\\t");
+        else if (*p < 0x20) { snprintf(u, sizeof u, "\\u%04x", *p); chaine_ajouter(c, u); }
+        else { u[0] = (char)*p; u[1] = 0; chaine_ajouter(c, u); }
+    }
+    chaine_ajouter(c, "\"");
+}
+
+/* Une valeur en JSON ; rend un message d'erreur, ou NULL. */
+static char *json_de_valeur(Chaine *c, const Valeur *v, int profondeur) {
+    if (profondeur > 64) return grym_dupliquer("Le JSON s'arrête à 64 niveaux d'imbrication.");
+    switch (v->type) {
+    case V_ABSENT: chaine_ajouter(c, "null"); return NULL;
+    case V_BOOLEEN: chaine_ajouter(c, v->vrai ? "true" : "false"); return NULL;
+    case V_NOMBRE: { char *s = dec_canonique(&v->nombre); chaine_ajouter(c, s); free(s); return NULL; }
+    case V_TEXTE: json_chaine(c, v->texte ? v->texte : ""); return NULL;
+    case V_DATE: { char *s = date_iso(v->jours); json_chaine(c, s); free(s); return NULL; }
+    case V_HEURE: { char h[16]; snprintf(h, sizeof h, "%02ld:%02ld", v->jours / 60, v->jours % 60); json_chaine(c, h); return NULL; }
+    case V_ENSEMBLE: {
+        chaine_ajouter(c, "[");
+        for (size_t k = 0; k < v->liste->n; k++) {
+            if (k) chaine_ajouter(c, ", ");
+            char *e = json_de_valeur(c, &v->liste->valeurs[k], profondeur + 1);
+            if (e) return e;
+        }
+        chaine_ajouter(c, "]");
+        return NULL;
+    }
+    case V_TABLE: {
+        chaine_ajouter(c, "{");
+        for (size_t k = 0; k + 1 < v->liste->n; k += 2) {
+            const Valeur *cl = &v->liste->valeurs[k];
+            if (k) chaine_ajouter(c, ", ");
+            if (cl->type == V_TEXTE) json_chaine(c, cl->texte ? cl->texte : "");
+            else if (cl->type == V_NOMBRE) { char *s = dec_canonique(&cl->nombre); json_chaine(c, s); free(s); }
+            else if (cl->type == V_DATE) { char *s = date_iso(cl->jours); json_chaine(c, s); free(s); }
+            else return grym_formater("Une clé JSON est un texte, un nombre ou une date, pas %s.", nom_type(cl->type));
+            chaine_ajouter(c, ": ");
+            char *e = json_de_valeur(c, &v->liste->valeurs[k + 1], profondeur + 1);
+            if (e) return e;
+        }
+        chaine_ajouter(c, "}");
+        return NULL;
+    }
+    case V_OBJET: return grym_dupliquer("Un objet ne s'écrit pas en JSON : range ses champs dans une table.");
+    default: return grym_formater("%s ne s'écrit pas en JSON.", nom_type(v->type));
+    }
+}
+
 /* Une table vide (§ 13.11) : clé, valeur, clé, valeur… dans la liste d'un ensemble. */
 static Valeur table_vide(void) {
     Valeur v = ensemble_vide();
@@ -7121,6 +7191,51 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&e);
             if (mp) { valeur_liberer(&x); ok = echouer(diag, b, debut, mp); break; }
             empiler(&pile, x);
+            break;
+        }
+        case I_LIGNES: {   /* « les lignes de x » : d'un texte, ou d'un fichier en UTF-8 (§ 15.9) */
+            Valeur x = depiler(&pile);
+            char *mp = NULL;
+            const char *s = NULL;
+            size_t n = 0;
+            if (x.type == V_ABSENT) mp = message_absent(&x);
+            else if (x.type == V_TEXTE) { s = x.texte ? x.texte : ""; n = strlen(s); }
+            else if (x.type == V_FICHIER) {
+                if (!x.fichier->octets) { char *e = NULL; base_fichier_lire(x.fichier, &e); free(e); }
+                if (!x.fichier->octets || !utf8_bien_forme(x.fichier->octets, x.fichier->taille))
+                    mp = grym_formater("Le fichier « %s » n'est pas un texte en UTF-8.", x.fichier->nom ? x.fichier->nom : "");
+                else { s = (const char *)x.fichier->octets; n = x.fichier->taille; }
+            } else mp = grym_formater("« les lignes de » se lisent dans un texte ou un fichier, pas dans %s.", nom_type(x.type));
+            Valeur r = valeur_nombre(dec_zero());
+            if (!mp) {
+                valeur_liberer(&r);
+                r = liste_vide();
+                if (n >= 3 && (unsigned char)s[0] == 0xEF && (unsigned char)s[1] == 0xBB && (unsigned char)s[2] == 0xBF) { s += 3; n -= 3; }   /* BOM */
+                size_t d = 0;
+                while (d < n) {
+                    size_t f = d;
+                    while (f < n && s[f] != '\n') f++;
+                    size_t l = f - d;
+                    if (l && s[d + l - 1] == '\r') l--;
+                    char *ligne = grym_allouer(l + 1);
+                    memcpy(ligne, s + d, l);
+                    ligne[l] = 0;
+                    ensemble_gagner(&r, vi_texte_pris(ligne));
+                    d = f + 1;
+                }
+            }
+            valeur_liberer(&x);
+            if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
+            break;
+        }
+        case I_JSON: {   /* « le JSON de x » (§ 15.9) */
+            Valeur x = depiler(&pile);
+            Chaine c = {0};
+            char *mp = json_de_valeur(&c, &x, 0);
+            valeur_liberer(&x);
+            if (mp) { free(chaine_rendre(&c)); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, vi_texte_pris(chaine_rendre(&c)));
             break;
         }
         case I_PERMIS: {   /* une variable d'un type nommé : sa valeur, l'une des permises (§ 16.16) */

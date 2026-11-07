@@ -910,7 +910,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
     case N_EXTRAIRE: return n->forme == 9 ? "nombre entier" : n->forme == 10 ? NULL : "texte";   /* § 4.6 */
     case N_REPONSE: return n->texte2;
-    case N_MOTIF: case N_SORTE: case N_GABARIT: return "texte";
+    case N_MOTIF: case N_SORTE: case N_GABARIT: case N_JSON_ECRIT: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
@@ -3134,6 +3134,29 @@ static Noeud *base(Analyse *a) {
                 noeud_ajouter(n, l);
                 if (rang) noeud_ajouter(n, rang);
                 n->fin = l->fin;
+                return n;
+            }
+        }
+        {
+            /* « les lignes de x », « le JSON de x » (§ 15.9) : un nom déclaré l'emporte */
+            const int m_les = est_mot(t, "les") ? 1 : a->article_force == ART_LES ? 0 : -1;
+            const int m_le = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+            size_t fe0;
+            int sorte = 0;
+            const Jeton *apres = NULL;
+            if (m_les >= 0 && est_mot(voir(a, m_les), "lignes") && !ensemble_en(a, a->i + (size_t)m_les, &fe0) && !visible(a, "lignes"))
+                { sorte = 1; apres = voir(a, m_les + 1); }
+            else if (m_le >= 0 && est_mot(voir(a, m_le), "json") && !visible(a, "json")) { sorte = 2; apres = voir(a, m_le + 1); }
+            const int des = sorte && est_mot(apres, "des");   /* « le JSON des données » : une table, une liste */
+            if (sorte && (de_ou_d(apres) || est_mot(apres, "du") || des)) {
+                Noeud *n = noeud_creer(sorte == 1 ? N_LIGNES : N_JSON_ECRIT, t->ligne, t->colonne, t->debut);
+                const int saut = sorte == 1 ? m_les + 1 : m_le + 1;
+                a->article_force = ART_AUCUN;
+                for (int q = 0; q < saut; q++) avancer(a);
+                Noeud *x = des ? nom_ensemble(a) : mots_de(a);
+                if (!x) { noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, x);
+                n->fin = x->fin;
                 return n;
             }
         }
@@ -6112,8 +6135,11 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
         size_t k2 = d, fe;
         if (a->j[k2].type == J_CROCHETS) k2++;
         else while (mot_de_nom(a, k2) && !est_mot(&a->j[k2], "parmi")) k2++;
-        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && est_mot(&a->j[k2 + 2], "décodages")
-            && est_mot(&a->j[k2 + 3], "wsjt") && article_de(&a->j[d]) == ART_AUCUN) {
+        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les")
+            && ((est_mot(&a->j[k2 + 2], "décodages") && est_mot(&a->j[k2 + 3], "wsjt"))
+                || (est_mot(&a->j[k2 + 2], "lignes") && !visible(a, "lignes")   /* « parmi les lignes de t » (§ 15.9) */
+                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du") || est_mot(&a->j[k2 + 3], "des"))))
+            && article_de(&a->j[d]) == ART_AUCUN) {
             /* « Pour chaque d parmi les décodages WSJT [du port p] : » (2.88) : lus une fois au début */
             char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);
             if (visible(a, nom)) {
@@ -10808,7 +10834,7 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
             valeur_n = x;
         } else if (valeur_n->nb_enfants == 1 && !ecrit_liste
                    && (valeur_n->enfants[0]->type == N_WSJTX || valeur_n->enfants[0]->type == N_TABLE_LISTE
-                       || valeur_n->enfants[0]->type == N_TRI
+                       || valeur_n->enfants[0]->type == N_TRI || valeur_n->enfants[0]->type == N_LIGNES
                        || (valeur_n->enfants[0]->type == N_EXTRAIRE && valeur_n->enfants[0]->forme == 10))) {
             /* « Les décodages valent les décodages WSJT. », « les morceaux de t séparés par « ; » » : la liste elle-même
              * (§ 13.10, 2.88, § 4.6) */
