@@ -421,6 +421,9 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_DOCUMENTS_SORTIS:   /* 3.09 */
+        emettre(c, I_DOCUMENTS_SORTIS, 0, n->ligne, n->colonne);
+        return;
     case N_COMMANDE:   /* le programme, [la liste des arguments,] puis COMMANDE 0 ou 1 (§ 15.10) */
         expression(c, n->enfants[0]);
         if (n->nb_enfants > 1) expression(c, n->enfants[1]);

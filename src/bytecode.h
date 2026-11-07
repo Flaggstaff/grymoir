@@ -180,11 +180,12 @@ typedef enum {
     I_MINUTERIE,        /* opérande : l'intervalle en secondes de la minuterie de l'écran, pour l'ÉCRAN_ATTENDRE qui suit (3.03) */
     I_COMMANDE,         /* opérande : 1 avec une liste d'arguments ; dépile [la liste, puis] le programme ; empile sa sortie (§ 15.10) */
     I_VERIFIER,         /* opérande : une constante texte, la condition écrite ; dépile la condition : fausse, échec (§ 9.7) */
-    I_GESTE             /* opérande : une constante « forme␟ligne␟écran␟élément » ; dépile la valeur pour écrire et choisir ;
+    I_GESTE,            /* opérande : une constante « forme␟ligne␟écran␟élément » ; dépile la valeur pour écrire et choisir ;
                            range le geste, que l'écran simulé jouera (3.08) */
+    I_DOCUMENTS_SORTIS  /* empile la liste des titres des documents fabriqués dans le scénario (3.09) */
 } CodeInstruction;
 
-#define I_DERNIER I_GESTE
+#define I_DERNIER I_DOCUMENTS_SORTIS
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

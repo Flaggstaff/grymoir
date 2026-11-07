@@ -268,6 +268,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_COMMANDE:       return "COMMANDE";
     case I_VERIFIER:       return "VÉRIFIER";
     case I_GESTE:          return "GESTE";
+    case I_DOCUMENTS_SORTIS: return "DOCUMENTS_SORTIS";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -497,6 +498,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_MINUTERIE: besoin = 0; effet = 0; break;
             case I_COMMANDE: besoin = op ? 2 : 1; effet = 1 - besoin; break;
             case I_VERIFIER: besoin = 1; effet = -1; break;
+            case I_DOCUMENTS_SORTIS: besoin = 0; effet = 1; break;
             case I_GESTE: {   /* écrire (1) et choisir (2) dépilent leur valeur */
                 const char *dg = op < b->nb_constantes && b->constantes[op].type == C_TEXTE ? b->constantes[op].texte : "";
                 besoin = dg[0] == '1' || dg[0] == '2' ? 1 : 0;

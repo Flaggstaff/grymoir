@@ -237,6 +237,8 @@ struct Machine {
     struct Geste *gestes;      /* les gestes préparés par « On clique sur … », dans l'ordre (3.08) */
     size_t nb_gestes, cap_gestes, geste_prochain;
     char *geste_erreur;        /* un geste impossible : l'attente s'interrompt avec ce message (3.08) */
+    char **documents;          /* les titres des documents fabriqués dans un scénario, dans l'ordre (3.09) */
+    size_t nb_documents;
     struct HoteScenario *hote; /* l'interface simulée d'un scénario, possédée */
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
@@ -594,6 +596,11 @@ static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
     }
     if (!ec || m->geste_prochain >= m->nb_gestes) return ISSUE_REPONDU;   /* plus de geste : l'écran se ferme */
     const Geste *g = &m->gestes[m->geste_prochain];
+    if (g->sorte == 5 || g->sorte == 6) {   /* une réponse sans question (3.09) */
+        m->geste_prochain++;
+        return sim_refuser(m, grym_formater("Geste de la ligne %d : « On %s » ne répond à aucune question : il suit le clic d'un "
+                                            "bouton « à confirmer par … ».", g->ligne, g->sorte == 5 ? "confirme" : "renonce"));
+    }
     if (!ec->nom || strcmp(ec->nom, g->ecran) != 0)
         return sim_refuser(m, grym_formater("Le geste de la ligne %d attendait l'écran %s ; c'est l'écran %s qui est ouvert.",
                                             g->ligne, g->ecran, ec->nom ? ec->nom : ""));
@@ -606,6 +613,15 @@ static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
         if (ec->etats[k] & 3)
             return sim_refuser_l(m, g->ligne, grym_formater("« %s » est %s dans l'écran %s : le geste ne peut pas se faire.", g->element,
                                                 ec->etats[k] & 2 ? "caché" : "inactif", ec->nom));
+        const ElementEcran *b = &ec->elements[k];
+        if (b->confirmation && (!b->confirmation_si_modifie || ec->modifie)) {   /* la question : le geste suivant y répond (3.09) */
+            const Geste *rep = m->geste_prochain < m->nb_gestes ? &m->gestes[m->geste_prochain] : NULL;
+            if (!rep || (rep->sorte != 5 && rep->sorte != 6))
+                return sim_refuser_l(m, g->ligne, grym_formater("« %s » demande une confirmation (« %s ») : écris « On confirme. » ou "
+                                                                 "« On renonce. » juste après le clic.", g->element, b->confirmation));
+            m->geste_prochain++;
+            if (rep->sorte == 6) return sim_attendre(c, sortie, e);   /* on renonce : rien ne se passe, le geste suivant */
+        }
         e->sorte = EVENEMENT_CLIC;
         e->element = k;
         return ISSUE_REPONDU;
@@ -659,6 +675,17 @@ static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
     return ISSUE_REPONDU;
 }
 
+/* Un document, dans un scénario (3.09) : fabriqué de sa page HTML, sans PDF réel ; montré, il ne s'ouvre nulle part. */
+static unsigned char *sim_rendre_pdf(void *c, const char *html, size_t *taille, char **erreur) {
+    (void)c; (void)erreur;
+    *taille = strlen(html);
+    unsigned char *o = grym_allouer(*taille + 1);
+    memcpy(o, html, *taille + 1);
+    return o;
+}
+static void sim_montrer_document(void *c, const unsigned char *o, size_t t, const char *nom) { (void)c; (void)o; (void)t; (void)nom; }
+static void sim_ouvrir_adresse(void *c, const char *adresse) { (void)c; (void)adresse; }
+
 /* Dans un scénario, personne ne répond au clavier : une saisie y est refusée au lieu d'attendre. */
 static Issue sim_formulaire(void *c, Chaine *s, Champ *ch, size_t n, size_t *arret, Validation v, void *vc) {
     (void)c; (void)s; (void)ch; (void)n; (void)v; (void)vc;
@@ -689,6 +716,9 @@ void machine_mode_scenario(Machine *m, int actif) {
     i.ecran_transcrire = sim_transcrire;
     i.ecran_choix = sim_choix;
     i.ecran_signaler = sim_signaler;
+    i.rendre_pdf = sim_rendre_pdf;
+    i.montrer_document = sim_montrer_document;
+    i.ouvrir_adresse = sim_ouvrir_adresse;
     machine_interface(m, &i);
 }
 
@@ -706,6 +736,8 @@ void machine_detruire(Machine *m) {
     for (size_t k = 0; k < m->nb_gestes; k++) { free(m->gestes[k].ecran); free(m->gestes[k].element); valeur_liberer(&m->gestes[k].v); }
     free(m->gestes);
     free(m->geste_erreur);
+    for (size_t k = 0; k < m->nb_documents; k++) free(m->documents[k]);
+    free(m->documents);
     if (m->hote) free(m->hote->erreur_ecran);
     free(m->hote);
     if (!m) return;
@@ -6493,10 +6525,6 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_DOCUMENT: {
-            if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
-                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore de fiche ni de document : cette action en ouvre un."));
-                break;
-            }
             if (op == 2) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier tel qu'il est rangé */
                 Valeur v = depiler(&pile);
                 char *probleme = NULL;
@@ -6525,6 +6553,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *probleme = NULL;
             if (!e || !e->document) probleme = grym_dupliquer("Document invalide.");
             char *html = probleme ? NULL : document_html(e);
+            if (!probleme && m->scenario && op == 1) {   /* 3.09 : un document ouvert, noté pour « les documents sortis » ; un
+                                                           document fabriqué pour être rangé (« … devient le document »)
+                                                           n'est pas sorti */
+                char **nd = grym_allouer((m->nb_documents + 1) * sizeof *nd);
+                if (m->nb_documents) memcpy(nd, m->documents, m->nb_documents * sizeof *nd);
+                free(m->documents);
+                m->documents = nd;
+                m->documents[m->nb_documents++] = grym_dupliquer(e->titre ? e->titre : "");
+            }
             if (e && e->document) { m->ecran = e->dessous; ecran_detruire(e); }
             unsigned char *pdf = NULL;
             size_t taille = 0;
@@ -6942,7 +6979,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         case I_FICHE_ECRAN: {
             if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
-                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore de fiche ni de document : cette action en ouvre un."));
+                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas de fiche : cette action en ouvre une. Une fiche se montre, ses gestes ne se simulent pas."));
                 break;
             }
             /* « Ouvrir la fiche de c. » : l'écran déduit de l'entité (grammaire, § 22.3) */
@@ -7467,6 +7504,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&l);
             valeur_liberer(&pr);
             if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
+            break;
+        }
+        case I_DOCUMENTS_SORTIS: {   /* « les documents sortis » (3.09) : leurs titres, une liste */
+            Valeur r = liste_vide();
+            for (size_t k = 0; k < m->nb_documents; k++) ensemble_gagner(&r, vi_texte_pris(grym_dupliquer(m->documents[k])));
             empiler(&pile, r);
             break;
         }

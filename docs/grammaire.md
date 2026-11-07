@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.08 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.09 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -778,7 +778,10 @@ Scénario « une relance se crée » :
   - **Un geste impossible arrête le scénario**, à sa ligne : un bouton inactif ou caché (« Geste de la ligne 28 : « Enregistrer » est inactif dans l'écran de saisie : le geste ne peut pas se faire. »), une zone en lecture seule, un choix hors de la liste, un objet qu'aucune liste ne montre, un geste destiné à un autre écran que celui qui attend. Un geste préparé qu'aucun écran ne reçoit est une erreur aussi. Une erreur qu'un événement montre dans l'écran (`Refuser`) arrête le scénario, avec son message.
   - Un bouton inconnu se signale dès l'analyse. Un geste hors d'un scénario est refusé.
   - En forme compacte : `_on_écrit X _dans nom _écran de_saisie`, `_on_choisit X [_dans pays] _écran …`, `_on_clique « B » _écran …`, `_on_ferme _écran …`.
-- **Ce qu'il ne fait pas encore** : ouvrir une fiche ou un document (refusé dès l'analyse ; une action qui en ouvre un échoue à sa ligne) ; une saisie y échoue au lieu d'attendre le clavier (« Aucune entrée : la question ne peut pas être posée ici. »).
+- **Les confirmations** *(3.09)* : un bouton `à confirmer par « … »` (§ 22.23) pose sa question ; le geste qui suit le clic y répond, `On confirme.` ou `On renonce.` (rien ne se passe alors). Sans réponse : « Geste de la ligne 32 : « Supprimer » demande une confirmation (« Supprimer ce patient ? ») : écris « On confirme. » ou « On renonce. » juste après le clic. » Une réponse sans question est une erreur aussi.
+- **Les documents** *(3.09)* : un scénario les fabrique sans PDF réel (la page du document en tient lieu) et ne les montre nulle part. **`les documents sortis`** est la liste des titres des documents ouverts (`Ouvrir le document de quittance.`), dans l'ordre : `Vérifier que « Quittance » est parmi les documents sortis.` Un document fabriqué pour être rangé (`L'exemplaire de la q devient le document de quittance.`) n'est pas sorti. Hors d'un scénario, `les documents sortis` est refusé.
+- **Ce qu'il ne fait pas** : ouvrir une fiche (§ 20.1), dont les gestes et la modification au clavier ne se simulent pas (refusé dès l'analyse ; une action qui en ouvre une échoue à sa ligne) ; une saisie y échoue au lieu d'attendre le clavier (« Aucune entrée : la question ne peut pas être posée ici. »).
+- En forme compacte : `_on_confirme`, `_on_renonce`, `_documents_sortis`.
 - `grym lancer` ignore les scénarios, comme les exemples. Aucun mot réservé : `Scénario` ne commence une phrase que suivi d'un titre et de « : », `Vérifier` que suivi de « que ».
 - En forme compacte : `_scénario « titre »` … `_fin` ; `_vérifier condition`.
 
@@ -3093,3 +3096,4 @@ Pour rappeler un patient :
 | 3.06 | 2026-11-07 | Ménage (points 21 à 23 de l'audit, première part) : `vrai` et `faux` comme éléments d'un ensemble ou d'une liste (§ 13.9) ; sept fuites de mémoire préexistantes corrigées dans la machine et le serveur, que l'audit avait relevées (25 et 49 octets) : les dix programmes d'essai tournent désormais sans aucune fuite |
 | 3.07 | 2026-11-07 | Plan du § 22 : ses 27 sections rangées par thème (un écran, son déroulement, son apparence, ses documents, les données sensibles, les échanges avec l'extérieur, le matériel et la radio), sans renumérotation, ses numéros étant cités par les messages, les essais et le code (point 21 de l'audit) |
 | 3.08 | 2026-11-07 | § 9.7 : les gestes d'un scénario, `On écrit … dans le nom de l'écran …`, `On choisit …`, `On clique sur « B » dans l'écran …`, `On ferme l'écran …`, préparés avant `Ouvrir` et joués par un écran simulé dans la machine ; un geste impossible arrête le scénario à sa ligne. Instruction `GESTE`. Forme compacte `_on_écrit`, `_on_choisit`, `_on_clique`, `_on_ferme` |
+| 3.09 | 2026-11-07 | § 9.7 : `On confirme.` et `On renonce.`, la réponse à un bouton à confirmer ; les documents dans un scénario, fabriqués sans PDF réel, et `les documents sortis` (les documents ouverts) ; la fiche reste refusée. Éprouvé sur une copie de Praxis : `régler` avec quittance immédiate. Instruction `DOCUMENTS_SORTIS` |

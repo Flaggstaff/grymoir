@@ -244,6 +244,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_DOCUMENTS_SORTIS:
+        chaine_ajouter(c, "(documents-sortis)");
+        return;
     case N_COMMANDE:   /* (commande p [arguments]) (§ 15.10) */
         chaine_ajouter(c, "(commande ");
         decrire(n->enfants[0], c);

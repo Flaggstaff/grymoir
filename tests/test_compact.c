@@ -304,6 +304,7 @@ int main(void) {
     ERR("_afficher _commande(« echo » ; 3)\n", 1, 11, "« _commande » s'écrit ainsi : _commande(« rigctl »), _commande(« rigctl » ; arguments).");
     ALLER_RETOUR("_scénario « a »\n    _le x << 1\n    _vérifier x = 1\n_fin\n", NULL);
     ALLER_RETOUR("_les l << _liste _vrai ; _faux ; _vrai\n_afficher l\n", NULL);
+    ALLER_RETOUR("_scénario « a »\n    _on_confirme\n    _on_renonce\n    _les d << _documents_sortis\n_fin\n", NULL);
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

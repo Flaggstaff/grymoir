@@ -405,6 +405,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 continue;
             }
         }
+        if (est_cle(t, "documents_sortis")) {   /* _documents_sortis → les documents sortis (3.09) */
+            if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);
+            mot(r, "documents", t);
+            mot(r, "sortis", t);
+            continue;
+        }
         if (est_cle(t, "commande") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _commande(« p » ; arguments) → la sortie de la commande (« p ») avec les arguments (§ 15.10) */
             size_t fin = fermante(r, k + 1, f), pv = k + 2;
@@ -3339,6 +3345,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 1], 1);
             fixer_retrait(r, premier, prof);
             ouvrir(r, O_FORMULE, prof, t);
+        } else if (!strcmp(c, "on_confirme") || !strcmp(c, "on_renonce")) {   /* → On confirme. On renonce. (3.09) */
+            mot(r, "on", t);
+            mot(r, !strcmp(c, "on_confirme") ? "confirme" : "renonce", t);
+            point(r, f);
         } else if (!strcmp(c, "on_écrit") || !strcmp(c, "on_choisit") || !strcmp(c, "on_clique") || !strcmp(c, "on_ferme")) {
             /* _on_écrit X _dans nom _écran de_saisie → On écrit X dans le nom de l'écran de saisie. (3.08) */
             const size_t ke = chercher(r, d + 1, f, "écran");

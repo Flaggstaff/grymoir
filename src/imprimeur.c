@@ -943,6 +943,9 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_DOCUMENTS_SORTIS:   /* « les documents sortis » ; « _documents_sortis » (3.09) */
+        aj(im, im->compact ? "_documents_sortis" : "les documents sortis");
+        return;
     case N_COMMANDE:   /* « la sortie de la commande « p » avec les a » ; « _commande(« p » ; a) » (§ 15.10) */
         if (im->compact) {
             aj(im, "_commande(");
@@ -2480,8 +2483,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (c) fin_compacte(im, niveau);
         return;
     case P_GESTE: {   /* « On clique sur « OK » dans l'écran de saisie. » ; « _on_clique « OK » _écran de_saisie » (3.08) */
-        static const char *const LIT[] = { "", "On écrit ", "On choisit ", "On clique sur ", "On ferme " };
-        static const char *const COMP[] = { "", "_on_écrit ", "_on_choisit ", "_on_clique ", "_on_ferme " };
+        static const char *const LIT[] = { "", "On écrit ", "On choisit ", "On clique sur ", "On ferme ", "On confirme", "On renonce" };
+        static const char *const COMP[] = { "", "_on_écrit ", "_on_choisit ", "_on_clique ", "_on_ferme ", "_on_confirme", "_on_renonce" };
+        if (n->forme >= 5) { aj(im, c ? COMP[n->forme] : LIT[n->forme]); aj(im, c ? "\n" : ".\n"); return; }   /* 3.09 */
         aj(im, c ? COMP[n->forme] : LIT[n->forme]);
         if (n->nb_enfants) { expression(im, n->enfants[0]); aj(im, " "); }
         if (n->forme == 3) { ecrire_texte(im, n->texte); aj(im, " "); }

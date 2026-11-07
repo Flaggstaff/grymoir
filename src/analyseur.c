@@ -3148,6 +3148,17 @@ static Noeud *base(Analyse *a) {
                 return n;
             }
         }
+        if ((est_mot(t, "les") || a->article_force == ART_LES) && est_mot(voir(a, est_mot(t, "les") ? 1 : 0), "documents")
+            && est_mot(voir(a, est_mot(t, "les") ? 2 : 1), "sortis") && !visible(a, "documents sortis")) {
+            /* « les documents sortis » (3.09) : dans un scénario, les titres des documents fabriqués */
+            if (!a->scenario) return erreur(a, t, grym_dupliquer("« les documents sortis » se lisent dans un scénario (§ 9.7)."));
+            const int saut = est_mot(t, "les") ? 3 : 2;
+            Noeud *n = noeud_creer(N_DOCUMENTS_SORTIS, t->ligne, t->colonne, t->debut);
+            a->article_force = ART_AUCUN;
+            for (int q = 0; q < saut; q++) avancer(a);
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+            return n;
+        }
         if ((est_mot(t, "la") || a->article_force == ART_LA) && !visible(a, "sortie")) {
             /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) */
             const int m = est_mot(t, "la") ? 1 : 0;
@@ -9965,8 +9976,8 @@ static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom) {
 }
 
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
-    if (a->scenario && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")))   /* 3.08 : l'écran, oui ; la fiche, le document, pas encore */
-        return erreur(a, t, grym_dupliquer("Un scénario n'ouvre pas encore de fiche ni de document : il ouvre des écrans, joués par ses gestes."));
+    if (a->scenario && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "fiche"))   /* 3.09 : écrans et documents, oui ; la fiche, non */
+        return erreur(a, t, grym_dupliquer("Un scénario n'ouvre pas de fiche : ses gestes ne se simulent pas. Il ouvre des écrans et des documents."));
     a->ouvrir_vu = 1;
     if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvre-le dans une action."));
     if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
@@ -10949,6 +10960,7 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
         } else if (valeur_n->nb_enfants == 1 && !ecrit_liste
                    && (valeur_n->enfants[0]->type == N_WSJTX || valeur_n->enfants[0]->type == N_TABLE_LISTE
                        || valeur_n->enfants[0]->type == N_TRI || valeur_n->enfants[0]->type == N_LIGNES
+                       || valeur_n->enfants[0]->type == N_DOCUMENTS_SORTIS
                        || (valeur_n->enfants[0]->type == N_EXTRAIRE && valeur_n->enfants[0]->forme == 10))) {
             /* « Les décodages valent les décodages WSJT. », « les morceaux de t séparés par « ; » » : la liste elle-même
              * (§ 13.10, 2.88, § 4.6) */
@@ -11024,10 +11036,16 @@ static Noeud *scenario(Analyse *a, const Jeton *t, int colonne) {
 static Noeud *geste(Analyse *a, const Jeton *t) {
     if (!a->scenario) return erreur(a, t, grym_dupliquer("Un geste (« On clique sur … ») s'écrit dans un scénario (§ 9.7)."));
     const Jeton *verbe = voir(a, 1);
-    const int forme = est_mot(verbe, "écrit") ? 1 : est_mot(verbe, "choisit") ? 2 : est_mot(verbe, "clique") ? 3 : 4;
+    const int forme = est_mot(verbe, "écrit") ? 1 : est_mot(verbe, "choisit") ? 2 : est_mot(verbe, "clique") ? 3
+                    : est_mot(verbe, "ferme") ? 4 : est_mot(verbe, "confirme") ? 5 : 6;
     Noeud *n = noeud_creer(P_GESTE, t->ligne, t->colonne, t->debut);
     n->forme = forme;
     a->i += 2;
+    if (forme >= 5) {   /* « On confirme. », « On renonce. » : la réponse à la question du clic qui précède (3.09) */
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     if (forme == 3) {   /* « sur « B » dans l'écran E » */
         if (!est_mot(cour(a), "sur") || voir(a, 1)->type != J_TEXTE || !est_mot(voir(a, 2), "dans")) {
             noeud_liberer(n);
@@ -11325,7 +11343,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
     if (est_mot(t, "scénario") && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_DEUX_POINTS) return scenario(a, t, colonne);   /* § 9.7 */
     if (est_mot(t, "on") && (est_mot(voir(a, 1), "écrit") || est_mot(voir(a, 1), "choisit") || est_mot(voir(a, 1), "clique")
-                             || est_mot(voir(a, 1), "ferme")))
+                             || est_mot(voir(a, 1), "ferme") || est_mot(voir(a, 1), "confirme") || est_mot(voir(a, 1), "renonce")))
         return geste(a, t);   /* 3.08 */
     if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "que") && !visible(a, "vérifier que")) {   /* § 9.7 */
         if (!a->scenario) return erreur(a, t, grym_dupliquer("« Vérifier que … » s'écrit dans un scénario (§ 9.7)."));
