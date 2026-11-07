@@ -9,6 +9,9 @@
 
 /* Boucle en cours : où va « Passer au tour suivant », quels sauts « Sortir » doit corriger. */
 static int mode_exemples = 0;   /* grym exemples (grammaire, § 9.6) */
+static int mode_scenario = 0;   /* grym scenarios (§ 9.7) : le rang du scénario à jouer, à partir de 1 ; 0 hors de ce mode */
+static int nb_scenarios_vus = 0;
+static char *titre_scenario = NULL;   /* le titre du scénario compilé en mode scénario */
 
 typedef struct {
     size_t suivant;          /* cible de « Passer », si elle est déjà connue */
@@ -1160,6 +1163,22 @@ static void phrase(Compilation *c, const Noeud *ph) {
         bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
         return;
     }
+    case P_SCENARIO:   /* § 9.7 : ne se compile qu'en mode scénario, à part (voir compiler) */
+        return;
+    case P_VERIFIER: {   /* la condition, puis VÉRIFIER « ligne N : … » (§ 9.7) */
+        char *t = imprimer_phrase(c->programme, ph, 0);
+        size_t l = strlen(t);
+        while (l && (t[l - 1] == '\n' || t[l - 1] == '.')) t[--l] = '\0';
+        const char *corps = strncmp(t, "Vérifier que ", strlen("Vérifier que ")) == 0 ? t + strlen("Vérifier que ") : t;
+        char *texte = grym_dupliquer(corps);   /* la position est celle de l'échec : la ligne n'est pas répétée */
+        free(t);
+        long k = bloc_constante(c->b, C_TEXTE, texte);
+        free(texte);
+        if (k < 0) { trop_grand(c, ph); return; }
+        expression(c, ph->enfants[0]);
+        emettre(c, I_VERIFIER, k, ph->ligne, ph->colonne);
+        return;
+    }
     case P_EXEMPLE: {   /* § 9.6 : ESSAYER → raté ; obtenu ; attendu ; EXEMPLE ; FIN_ESSAI ; → fin ; raté : EXEMPLE_RATÉ */
         if (!mode_exemples) return;   /* un exemple ne s'exécute qu'avec « grym exemples » */
         char *t = imprimer_phrase(c->programme, ph, 0);
@@ -1900,6 +1919,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
 }
 
 void compilateur_mode_exemples(int actif) { mode_exemples = actif; }
+void compilateur_mode_scenario(int rang) {
+    mode_scenario = rang;
+    if (rang < 0) { free(titre_scenario); titre_scenario = NULL; mode_scenario = 0; }   /* -1 : tout rendre */
+}
+int compilateur_nb_scenarios(void) { return nb_scenarios_vus; }
+const char *compilateur_titre_scenario(void) { return titre_scenario; }
 
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
@@ -1916,7 +1941,44 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
         if (*s) emettre(&c, I_SIGLES, bloc_constante(c.b, C_TEXTE, s), 0, 0);
         free(s);
     }
-    if (mode_exemples) {   /* les déclarations et les exemples seulement : rien d'autre ne s'exécute (§ 9.6) */
+    nb_scenarios_vus = 0;
+    for (size_t k = 0; k < p->nb; k++) nb_scenarios_vus += p->phrases[k]->type == P_SCENARIO;
+    if (mode_scenario) {   /* les déclarations, puis le scénario demandé, compilé comme une action et appelé (§ 9.7) */
+        Noeud **garde = grym_allouer((p->nb ? p->nb : 1) * sizeof *garde);
+        size_t n = 0;
+        const Noeud *sc = NULL;
+        int rang = 0;
+        for (size_t k = 0; k < p->nb; k++) {
+            TypeNoeud t = p->phrases[k]->type;
+            if (t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER
+                || t == P_STYLE || t == P_TYPE || t == P_CONTRAT)
+                garde[n++] = p->phrases[k];
+            if (t == P_SCENARIO && ++rang == mode_scenario) sc = p->phrases[k];
+        }
+        free(titre_scenario);
+        titre_scenario = sc ? grym_dupliquer(sc->texte) : NULL;
+        phrases(&c, garde, n);
+        free(garde);
+        if (sc) {
+            Noeud vide;
+            memset(&vide, 0, sizeof vide);
+            vide.type = N_BLOC;
+            vide.local = -1;
+            Noeud *enf[2] = { &vide, sc->enfants[0] };
+            Noeud action = *sc;
+            action.type = P_ACTION;
+            action.texte = grym_formater("scénario « %s »", sc->texte);
+            action.texte2 = NULL;
+            action.texte3 = NULL;
+            action.enfants = enf;
+            action.nb_enfants = 2;
+            action.forme = 1;
+            phrase(&c, &action);
+            long nom = bloc_nom(c.b, action.texte);
+            if (nom >= 0) bloc_emettre_appel(c.b, (uint16_t)nom, 0, 0, sc->ligne, sc->colonne);
+            free(action.texte);
+        }
+    } else if (mode_exemples) {   /* les déclarations et les exemples seulement : rien d'autre ne s'exécute (§ 9.6) */
         Noeud **garde = grym_allouer((p->nb ? p->nb : 1) * sizeof *garde);
         size_t n = 0;
         for (size_t k = 0; k < p->nb; k++) {
@@ -1932,7 +1994,7 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
     }
     int ligne = p->nb ? p->phrases[p->nb - 1]->ligne : 0;
     c.b = m->blocs[0];
-    if (!mode_exemples) verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) */
+    if (!mode_exemples) verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) ; un scénario aussi */
     if (!mode_exemples && c.nb_regles && !c.echec) {
         /* les mêmes vérifications, en action sous un nom réservé : la machine l'appelle là où elle valide elle-même
          * une saisie, hors du code compilé (« Modifier » d'une fiche déduite, § 22.3 ; docs/vm.md, § 3.3) */

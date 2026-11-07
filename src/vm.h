@@ -72,6 +72,9 @@ void machine_interface(Machine *m, const Interface *i);
  * s'arrête sans exécuter le programme. Une migration refusée est une erreur, dans *diag, comme au lancement.
  * Une base qui n'existe pas encore n'est pas créée : le rapport le dit. */
 void machine_essai_migration(Machine *m, Chaine *rapport);
+/* grym scenarios (§ 9.7) : un programme qui contient des écrans tourne quand même ; ouvrir un écran, une fiche ou un
+ * document y échoue, à sa ligne. */
+void machine_mode_scenario(Machine *m, int actif);
 
 /* Après une exécution ratée : ce qui a été annulé, à dire à l'utilisateur (§ 3.3), ou NULL
  * s'il n'y a rien à dire. À libérer. */

@@ -2472,6 +2472,18 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         expression(im, n->enfants[0]);
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_SCENARIO:   /* « Scénario « titre » : » et son bloc ; « _scénario « titre » » … « _fin » (§ 9.7) */
+        aj(im, c ? "_scénario " : "Scénario ");
+        ecrire_texte(im, n->texte);
+        aj(im, c ? "\n" : " :\n");
+        bloc(im, n->enfants[0], niveau + 1);
+        if (c) fin_compacte(im, niveau);
+        return;
+    case P_VERIFIER:   /* « Vérifier que c. » ; « _vérifier c » (§ 9.7) */
+        aj(im, c ? "_vérifier " : "Vérifier que ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_CONTRAT: {   /* « Une chose payable doit savoir : le montant dû d'une chose payable. » ; compacte : « _contrat payable
                          * _calcul _le montant_dû(_une chose_payable) », « _contrat payable _action encaisser(…) » (§ 13.7 bis) */
         const int calcul = n->forme == 1;

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.04 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.05 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -749,6 +749,25 @@ Exemple : le carré de −1,5 vaut 2,25.
 - Un exemple se place au premier niveau du fichier. Son expression se lit comme dans un calcul (§ 9.4) : formules, constantes et base en lecture, jamais les variables du programme, ni `aujourd'hui`. Un exemple qui dépend du jour ne serait plus vrai demain.
 - Aucun mot réservé : `Exemple` ne commence une phrase que suivi de « : ».
 - En forme compacte : `_exemple carré(7) << 49`.
+
+### 9.7 Scénarios *(3.05)*
+
+```
+Scénario « une relance se crée » :
+    Le c vaut un nouveau client :
+        Le nom vaut « Ana ».
+    Conserver le c.
+    Relancer le c.
+    Vérifier que le nombre de relances conservées = 1.
+```
+
+- **Un scénario** éprouve ce que les exemples (§ 9.6) ne peuvent pas : des actions, la base, les règles. `Scénario « titre » :` et son bloc, au premier niveau ; un titre par scénario (« Le scénario « a » existe déjà : chacun a son titre. »).
+- **`Vérifier que condition.`** : fausse, le scénario échoue, à sa ligne : « Vérification fausse : le nombre de relances conservées = 3. » Elle ne s'écrit que dans un scénario.
+- **`grym scenarios fichier.grym`** joue chaque scénario **seul, sur une base neuve en mémoire** : ce qu'un scénario conserve, le suivant ne le voit pas, et la base du programme n'est jamais touchée. Le programme lui-même ne s'exécute pas : seules ses déclarations (classes, entités, aptitudes, types, contrats, calculs, actions, règles, fichiers utilisés) sont compilées. Chaque scénario s'affiche, `✓ « une relance se crée »` ou `✗ « un échec se voit » : fichier:25:5 : Vérification fausse : …`, puis le bilan : « 3 scénarios, 2 réussis. » La commande réussit si tous réussissent : un script ou l'intégration continue s'y fie. Les règles (§ 16.14) se vérifient à la fin du scénario comme à la fin d'un programme.
+- **Ce qu'un scénario voit** : les déclarations du programme, et ses propres noms, qui disparaissent avec lui. Les variables du programme lui sont invisibles, puisque le programme ne s'exécute pas (« « total » est une variable du programme : un scénario ne la voit pas … Crée-la dans le scénario. »).
+- **Ce qu'il ne fait pas encore** : ouvrir un écran, une fiche ou un document (refusé dès l'analyse : les gestes simulés viendront) ; une saisie y échoue au lieu d'attendre le clavier (« Aucune entrée : la question ne peut pas être posée ici. »).
+- `grym lancer` ignore les scénarios, comme les exemples. Aucun mot réservé : `Scénario` ne commence une phrase que suivi d'un titre et de « : », `Vérifier` que suivi de « que ».
+- En forme compacte : `_scénario « titre »` … `_fin` ; `_vérifier condition`.
 
 ## 10. Répéter
 
@@ -3041,3 +3060,4 @@ Pour rappeler un patient :
 | 3.02 | 2026-11-06 | Nouveau § 15.9 (points 12 et 13 de l'audit) : `les lignes de x`, une liste, d'un texte ou d'un fichier en UTF-8 ; `le JSON de x`, une valeur écrite en JSON, récursivement (tables en objets, listes en tableaux). Instructions `LIGNES` et `JSON`. Formes compactes `_lignes x`, `_json(x)` |
 | 3.03 | 2026-11-06 | § 22.2 : la minuterie (point 18 de l'audit), `Toutes les 10 secondes dans l'écran X :` ; instruction `MINUTERIE` avant `ÉCRAN_ATTENDRE`, fonction d'interface `ecran_minuterie`, événement `EVENEMENT_MINUTERIE` ; l'atelier attend à échéance, le navigateur renvoie son formulaire par `grym.js`. Forme compacte `_toutes_les 10 _secondes _dans X` |
 | 3.04 | 2026-11-06 | Nouveau § 15.10 (point 17 de l'audit) : `la sortie de la commande « p » avec les arguments`, sans shell, 30 secondes au plus ; nouvelle sorte d'échec `commande` (§ 18.2). Console (Mac, Linux : fork et exec), atelier (QProcess) ; le navigateur et la console sous Windows refusent. Instruction `COMMANDE`. Forme compacte `_commande(« p » ; arguments)` |
+| 3.05 | 2026-11-06 | Nouveau § 9.7 (point 20 de l'audit) : les scénarios, `Scénario « titre » :`, `Vérifier que condition.`, joués par `grym scenarios`, chacun seul sur une base neuve en mémoire, sans exécuter le programme ; sans écran pour l'instant. Instruction `VÉRIFIER`. Forme compacte `_scénario`, `_vérifier` |

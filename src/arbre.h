@@ -133,6 +133,8 @@ typedef enum {
     P_ESSAYER,       /* « Essayer : … En cas d'échec … » (§ 18) : enfants[0] : N_BLOC essayé ; enfants[1…] : les P_CAS_ECHEC, dans
                         l'ordre ; entier : case du motif ; local : case de la sorte (§ 18.2) */
     P_COURRIEL,      /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » (§ 22.27) : enfants : a, o, m, t */
+    P_SCENARIO,      /* « Scénario « titre » : » et son bloc (§ 9.7) : texte : le titre ; enfants[0] : le bloc ; entier : locaux */
+    P_VERIFIER,      /* « Vérifier que condition. » (§ 9.7) : enfants[0] : la condition */
     P_CONTRAT,       /* « Une chose payable doit savoir : le montant dû d'une chose payable. » (§ 13.7 bis) : texte : la formule ;
                         texte2 : l'aptitude ; forme : 1 calcul, 2 action ; article : celui du calcul ; enfants[0] : les
                         paramètres (N_BLOC). Une version abstraite : aucun code */

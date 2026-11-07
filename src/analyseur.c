@@ -573,6 +573,9 @@ typedef struct {
     int profondeur;
     Article article_force;   /* article contenu dans « au » ou « du » (grammaire, § 5.2) */
     int formule;             /* 0 : hors formule ; 1 : dans un calcul ; 2 : dans une action (§ 9) */
+    int scenario;            /* dans un scénario (§ 9.7) : les variables du programme y sont invisibles, comme dans un calcul */
+    const char **scenarios;  /* les titres déjà vus, pour les doublons */
+    size_t nb_scenarios;
     size_t barriere;         /* dans un calcul, les variables d'index inférieur sont invisibles */
     int nb_locaux;           /* cases locales allouées dans la formule en cours */
     int niveau;              /* 0 : premier niveau du programme ; > 0 : dans un bloc */
@@ -1113,7 +1116,7 @@ static Symbole *visible(Analyse *a, const char *nom) {
     for (size_t i = a->portee->n; i > 0; i--) {
         Symbole *s = &a->portee->s[i - 1];
         if (strcmp(s->nom, nom) != 0) continue;
-        if (a->formule == 1 && i - 1 < a->barriere && s->sorte == S_VARIABLE) continue;
+        if ((a->formule == 1 || a->scenario) && i - 1 < a->barriere && s->sorte == S_VARIABLE) continue;
         if (bibliotheque_cachante(a->portee, s)) continue;
         return s;
     }
@@ -1268,6 +1271,7 @@ static int comme_classe(Analyse *a, const Symbole *s, Noeud *n);
 static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel);
 static Noeud *definition_contrat(Analyse *a, size_t kdoit);
 static Noeud *minuterie(Analyse *a, int colonne);
+static Noeud *scenario(Analyse *a, const Jeton *t, int colonne);
 
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
@@ -1614,14 +1618,19 @@ static Noeud *nom_expression(Analyse *a) {
         }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
             char *tout = cle(a, d, f);
-            if (!s && a->formule == 1) {
-                /* Le nom existe peut-être hors du calcul : les calculs sont purs (§ 9.4). */
+            if (!s && (a->formule == 1 || a->scenario)) {
+                /* Le nom existe peut-être hors du calcul : les calculs sont purs (§ 9.4) ; hors du scénario, que « grym
+                 * scenarios » joue sans exécuter le programme (§ 9.7) */
                 int dehors = 0;
                 for (size_t k = f; k > d && !dehors; k--) {
                     char *c = cle(a, d, k);
                     for (size_t i = 0; i < a->barriere; i++)
                         if (a->portee->s[i].sorte == S_VARIABLE && strcmp(a->portee->s[i].nom, c) == 0) dehors = 1;
-                    if (dehors) {
+                    if (dehors && a->scenario)
+                        erreur(a, &a->j[d], grym_formater(
+                            "« %s » est une variable du programme : un scénario ne la voit pas, le programme ne s'exécute pas "
+                            "pendant les scénarios. Crée-la dans le scénario.", c));
+                    else if (dehors) {
                         erreur(a, &a->j[d], grym_formater(
                             "« %s » n'est pas visible dans un calcul : un calcul ne voit que ses paramètres. "
                             "Passe la valeur en paramètre.", c));
@@ -9955,6 +9964,8 @@ static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom) {
 }
 
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
+    if (a->scenario)   /* § 9.7 : les gestes simulés d'un écran viendront */
+        return erreur(a, t, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : il éprouve les actions et la base."));
     a->ouvrir_vu = 1;
     if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvre-le dans une action."));
     if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
@@ -10968,6 +10979,38 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
 
 /* « Exemple : le carré de 7 vaut 49. » (§ 9.6) : au premier niveau ; l'expression se lit comme dans un calcul
  * (pure, sans les variables du programme), et ne s'évalue qu'avec « grym exemples ». */
+/* « Scénario « une relance se crée » : » et son bloc (§ 9.7) : une action sans paramètre, ses noms à elle ; les variables
+ * du programme y sont invisibles, puisque « grym scenarios » n'exécute pas le programme. */
+static Noeud *scenario(Analyse *a, const Jeton *t, int colonne) {
+    if (a->formule || t->colonne != 1)
+        return erreur(a, t, grym_dupliquer("Un scénario se place au premier niveau du fichier, hors d'une formule."));
+    const Jeton *titre = voir(a, 1);
+    for (size_t q = 0; q < a->nb_scenarios; q++)
+        if (strcmp(a->scenarios[q], titre->valeur) == 0)
+            return erreur(a, titre, grym_formater("Le scénario « %s » existe déjà : chacun a son titre.", titre->valeur));
+    Noeud *params = noeud_creer(N_BLOC, t->ligne, t->colonne, t->debut);
+    Contexte ctx = entrer_formule(a, 2, params);
+    a->scenario = 1;
+    a->i += 3;
+    Noeud *corps = corps_en_bloc(a, &a->j[a->i - 1], colonne);
+    a->scenario = 0;
+    const int locaux = a->nb_locaux;
+    sortir_formule(a, ctx);
+    if (!corps) { noeud_liberer(params); return NULL; }
+    noeud_liberer(params);
+    const char **s = grym_allouer((a->nb_scenarios + 1) * sizeof *s);
+    if (a->nb_scenarios) memcpy(s, a->scenarios, a->nb_scenarios * sizeof *s);
+    free(a->scenarios);
+    a->scenarios = s;
+    a->scenarios[a->nb_scenarios++] = titre->valeur;   /* le jeton vit autant que l'analyse */
+    Noeud *n = noeud_creer(P_SCENARIO, t->ligne, t->colonne, t->debut);
+    n->texte = grym_dupliquer(titre->valeur);
+    n->entier = locaux;
+    noeud_ajouter(n, corps);
+    n->fin = corps->fin;
+    return n;
+}
+
 static Noeud *exemple(Analyse *a, const Jeton *t) {
     if (a->formule || t->colonne != 1)
         return erreur(a, t, grym_dupliquer("Un exemple se place au premier niveau du fichier, hors d'une formule."));
@@ -11205,6 +11248,18 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
+    if (est_mot(t, "scénario") && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_DEUX_POINTS) return scenario(a, t, colonne);   /* § 9.7 */
+    if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "que") && !visible(a, "vérifier que")) {   /* § 9.7 */
+        if (!a->scenario) return erreur(a, t, grym_dupliquer("« Vérifier que … » s'écrit dans un scénario (§ 9.7)."));
+        a->i += 2;
+        Noeud *c = valeur(a);
+        if (!c) return NULL;
+        if (!fin_phrase(a, 0)) { noeud_liberer(c); return NULL; }
+        Noeud *n = noeud_creer(P_VERIFIER, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, c);
+        n->fin = c->fin;
+        return n;
+    }
     if (est_mot(t, "dans")) return phrase_dans(a, t);   /* § 13.11 */
     if (est_mot(t, "envoyer") && est_mot(voir(a, 1), "un") && est_mot(voir(a, 2), "courriel") && est_mot(voir(a, 3), "à")
         && !visible(a, "envoyer un courriel"))
@@ -11962,6 +12017,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     Portee copie;
     portee_copier(&copie, portee);
     Analyse a;
+    memset(&a, 0, sizeof a);   /* tout champ ajouté naît à zéro (le scénario, § 9.7, en a ajouté trois) */
     a.dans_xml = 0;   /* 2.46 */
     a.action_rend = 0;
     a.j = j;
@@ -12056,6 +12112,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     }
     free(a.valeurs_lues);
     free(a.couleurs_lues);
+    free(a.scenarios);   /* § 9.7 : les titres eux-mêmes appartiennent aux jetons */
     liberer_noms_fin(&a);
     free(a.a_completer);
     liberer_jetons(j, n);

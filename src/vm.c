@@ -233,6 +233,7 @@ struct Machine {
     void *contexte_mdp;
     int essais_mdp;         /* plus de 1 : un mot de passe faux se redemande, l'hôte le sachant (6 novembre 2026) */
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
+    int scenario;              /* grym scenarios (§ 9.7) : sans écran ; une action qui en ouvrirait un échoue, à sa ligne */
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
@@ -402,6 +403,7 @@ void machine_interface(Machine *m, const Interface *i) {
 }
 
 void machine_essai_migration(Machine *m, Chaine *rapport) { m->essai_migration = rapport; }
+void machine_mode_scenario(Machine *m, int actif) { m->scenario = actif; }
 
 void machine_base(Machine *m, const char *chemin) {
     free(m->signature);
@@ -4635,7 +4637,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         return 0;
     }
     /* un essai de migration n'exécute rien (A2-c) : qu'il y ait des écrans ne l'empêche pas */
-    if (!m->essai_migration && !m->iface.ecran_ouvrir
+    if (!m->essai_migration && !m->scenario && !m->iface.ecran_ouvrir
         && (module_contient(module, I_ECRAN_OUVRIR) || module_contient(module, I_FICHE_ECRAN))) {
         diag->message = grym_dupliquer("Ce programme ouvre des écrans ou des documents : lance-le dans une fenêtre, avec grym-atelier.");
         return 0;
@@ -5925,6 +5927,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_ECRAN_OUVRIR: {
+            if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
+                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : cette action en ouvre un."));
+                break;
+            }
             /* « Ouvrir l'écran X. » (grammaire, § 22.3) : l'écran se montre ; la boucle compilée attend ensuite */
             char *probleme = NULL;
             EcranVM *e = ecran_lire(m, b->constantes[op].texte, &probleme);
@@ -6294,6 +6300,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_DOCUMENT: {
+            if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
+                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : cette action en ouvre un."));
+                break;
+            }
             if (op == 2) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier tel qu'il est rangé */
                 Valeur v = depiler(&pile);
                 char *probleme = NULL;
@@ -6737,6 +6747,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             break;
         case I_FICHE_ECRAN: {
+            if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
+                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : cette action en ouvre un."));
+                break;
+            }
             /* « Ouvrir la fiche de c. » : l'écran déduit de l'entité (grammaire, § 22.3) */
             Valeur vo = depiler(&pile);
             char *probleme = NULL;
@@ -7256,6 +7270,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&pr);
             if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
             empiler(&pile, r);
+            break;
+        }
+        case I_VERIFIER: {   /* « Vérifier que … » (§ 9.7) : fausse, le scénario échoue, avec la ligne et la condition */
+            Valeur v = depiler(&pile);
+            char *mp = NULL;
+            if (v.type == V_ABSENT) mp = message_absent(&v);
+            else if (v.type != V_BOOLEEN) mp = grym_formater("« Vérifier que » attend vrai ou faux, pas %s.", nom_type(v.type));
+            else if (!v.vrai) mp = grym_formater("Vérification fausse : %s.", b->constantes[op].texte);
+            valeur_liberer(&v);
+            if (mp) ok = echouer(diag, b, debut, mp);
             break;
         }
         case I_MINUTERIE:   /* l'intervalle de la minuterie, pour l'attente qui suit (3.03) */

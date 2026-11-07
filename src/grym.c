@@ -293,6 +293,66 @@ static int exemples(const char *chemin) {
     return ok && !rates ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+/* Dans un scénario, personne ne répond au clavier (§ 9.7) : une saisie y est refusée au lieu d'attendre. */
+static Issue scenario_sans_saisie(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret, Validation valider,
+                                  void *vcontexte) {
+    (void)contexte; (void)sortie; (void)champs; (void)n; (void)valider; (void)vcontexte;
+    *arret = 0;
+    return ISSUE_FIN;
+}
+
+/* grym scenarios : joue chaque « Scénario « … » : » du programme, seul, sur une base neuve en mémoire, sans exécuter le
+ * reste du programme (grammaire, § 9.7). Réussit si tous réussissent. */
+static int scenarios(const char *chemin) {
+    const char *point = strrchr(chemin, '.');
+    if (point && strcmp(point, ".grymb") == 0) {
+        fprintf(stderr, "%s : erreur : les scénarios se lisent dans la source (.grym ou .grymc), pas dans le bytecode.\n", chemin);
+        return EXIT_FAILURE;
+    }
+    int total = 0, justes = 0;
+    for (int rang = 1;; rang++) {
+        compilateur_mode_scenario(rang);
+        Module *b = charger(chemin);
+        compilateur_mode_scenario(0);
+        if (!b) return EXIT_FAILURE;
+        const int nb = compilateur_nb_scenarios();
+        if (rang > nb) {
+            module_detruire(b);
+            break;
+        }
+        total++;
+        Machine *m = machine_creer();
+        situer(m, chemin);
+        machine_base(m, ":memory:");
+        machine_mode_scenario(m, 1);
+        Console console;
+        memset(&console, 0, sizeof console);
+        Interface i = console_interface(&console);
+        i.formulaire = scenario_sans_saisie;
+        machine_interface(m, &i);
+        Chaine sortie = {0};
+        Diagnostic d;
+        const int ok = machine_executer(m, b, &sortie, &d);
+        if (sortie.d && *sortie.d) fputs(sortie.d, stdout);
+        free(sortie.d);
+        const char *titre = compilateur_titre_scenario() ? compilateur_titre_scenario() : "";
+        if (ok) { justes++; printf("✓ « %s »\n", titre); }
+        else {   /* sur la sortie ordinaire, à sa place dans le bilan : où, et pourquoi */
+            const char *f = d.fichier ? d.fichier : chemin;
+            if (d.ligne) printf("✗ « %s » : %s:%d:%d : %s\n", titre, f, d.ligne, d.colonne, d.message);
+            else printf("✗ « %s » : %s : %s\n", titre, f, d.message);
+            diagnostic_liberer(&d);
+        }
+        machine_detruire(m);
+        module_detruire(b);
+    }
+    compilateur_mode_scenario(-1);
+    if (!total) printf("Aucun scénario dans « %s » : « Scénario « une relance se crée » : ».\n", chemin);
+    else printf("%d scénario%s, %d réussi%s%s.\n", total, total > 1 ? "s" : "", justes, justes > 1 ? "s" : "",
+                justes == total ? " : tout est juste" : "");
+    return total && justes == total ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 /* grym migration : ce que le prochain lancement fera à la base, sans rien changer (docs/atelier.md, A2-c). */
 static int migration(const char *chemin) {
     Module *b = charger(chemin);
@@ -575,6 +635,7 @@ int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "lsp") == 0) return lsp_servir(stdin, stdout);   /* docs/lsp.md */
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
     if (argc == 3 && strcmp(argv[1], "exemples") == 0) return exemples(argv[2]);
+    if (argc == 3 && strcmp(argv[1], "scenarios") == 0) return scenarios(argv[2]);   /* § 9.7 */
     if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
         int port = 0, navigateur = 1, bon = 1;
         for (int k = 3; k < argc && bon; k++) {
@@ -605,6 +666,7 @@ int main(int argc, char **argv) {
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym migration fichier.grym         ce que le prochain lancement fera à la base, sans rien changer\n"
             "  grym exemples fichier.grym          vérifie les exemples du programme, sans exécuter le reste\n"
+            "  grym scenarios fichier.grym         joue chaque scénario seul, sur une base neuve, sans exécuter le reste\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
             "  grym --base fichier.grymd           boucle interactive sur une base conservée\n"
             "  grym lsp                            serveur d'aide à la saisie (protocole LSP)\n"

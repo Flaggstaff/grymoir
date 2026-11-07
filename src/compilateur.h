@@ -13,5 +13,10 @@
 Module *compiler(const Programme *p, Diagnostic *diag);
 /* Mode exemples (grym exemples, grammaire § 9.6) : le programme ne compile que ses déclarations et ses exemples. */
 void compilateur_mode_exemples(int actif);
+/* grym scenarios (§ 9.7) : rang (à partir de 1) du scénario à jouer, seul, après les déclarations ; 0 : mode ordinaire. Après
+ * une compilation, compilateur_nb_scenarios dit combien le programme en a. */
+void compilateur_mode_scenario(int rang);   /* -1 : libère le titre retenu */
+int compilateur_nb_scenarios(void);
+const char *compilateur_titre_scenario(void);   /* celui du scénario compilé ; valable jusqu'à la compilation suivante */
 
 #endif

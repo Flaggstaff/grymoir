@@ -206,6 +206,8 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Scénarios (§ 9.7) */
+    V("Scénario « a » :\n    Le x vaut 1.\n    Vérifier que x = 1.", "(scénario «a» (bloc (créer [x] 1) (vérifier (= [x] 1))))");
     /* Contrats d'aptitude (§ 13.7 bis) */
     V("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\n"
       "Une chose payable doit savoir : encaisser une chose payable et un mode.\nLe montant dû d'une chose payable vaut 1.\n"

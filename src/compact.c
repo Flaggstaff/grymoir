@@ -3329,6 +3329,22 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, r->e[verbe].valeur, &r->e[verbe]);
             expression(r, verbe + 1, f);
             point(r, f);
+        } else if (!strcmp(c, "scénario")) {   /* _scénario « titre » … _fin → Scénario « titre » : (§ 9.7) */
+            if (d + 2 != f || r->e[d + 1].type != J_TEXTE) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _scénario « une relance se crée » », puis son bloc et « _fin »."));
+                return;
+            }
+            mot(r, "scénario", t);
+            copier(r, &r->e[d + 1]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 1], 1);
+            fixer_retrait(r, premier, prof);
+            ouvrir(r, O_FORMULE, prof, t);
+        } else if (!strcmp(c, "vérifier")) {   /* _vérifier c → Vérifier que c. (§ 9.7) */
+            if (d + 1 == f) { echouer(r, t, grym_dupliquer("Forme attendue : « _vérifier _nombre_de relance _conservé = 1 ».")); return; }
+            mot(r, "vérifier", t);
+            mot(r, "que", t);
+            expression(r, d + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "exemple")) {   /* _exemple carré(7) << 49 → Exemple : le carré de 7 vaut 49. (§ 9.6) */
             size_t aff = d + 1;
             while (aff < f && r->e[aff].type != J_AFFECTE) aff++;

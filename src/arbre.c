@@ -462,6 +462,18 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_SCENARIO:   /* (scénario «titre» (bloc …)) (§ 9.7) */
+        chaine_ajouter(c, "(scénario «");
+        chaine_ajouter(c, n->texte ? n->texte : "");
+        chaine_ajouter(c, "» ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case P_VERIFIER:   /* (vérifier condition) */
+        chaine_ajouter(c, "(vérifier ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_CONTRAT:   /* (contrat payable calcul [montant dû] ([chose])) (§ 13.7 bis) */
         chaine_ajouter(c, "(contrat ");
         chaine_ajouter(c, n->texte2 ? n->texte2 : "");
