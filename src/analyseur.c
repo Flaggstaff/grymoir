@@ -1267,6 +1267,7 @@ static int comme_classe(Analyse *a, const Symbole *s, Noeud *n);
 
 static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel);
 static Noeud *definition_contrat(Analyse *a, size_t kdoit);
+static Noeud *minuterie(Analyse *a, int colonne);
 
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
@@ -9597,6 +9598,79 @@ static EcranConnu *ecran_nomme(Analyse *a, size_t k, size_t *f, char **nom) {
 }
 
 /* « Quand on clique sur « B » dans l'écran X : », « Quand on choisit un c dans l'écran X : » (§ 22.2). */
+/* « Toutes les 10 secondes dans l'écran X : », « Toutes les secondes … », « Toutes les 5 minutes … » (3.03, § 22.2) : un
+ * événement d'écran sans paramètre, une minuterie par écran. Le P_QUAND de forme 10 ; son objet (N_TEXTE) : « 10 secondes »,
+ * l'écrit, et entier : l'intervalle en secondes. */
+static Noeud *minuterie(Analyse *a, int colonne) {
+    Jeton *tq = cour(a);
+    if (!premier_niveau(a, tq)) return NULL;
+    size_t k = a->i + 2;
+    long nb = 1;
+    const int nombre_ecrit = a->j[k].type == J_NOMBRE;
+    if (nombre_ecrit) {
+        char *f = NULL;
+        nb = strtol(a->j[k].valeur, &f, 10);
+        if (!f || *f || nb < 1 || nb > 86400)
+            return erreur(a, &a->j[k], grym_dupliquer("Un nombre entier de 1 à 86400 : « Toutes les 10 secondes … »."));
+        k++;
+    }
+    const int sec = est_mot(&a->j[k], "secondes") || (nb == 1 && est_mot(&a->j[k], "seconde"));
+    const int min = est_mot(&a->j[k], "minutes") || (nb == 1 && est_mot(&a->j[k], "minute"));
+    if (!sec && !min)
+        return erreur(a, &a->j[k], grym_dupliquer("« secondes » ou « minutes » attendu : « Toutes les 10 secondes dans l'écran … : »."));
+    const Jeton *tl = &a->j[k];
+    const long secondes = nb * (min ? 60 : 1);
+    if (secondes > 86400) return erreur(a, tl, grym_dupliquer("Une minuterie bat au plus une fois par jour : 1440 minutes au plus."));
+    const size_t dans = k + 1;
+    if (!est_mot(&a->j[dans], "dans")) return erreur(a, &a->j[dans], grym_dupliquer("« dans l'écran … » attendu."));
+    size_t f;
+    char *nom = NULL;
+    EcranConnu *e = ecran_nomme(a, dans + 1, &f, &nom);
+    if (!e) { free(nom); return NULL; }
+    if (a->j[f].type != J_DEUX_POINTS) {
+        free(nom);
+        return erreur(a, &a->j[f], grym_dupliquer("« : » attendu : un événement s'écrit en bloc."));
+    }
+    char *interne = grym_formater("quand minuterie dans l'écran %s", nom);   /* une seule par écran */
+    for (size_t q = 0; q < a->portee->n; q++)
+        if (strcmp(a->portee->s[q].nom, interne) == 0) {
+            erreur(a, tq, grym_formater("L'écran %s a déjà sa minuterie (ligne %d).", nom, a->portee->s[q].ligne_decl));
+            free(interne);
+            free(nom);
+            return NULL;
+        }
+    Noeud *params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
+    portee_declarer(a->portee, interne, GENRE_LIBRE, tq->ligne);
+    a->portee->s[a->portee->n - 1].sorte = S_ACTION;
+    a->portee->s[a->portee->n - 1].nb_parametres = 0;
+    Contexte ctx = entrer_formule(a, 2, params);
+    a->evenement = 1;
+    char *classe = grym_formater("écran %s", nom);
+    a->ecran = classe;
+    a->i = f + 1;
+    Noeud *corps = corps_en_bloc(a, &a->j[f], colonne);
+    a->evenement = 0;
+    a->ecran = NULL;
+    free(classe);
+    int locaux = a->nb_locaux;
+    sortir_formule(a, ctx);
+    if (!corps) { free(interne); free(nom); noeud_liberer(params); return NULL; }
+    Noeud *n = noeud_creer(P_QUAND, tq->ligne, tq->colonne, tq->debut);
+    n->texte = interne;
+    n->texte3 = nom;
+    n->forme = 10;
+    n->entier = locaux;
+    noeud_ajouter(n, params);
+    noeud_ajouter(n, corps);
+    Noeud *lib = noeud_creer(N_TEXTE, tl->ligne, tl->colonne, tl->debut);
+    lib->texte = nombre_ecrit ? grym_formater("%ld %s", nb, min ? (nb == 1 ? "minute" : "minutes") : (nb == 1 ? "seconde" : "secondes"))
+                              : grym_dupliquer(min ? "minutes" : "secondes");   /* « Toutes les secondes » */
+    lib->entier = (int)secondes;
+    noeud_ajouter(n, lib);
+    n->fin = corps->fin;
+    return n;
+}
+
 static Noeud *quand(Analyse *a, int colonne) {
     Jeton *tq = cour(a);
     if (!premier_niveau(a, tq)) return NULL;
@@ -11071,6 +11145,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "la") && est_mot(voir(a, 1), "partie") && voir(a, 2)->type == J_TEXTE && est_mot(voir(a, 3), "montre")
         && voir(a, 4)->type == J_DEUX_POINTS) return declaration_ecran(a, t);   /* 2.56 */
     if (est_mot(t, "quand")) return quand(a, colonne);
+    if (est_mot(t, "toutes") && est_mot(voir(a, 1), "les")) return minuterie(a, colonne);   /* § 22.2, 3.03 */
     if (est_mot(t, "ouvrir")) return ouvrir_ecran(a, t);
     if (est_mot(t, "fermer")) return fermer_ecran(a, t);
     if (est_mot(t, "afficher")) {

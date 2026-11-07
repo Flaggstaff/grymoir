@@ -2123,6 +2123,26 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         ouvrir(r, O_ECRAN, prof, t);
         return;
     }
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "toutes_les")) {
+        /* _toutes_les 10 _secondes _dans de_veille → Toutes les 10 secondes dans l'écran de veille : (3.03) */
+        size_t k = d + 1;
+        mot(r, "toutes", t);
+        mot(r, "les", t);
+        if (k < f && r->e[k].type == J_NOMBRE) copier(r, &r->e[k++]);
+        if (k + 2 >= f || r->e[k].type != J_MOT_CLE || !est_cle(&r->e[k + 1], "dans")) {
+            echouer(r, t, grym_dupliquer("Forme attendue : « _toutes_les 10 _secondes _dans de_veille »."));
+            return;
+        }
+        mot(r, r->e[k].valeur, &r->e[k]);
+        mot(r, "dans", &r->e[k + 1]);
+        emettre(r, J_ELISION, "l", &r->e[k + 1], 1);
+        mot(r, "écran", &r->e[k + 1]);
+        for (size_t q = k + 2; q < f; q++) copier(r, &r->e[q]);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_FORMULE, prof, t);
+        return;
+    }
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "quand")) {
         /* _quand _clique « B » _dans X ; _quand _choisit _un c _dans X → Quand on … dans l'écran X : */
         if (d + 2 < f && (est_cle(&r->e[d + 1], "ouvre") || est_cle(&r->e[d + 1], "ferme"))) {

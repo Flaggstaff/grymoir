@@ -2324,7 +2324,24 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_QUAND: {   /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) */
         size_t apres_nom = im->nb;
-        if (n->forme == 7) {   /* « Quand un poste capte un son dans l'écran X : » ; « _quand _capte _un poste _dans X » (2.70) */
+        if (n->forme == 10) {   /* « Toutes les 10 secondes dans l'écran X : » ; « _toutes_les 10 _secondes _dans X » (3.03) */
+            const char *ecrit = n->enfants[2]->texte;   /* « 10 secondes », ou « secondes » sans nombre */
+            const char *esp = strchr(ecrit, ' ');
+            if (c) {
+                aj(im, "_toutes_les ");
+                if (esp) { char *nb = grym_formater("%.*s", (int)(esp - ecrit), ecrit); aj(im, nb); free(nb); aj(im, " _"); aj(im, esp + 1); }
+                else { aj(im, "_"); aj(im, ecrit); }
+                aj(im, " _dans ");
+                ecrire_nom(im, n->texte3, 0);
+                aj(im, "\n");
+            } else {
+                aj(im, "Toutes les ");
+                aj(im, ecrit);
+                aj(im, " dans l'écran ");
+                aj_sigles(im, n->texte3);
+                aj(im, " :\n");
+            }
+        } else if (n->forme == 7) {   /* « Quand un poste capte un son dans l'écran X : » ; « _quand _capte _un poste _dans X » (2.70) */
             const Noeud *prm = n->enfants[0]->enfants[0];
             if (c) {
                 aj(im, "_quand _capte ");

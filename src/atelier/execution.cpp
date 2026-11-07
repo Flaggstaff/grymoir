@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "courriel.h"
+#include <QDateTime>
 #include "execution.h"
 #include "agenda.h"
 #include "ecoute.h"
@@ -336,6 +337,13 @@ static void iface_ecran_signature(void *contexte, const unsigned char *octets, s
     emit t->signature(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille));
 }
 
+// « Toutes les 10 secondes dans l'écran X : » (3.03) : l'intervalle de l'écran attendu ; un changement repart de maintenant
+static void iface_ecran_minuterie(void *contexte, long ms) {
+    auto *t = static_cast<Travail *>(contexte);
+    if (ms != t->minuterie_ms) t->minuterie_echeance = 0;
+    t->minuterie_ms = ms;
+}
+
 static Issue iface_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e) {
     return static_cast<Travail *>(contexte)->attendre_evenement(sortie, e);
 }
@@ -531,6 +539,21 @@ static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
 Issue Travail::attendre_evenement(Chaine *sortie, Evenement *e) {
     vider_sortie(sortie);
     emit ecran_attente();
+    if (minuterie_ms > 0) {   // une minuterie (3.03) : l'attente s'arrête à l'échéance, comptée depuis la précédente
+        const qint64 maintenant = QDateTime::currentMSecsSinceEpoch();
+        if (minuterie_echeance <= 0) minuterie_echeance = maintenant + minuterie_ms;
+        const qint64 reste = minuterie_echeance - maintenant;
+        if (!reponse.tryAcquire(1, reste > 0 ? (int)qMin<qint64>(reste, 86400000) : 0)) {
+            // personne n'a rien fait avant l'échéance : la suivante part de celle-ci, ou de maintenant si on a pris du retard
+            minuterie_echeance += minuterie_ms;
+            if (minuterie_echeance <= QDateTime::currentMSecsSinceEpoch()) minuterie_echeance = QDateTime::currentMSecsSinceEpoch() + minuterie_ms;
+            *e = Evenement{EVENEMENT_MINUTERIE, 0, 0, nullptr, nullptr, 0, nullptr, 0};
+            return ISSUE_REPONDU;
+        }
+        if (issue == 2) return ISSUE_INTERROMPU;
+        *e = evenement;
+        return ISSUE_REPONDU;
+    }
     reponse.acquire();   // la fenêtre remplit `issue` et `evenement`, puis libère
     if (issue == 2) return ISSUE_INTERROMPU;
     *e = evenement;
@@ -670,7 +693,7 @@ void Travail::run() {
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
                    1,    // les écoutes captent le son (2.69)
-                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel};
+                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel, iface_ecran_minuterie};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)

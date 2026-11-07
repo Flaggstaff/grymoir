@@ -176,10 +176,11 @@ typedef enum {
     I_PERMIS,           /* opérande : une constante texte « type␝valeurs » ; la valeur au sommet, qui reste, doit être l'une
                            d'elles (§ 16.16) */
     I_LIGNES,           /* remplace un texte ou un fichier par la liste de ses lignes (§ 15.9) */
-    I_JSON              /* remplace une valeur par son texte JSON (§ 15.9) */
+    I_JSON,             /* remplace une valeur par son texte JSON (§ 15.9) */
+    I_MINUTERIE         /* opérande : l'intervalle en secondes de la minuterie de l'écran, pour l'ÉCRAN_ATTENDRE qui suit (3.03) */
 } CodeInstruction;
 
-#define I_DERNIER I_JSON
+#define I_DERNIER I_MINUTERIE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

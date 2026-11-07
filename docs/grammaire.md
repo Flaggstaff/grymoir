@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.02 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.03 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2224,6 +2224,9 @@ Ouvrir l'écran des compositeurs.
 ### 22.2 Événements
 
 - `Quand on ouvre l'écran X :`, `Quand on clique sur « B » dans l'écran X :`, `Quand on choisit un c dans l'écran X :`, `Quand on change la zone dans l'écran X :`, `Quand on ferme l'écran X :`, suivis d'un bloc. Ce sont des actions (§ 9).
+- *(3.03)* **La minuterie** : `Toutes les 10 secondes dans l'écran de veille :`, `Toutes les secondes …`, `Toutes les minutes …`, `Toutes les 5 minutes …`, suivis d'un bloc. Tant que l'écran est ouvert et attend, son bloc s'exécute à chaque échéance, comme un événement (une transaction ; un échec s'affiche dans l'écran, qui reste ouvert). Les échéances se comptent l'une après l'autre, pas depuis le dernier geste : des clics fréquents ne la retardent pas. Une échéance ne change ni la ligne choisie d'une liste ni une saisie en cours ; elle ne vient pas pendant qu'un autre événement s'exécute, et deux échéances manquées n'en font qu'une. Une minuterie par écran (« L'écran de veille a déjà sa minuterie (ligne 3). ») ; de 1 seconde à 24 heures ; un nombre entier.
+  - **Où** : dans l'atelier et l'application fabriquée, l'attente s'arrête à l'échéance. Dans le navigateur (`grym servir`), la page renvoie son formulaire à l'échéance par `grym.js` : une saisie commencée part avec lui, comme pour tout geste ; sans JavaScript, la minuterie ne bat pas. La console n'a pas d'écrans.
+  - En forme compacte : `_toutes_les 10 _secondes _dans de_veille`.
 - *(2.56)* **Les parties** : des éléments écrits une fois, posés dans plusieurs écrans ou documents.
 
 ```
@@ -3017,3 +3020,4 @@ Pour rappeler un patient :
 | 3.00 | 2026-11-06 | § 16.16 : les annotations (point 8 de l'audit) ; une variable ou un paramètre de formule se type, `(nombre)`, `(texte)`, `(date)`, `(heure)`, `(vrai ou faux)` ou un type nommé ; constante vérifiée à l'analyse, à la ligne de l'appel pour un argument ; le reste à l'exécution (`PERMIS`, étendu aux types simples ; en tête de formule pour un paramètre) |
 | 3.01 | 2026-11-06 | Nouveau § 13.7 bis : les contrats d'aptitude, `Une chose payable doit savoir : le montant dû d'une chose payable.` ; une version abstraite, sans code ; à la fin de l'analyse, chaque classe qui adopte l'aptitude a une version concrète (la sienne, d'un ancêtre ou d'une aptitude), hors boucle interactive. Forme compacte `_contrat payable _calcul …` |
 | 3.02 | 2026-11-06 | Nouveau § 15.9 (points 12 et 13 de l'audit) : `les lignes de x`, une liste, d'un texte ou d'un fichier en UTF-8 ; `le JSON de x`, une valeur écrite en JSON, récursivement (tables en objets, listes en tableaux). Instructions `LIGNES` et `JSON`. Formes compactes `_lignes x`, `_json(x)` |
+| 3.03 | 2026-11-06 | § 22.2 : la minuterie (point 18 de l'audit), `Toutes les 10 secondes dans l'écran X :` ; instruction `MINUTERIE` avant `ÉCRAN_ATTENDRE`, fonction d'interface `ecran_minuterie`, événement `EVENEMENT_MINUTERIE` ; l'atelier attend à échéance, le navigateur renvoie son formulaire par `grym.js`. Forme compacte `_toutes_les 10 _secondes _dans X` |

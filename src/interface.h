@@ -108,7 +108,8 @@ typedef struct {
  * texte : « JJ.MM.AAAA|HH:MM », là où elle arrive. */
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT, EVENEMENT_CAPTURE,
                EVENEMENT_DEPLACEMENT,
-               EVENEMENT_CRENEAU } SorteEvenement;   /* 2.75 : un clic dans un agenda, hors des objets ; element : l'agenda ;
+               EVENEMENT_CRENEAU,
+               EVENEMENT_MINUTERIE } SorteEvenement;   /* 3.03 : l'échéance d'une minuterie (§ 22.2) ; rien d'autre ne compte */   /* 2.75 : un clic dans un agenda, hors des objets ; element : l'agenda ;
                                                         texte : « JJ.MM.AAAA|HH:MM », au quart d'heure */
 typedef struct {
     SorteEvenement sorte;
@@ -262,6 +263,10 @@ typedef struct {
      * 0 et *erreur (allouée) sinon. NULL : la machine refuse (console, navigateur). */
     int (*courriel)(void *contexte, const char *serveur, const char *compte, const char *cle, const char *de, const char *a,
                     const char *objet, const char *texte, char **erreur);
+    /* « Toutes les 10 secondes dans l'écran X : » (3.03, § 22.2) : avant chaque attente, l'intervalle de la minuterie de
+     * l'écran attendu, en millisecondes, 0 sans minuterie ; l'interface rend alors EVENEMENT_MINUTERIE à chaque échéance,
+     * comptée depuis la précédente, pas depuis le dernier geste. NULL : pas de minuterie. */
+    void (*ecran_minuterie)(void *contexte, long ms);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

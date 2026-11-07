@@ -210,6 +210,7 @@ typedef struct {
 } Ecriture_disque;
 
 struct Machine {
+    long minuterie;   /* MINUTERIE (3.03) : l'intervalle, en secondes, pour l'ÉCRAN_ATTENDRE qui suit ; remis à 0 par lui */
     const char *sorte_fixee;   /* la sorte d'un échec, fixée par son instruction (§ 18.2) ; NULL : la table SORTES décide */
     char *sorte_echec;         /* la sorte du dernier échec rattrapé, pour SORTE_ÉCHEC */
     char *sorte_relancee;      /* la sorte d'un échec qui remonte (RELANCER) */
@@ -6494,10 +6495,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                          m->ecran->elements[k].format);
             Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0, NULL, 0 };
             Issue issue = ISSUE_REPONDU;
+            const long minuterie = m->minuterie;   /* l'instruction MINUTERIE juste avant, ou 0 (3.03) */
+            m->minuterie = 0;
+            if (!probleme && !m->fermer_ecran && m->iface.ecran_minuterie)   /* 0 l'arrête */
+                m->iface.ecran_minuterie(m->iface.contexte, minuterie * 1000);
             if (!probleme && !m->fermer_ecran)
                 for (;;) {   /* un geste sur un élément inactif, caché ou en lecture seule ne compte pas (§ 22.6) */
                     issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
-                    if (issue != ISSUE_REPONDU || ev.sorte == EVENEMENT_FERMETURE || !m->ecran || ev.element >= m->ecran->n)
+                    if (issue != ISSUE_REPONDU || ev.sorte == EVENEMENT_FERMETURE || ev.sorte == EVENEMENT_MINUTERIE || !m->ecran
+                        || ev.element >= m->ecran->n)
                         break;
                     const int refuse = (m->ecran->etats[ev.element] & 3)
                                     || (ev.sorte == EVENEMENT_CHANGEMENT && m->ecran->elements[ev.element].lecture_seule);
@@ -6510,8 +6516,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 probleme = grym_dupliquer("Interrompu (Ctrl+C).");
                 fatal = 1;
             }
-            /* la ligne choisie de chaque liste : « le compositeur choisi de l'écran » */
-            for (size_t k = 0; !probleme && m->ecran && m->ecran->objet && k < m->ecran->n; k++) {
+            /* la ligne choisie de chaque liste : « le compositeur choisi de l'écran » ; une échéance n'y touche pas (3.03) */
+            for (size_t k = 0; !probleme && ev.sorte != EVENEMENT_MINUTERIE && m->ecran && m->ecran->objet && k < m->ecran->n; k++) {
                 EcranVM *e = m->ecran;
                 if (e->champ[k] < 0) continue;
                 /* le poste d'une écoute (2.70) : écrit seulement quand c'est elle qui capte */
@@ -6695,6 +6701,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 valeur_liberer(&objet);
                 objet = vi_fichier(ev.octets, ev.taille, ev.texte ? ev.texte : "passage.wav");
                 code_ev = (long)ev.element + 1;
+            } else if (!probleme && ev.sorte == EVENEMENT_MINUTERIE) {
+                code_ev = minuterie ? 30001 : -1;   /* l'échéance de la minuterie (3.03) ; sans elle, rien */
             } else if (!probleme && code_ev == 0 && ev.sorte != EVENEMENT_FERMETURE) {
                 code_ev = -1;   /* un événement qui ne désigne rien (ligne disparue entre-temps) : rien ne s'exécute */
             }
@@ -7193,6 +7201,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, x);
             break;
         }
+        case I_MINUTERIE:   /* l'intervalle de la minuterie, pour l'attente qui suit (3.03) */
+            m->minuterie = (long)op;
+            break;
         case I_LIGNES: {   /* « les lignes de x » : d'un texte, ou d'un fichier en UTF-8 (§ 15.9) */
             Valeur x = depiler(&pile);
             char *mp = NULL;

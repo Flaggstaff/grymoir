@@ -1751,8 +1751,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
         /* « Quand on ouvre » : une fois, avant la première attente, avec sa propre reprise */
         const Noeud *qo = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 4, "ouverture");
         if (qo) evenement_seul(c, ph, qo);
+        /* « Toutes les 10 secondes dans l'écran X : » (3.03) : l'intervalle, en secondes, dans l'opérande de l'attente */
+        const Noeud *qm = NULL;
+        for (size_t q = 0; q < c->programme->nb && !qm; q++) {
+            const Noeud *x = c->programme->phrases[q];
+            if (x->type == P_QUAND && x->forme == 10 && x->texte3 && strcmp(x->texte3, e->texte) == 0) qm = x;
+        }
         size_t tour = c->b->taille_code;
         relire_ecran(c, e, ph);
+        if (qm) emettre(c, I_MINUTERIE, qm->enfants[2]->entier, ph->ligne, ph->colonne);   /* ÉCRAN_ATTENDRE n'a pas d'opérande */
         emettre(c, I_ECRAN_ATTENDRE, 0, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, ev, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, objet, ph->ligne, ph->colonne);
@@ -1763,8 +1770,19 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t vers_sortie = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         bloc_corriger_saut(c->b, vers_suite, c->b->taille_code);
         size_t vers_rate = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
-        size_t *vers_apres = grym_allouer((e->nb_enfants ? 3 * e->nb_enfants : 1) * sizeof *vers_apres);
+        size_t *vers_apres = grym_allouer((3 * e->nb_enfants + 1) * sizeof *vers_apres);
         size_t nb_apres = 0;
+        if (qm) {   /* l'échéance de la minuterie : code 30001, sans paramètre (3.03) */
+            emettre(c, I_LIRE_LOCAL, ev, ph->ligne, ph->colonne);
+            emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, "30001"), ph->ligne, ph->colonne);
+            emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
+            size_t autre = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
+            long nomm = bloc_nom(c->b, qm->texte);
+            if (nomm < 0) { free(vers_apres); trop_grand(c, ph); return; }
+            bloc_emettre_appel(c->b, (uint16_t)nomm, 0, 0, ph->ligne, ph->colonne);
+            vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+            bloc_corriger_saut(c->b, autre, c->b->taille_code);
+        }
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_TEXTE_ECRAN || el->type == N_DISPOSITION || el->type == N_IMAGE_ECRAN) continue;   /* sans événement */

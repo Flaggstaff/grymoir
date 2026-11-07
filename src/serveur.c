@@ -97,6 +97,7 @@ static void erreurs_vider(EcranWeb *e) {
 static void graphique(Chaine *c, const EcranWeb *e, size_t k);   /* § 22.11 */
 
 struct Serveur {
+    long minuterie_ms;   /* la minuterie de l'écran attendu (3.03, § 22.2), 0 sans ; la page la dit à grym.js */
     unsigned long ouvertures;   /* écrans ouverts depuis le début : la série de chacun */
     int port;
     char jeton[33];
@@ -946,7 +947,12 @@ static const char SCRIPT[] =
     "if(t.tagName==='SELECT'||t.type==='checkbox'||(t.type==='radio'&&t.name.charAt(0)==='z'))"
     "{var b=f.querySelector('button[name=valider]');if(b)b.click();}});"
     "document.addEventListener('click',function(e){var l=e.target.closest&&e.target.closest('table.liste tbody tr');"
-    "if(!l||e.target.closest('button,input'))return;var r=l.querySelector('input[type=radio]');if(r)r.checked=true;});";
+    "if(!l||e.target.closest('button,input'))return;var r=l.querySelector('input[type=radio]');if(r)r.checked=true;});"
+    /* la minuterie (3.03) : à l'échéance, le formulaire de l'écran repart avec « minuterie », s'il n'est pas déjà parti ;
+       une saisie en cours part avec lui, comme pour tout geste */
+    "(function(){var m=+document.body.getAttribute('data-minuterie');if(!(m>0))return;"
+    "setTimeout(function(){var f=document.querySelector('form.ecran');if(!f)return;"
+    "var i=document.createElement('input');i.type='hidden';i.name='minuterie';i.value='1';f.appendChild(i);f.submit();},m);})();";
 
 static const char *type_image(const char *format);
 static EcranWeb *ecran_dessus(const Serveur *s) { return s->nb_ecrans ? s->ecrans[s->nb_ecrans - 1] : NULL; }
@@ -1452,6 +1458,11 @@ static void page_ecran(Serveur *s) {
             break;
         }
     chaine_ajouter(&c, "<script src=\"/grym.js\" defer></script></head><body");
+    if (s->minuterie_ms > 0) {   /* 3.03 : grym.js renvoie le formulaire à l'échéance, avec « minuterie » */
+        char *m = grym_formater(" data-minuterie=\"%ld\"", s->minuterie_ms);
+        chaine_ajouter(&c, m);
+        free(m);
+    }
     chaine_ajouter(&c, s->nb_ecrans == 1 ? " class=\"accueil\"><main>\n" : "><main>\n");
     if (s->avis) {
         chaine_ajouter(&c, "<p class=\"avis\">");
@@ -1906,8 +1917,12 @@ static int evenements_de(Serveur *s, Envoi *env) {
        le champ du mot (le bouton invisible « valider ») la laisse ouverte */
     const size_t attendue = e->a_confirmer;
     if (pc || px || pf || envoi_partie(env, "annuler_confirmation")) { e->a_confirmer = 0; e->mot_faux = 0; }
+    Partie *pm = envoi_partie(env, "minuterie");
     if (pf && !pf->fichier) {
         Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, choisies(e), e->n, NULL, 0 };
+        file_ajouter(s, ev);
+    } else if (pm && !pm->fichier && !pc && !px) {   /* l'échéance de la minuterie (3.03) ; un geste l'emporte sur elle */
+        Evenement ev = { EVENEMENT_MINUTERIE, 0, 0, NULL, choisies(e), e->n, NULL, 0 };
         file_ajouter(s, ev);
     } else if (pc && !pc->fichier) {
         unsigned long k = strtoul(pc->valeur, &fin, 10);
@@ -2750,6 +2765,9 @@ static void serveur_ecran_signature(void *contexte, const unsigned char *octets,
 
 /* Les clés d'une zone liée, changées depuis l'ouverture (3 novembre 2026) : copiées, le menu les montre au prochain
  * affichage. */
+/* La minuterie de l'écran attendu (3.03) : la page la portera ; 0 l'arrête. */
+static void serveur_ecran_minuterie(void *contexte, long ms) { ((Serveur *)contexte)->minuterie_ms = ms; }
+
 static void serveur_ecran_choix(void *contexte, size_t k, const char *const *choix, size_t n) {
     EcranWeb *e = ecran_dessus(contexte);
     if (!e || k >= e->n) return;
@@ -2783,7 +2801,8 @@ Interface serveur_interface(Serveur *s) {
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
                     serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0,
-                    serveur_ecran_signaler, NULL, serveur_ecran_choix, NULL };   /* NULL : pas de courriel (§ 22.27) */
+                    serveur_ecran_signaler, NULL, serveur_ecran_choix, NULL,   /* NULL : pas de courriel (§ 22.27) */
+                    serveur_ecran_minuterie };
     return i;
 }
 

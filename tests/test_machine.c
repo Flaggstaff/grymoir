@@ -250,7 +250,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -891,6 +891,7 @@ typedef struct {
     ElementEcran *pile[8];
     size_t nb_pile[8];
     size_t profondeur;
+    long minuterie;   /* le dernier intervalle annoncé (3.03) ; 0 au départ, par l'initialisation qui complète de zéros */
 } Scene;
 
 static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
@@ -993,6 +994,16 @@ static void scene_valeurs(void *contexte, const char *const *v, size_t n) {
     chaine_ajouter(&s->page.journal, "]\n");
 }
 
+/* L'intervalle annoncé (3.03) : noté au journal quand il change, 0 compris. */
+static void scene_minuterie(void *contexte, long ms) {
+    Scene *s = contexte;
+    if (ms == s->minuterie) return;   /* rien tant qu'aucune minuterie n'a battu : les essais d'écran existants restent */
+    s->minuterie = ms;
+    char l[48];
+    snprintf(l, sizeof l, "[minuterie %ld]\n", ms);
+    chaine_ajouter(&s->page.journal, l);
+}
+
 static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
     Scene *s = contexte;
     static long choisies[16];
@@ -1027,6 +1038,10 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
                 snprintf(texte, sizeof texte, "%s", egal + 1);
                 e->texte = texte;
             }
+        return ISSUE_REPONDU;
+    }
+    if (strcmp(x, "minuterie") == 0) {   /* l'échéance d'une minuterie (3.03) */
+        e->sorte = EVENEMENT_MINUTERIE;
         return ISSUE_REPONDU;
     }
     if (strncmp(x, "créneau ", strlen("créneau ")) == 0) {   /* « créneau 04.11.2026|10:30 » : un clic hors des objets (2.75) */
@@ -1265,11 +1280,11 @@ static char *scene_transcrire(void *contexte, const unsigned char *octets, size_
 }
 
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
-    Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
+    Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -1473,6 +1488,32 @@ static void essais_agenda(void) {   /* 2.74 : une liste en agenda ; déplacer un
     PROG("Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier).\n"
          "L'écran x montre :\n    la liste des séances conservées, en agenda d'abord.\nOuvrir l'écran x.\n",
          "~Forme attendue : « , en agenda selon la grille de l'agenda ».");
+}
+
+static void essais_minuterie(void) {   /* 3.03 : « Toutes les 10 secondes dans l'écran X : » */
+    const char *src =
+        "Le compte vaut 0.\nUn poste, conservé, a : un nom (texte).\nLe p vaut un nouveau poste :\n    Le nom vaut « Est ».\nConserver le p.\n"
+        "L'écran de veille montre :\n    la liste des postes conservés, avec le nom,\n    un bouton « Fermer ».\n"
+        "Toutes les 10 secondes dans l'écran de veille :\n    Le compte devient compte + 1.\n    Afficher « tic » puis compte.\n"
+        "Quand on choisit un poste dans l'écran de veille :\n    Afficher « choisi : » puis le nom du poste.\n"
+        "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de veille.\nAfficher « fin » puis compte.\n";
+    const char *ev[] = { "minuterie", "minuterie", "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep, "[ouvrir Veille ; liste poste (Nom) ; bouton Fermer]\n[lignes Est]\n[minuterie 10000]\n[lignes Est]\n"
+                         "tic 1\n[lignes Est]\ntic 2\n[lignes Est]\n[fermer]\nfin 2");
+    /* sans minuterie : l'intervalle annoncé est 0, et une échéance égarée ne fait rien */
+    const char *src2 = "L'écran de veille montre :\n    un bouton « Fermer ».\n"
+                       "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\nOuvrir l'écran de veille.\n";
+    const char *ev2[] = { "minuterie", "clic Fermer" };
+    ECRANS(src2, ev2, rep, "[ouvrir Veille ; bouton Fermer]\n[fermer]\n");
+    PROG("L'écran de veille montre :\n    un bouton « Fermer ».\nToutes les 2 minutes dans l'écran de veille :\n    Afficher 1.\n"
+         "Toutes les secondes dans l'écran de veille :\n    Afficher 2.\n",
+         "ERREUR 5:1 L'écran de veille a déjà sa minuterie (ligne 3).");
+    PROG("L'écran de veille montre :\n    un bouton « Fermer ».\nToutes les 10 heures dans l'écran de veille :\n    Afficher 1.\n",
+         "ERREUR 3:15 « secondes » ou « minutes » attendu : « Toutes les 10 secondes dans l'écran … : ».");
+    PROG("L'écran de veille montre :\n    un bouton « Fermer ».\nToutes les 0 secondes dans l'écran de veille :\n    Afficher 1.\n",
+         "ERREUR 3:12 Un nombre entier de 1 à 86400 : « Toutes les 10 secondes … ».");
 }
 
 static void essais_morse(void) {   /* 2.78 : le morse d'un son, et sa transcription sur demande */
@@ -5261,6 +5302,7 @@ int main(void) {
     essais_ports();
     essais_second_tri();
     essais_agenda();
+    essais_minuterie();
     essais_morse();
     essais_etats_ecran();
     essais_ecoute();

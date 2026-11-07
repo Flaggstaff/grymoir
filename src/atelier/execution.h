@@ -100,6 +100,8 @@ public:
     void vider_sortie(Chaine *sortie);
     Issue formulaire(Chaine *sortie, Champ *champs, size_t n, size_t *arret, Validation valider, void *vcontexte);
     Issue attendre_evenement(Chaine *sortie, Evenement *e);
+    long minuterie_ms = 0;          // la minuterie de l'écran attendu (3.03, § 22.2), 0 sans
+    qint64 minuterie_echeance = 0;  // sa prochaine échéance, en millisecondes depuis l'époque ; comptée depuis la précédente
     Evenement evenement = {EVENEMENT_FERMETURE, 0, 0, nullptr, nullptr, 0, nullptr, 0};   // rempli par la fenêtre avant de libérer `reponse`
     QVector<int> nb_colonnes;                             // de chaque élément de l'écran ouvert
     QStringList types_zones;                              // de chaque élément : le type d'une zone, sinon vide
