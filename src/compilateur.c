@@ -425,6 +425,15 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_DOCUMENTS_SORTIS:   /* 3.09 */
         emettre(c, I_DOCUMENTS_SORTIS, 0, n->ligne, n->colonne);
         return;
+    case N_NATIF: {   /* les paramètres du calcul, dans l'ordre, puis NATIF « n␟bibliothèque␟fonction » (3.14) */
+        char *d = grym_formater("%lu\x1f%s\x1f%s", (unsigned long)n->nb_enfants, n->texte2, n->texte);
+        long k = bloc_constante(c->b, C_TEXTE, d);
+        free(d);
+        if (k < 0) { trop_grand(c, n); return; }
+        for (size_t q = 0; q < n->nb_enfants; q++) expression(c, n->enfants[q]);
+        emettre(c, I_NATIF, k, n->ligne, n->colonne);
+        return;
+    }
     case N_COMMANDE:   /* le programme, [la liste des arguments,] puis COMMANDE 0 ou 1 (§ 15.10) */
         expression(c, n->enfants[0]);
         if (n->nb_enfants > 1) expression(c, n->enfants[1]);

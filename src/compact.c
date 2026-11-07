@@ -411,6 +411,18 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "sortis", t);
             continue;
         }
+        if (est_cle(t, "fonction_c")) {   /* _fonction_c(« f ») → la fonction C « f » (3.14, § 21.10) */
+            if (!(k + 3 < f && r->e[k + 1].type == J_PAR_OUV && r->e[k + 2].type == J_TEXTE && r->e[k + 3].type == J_PAR_FERM)) {
+                echouer(r, t, grym_dupliquer("« _fonction_c » s'écrit ainsi : _fonction_c(« signal_niveau »)."));
+                return;
+            }
+            mot(r, "la", t);
+            mot(r, "fonction", t);
+            mot(r, "c", t);
+            copier(r, &r->e[k + 2]);
+            k += 3;
+            continue;
+        }
         if (est_cle(t, "commande") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _commande(« p » ; arguments) → la sortie de la commande (« p ») avec les arguments (§ 15.10) */
             size_t fin = fermante(r, k + 1, f), pv = k + 2;

@@ -249,6 +249,13 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case N_DOCUMENTS_SORTIS:
         chaine_ajouter(c, "(documents-sortis)");
         return;
+    case N_NATIF:   /* (fonction-c « f » de « bibliothèque ») (3.14) */
+        chaine_ajouter(c, "(fonction-c « ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, " » de « ");
+        chaine_ajouter(c, n->texte2 ? n->texte2 : "");
+        chaine_ajouter(c, " »)");
+        return;
     case N_COMMANDE:   /* (commande p [arguments]) (§ 15.10) */
         chaine_ajouter(c, "(commande ");
         decrire(n->enfants[0], c);

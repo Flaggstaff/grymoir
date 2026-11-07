@@ -182,10 +182,12 @@ typedef enum {
     I_VERIFIER,         /* opérande : une constante texte, la condition écrite ; dépile la condition : fausse, échec (§ 9.7) */
     I_GESTE,            /* opérande : une constante « forme␟ligne␟écran␟élément » ; dépile la valeur pour écrire et choisir ;
                            range le geste, que l'écran simulé jouera (3.08) */
-    I_DOCUMENTS_SORTIS  /* empile la liste des titres des documents fabriqués dans le scénario (3.09) */
+    I_DOCUMENTS_SORTIS, /* empile la liste des titres des documents fabriqués dans le scénario (3.09) */
+    I_NATIF             /* opérande : une constante « n␟bibliothèque␟fonction » ; dépile les n arguments, empile ce que la
+                           fonction C rend (3.14, § 21.10) */
 } CodeInstruction;
 
-#define I_DERNIER I_DOCUMENTS_SORTIS
+#define I_DERNIER I_NATIF
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

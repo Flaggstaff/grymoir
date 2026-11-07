@@ -6,7 +6,7 @@ CPPFLAGS += -isystem vendor/sqlite   # en-tête tiers : ses avertissements ne so
 # dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
 LEXEUR    = src/lexeur.c src/date.c src/texte.c src/teinte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
-EXECUTION = src/json.c src/morse.c src/serie.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
+EXECUTION = src/natif.c src/json.c src/morse.c src/serie.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué, avec SQLite3MC (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
@@ -14,14 +14,18 @@ SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -
 SQLITE_O     = vendor/sqlite/sqlite3.o
 
 # Windows : prises réseau et générateur aléatoire du système (grym servir, docs/v2.md)
+# dlopen, pour les fonctions C des bibliothèques (3.14) : dans libdl sous Linux, déjà dans la bibliothèque du C
+# ailleurs (macOS accepte -ldl) ; Windows charge par LoadLibrary
+DL = -ldl
 ifeq ($(OS),Windows_NT)
+DL =
 RESEAU = -lws2_32 -lbcrypt
 # le manifeste des exécutables : les chemins accentués s'ouvrent (outils/windows/grymoir.manifest)
 RESSOURCES = outils/windows/grym-ressources.o
 WINDRES ?= windres
 endif
 
-ENTETES   = src/qr.h src/coffre.h src/teinte.h src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
+ENTETES   = src/natif.h src/grym_natif.h src/qr.h src/coffre.h src/teinte.h src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
 all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide test_serie
 
@@ -29,7 +33,7 @@ $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
 grym: src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(RESEAU) -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 outils/windows/grym-ressources.o: outils/windows/grym.rc outils/windows/grymoir.manifest
 	$(WINDRES) -I outils/windows -i outils/windows/grym.rc -o $@
@@ -53,13 +57,13 @@ test_analyseur: tests/test_analyseur.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_analyseur.c $(ANALYSEUR)
 
 test_machine: tests/test_machine.c $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_machine.c $(EXECUTION) -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_machine.c $(EXECUTION) -lm $(DL)
 
 test_imprimeur: tests/test_imprimeur.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_imprimeur.c $(ANALYSEUR)
 
 test_compact: tests/test_compact.c $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_compact.c $(EXECUTION) -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_compact.c $(EXECUTION) -lm $(DL)
 
 test_base: tests/test_base.c $(SQLITE_O)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_base.c $(SQLITE_O)
@@ -68,10 +72,10 @@ test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)
 
 test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/serveur.h src/json.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU) -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION) -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION) -lm $(DL)
 
 test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide test_serie
 	./test_lexeur
@@ -88,6 +92,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/praxis-versions
 	sh tests/mise-a-jour
 	sh tests/bibliotheques
+	CC="$(CC)" sh tests/natif
 	sh tests/praxis-justificatif
 	sh tests/praxis-electronique
 	sh tests/praxis-twint

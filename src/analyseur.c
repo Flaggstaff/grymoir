@@ -577,6 +577,9 @@ typedef struct {
     Article article_force;   /* article contenu dans « au » ou « du » (grammaire, § 5.2) */
     int formule;             /* 0 : hors formule ; 1 : dans un calcul ; 2 : dans une action (§ 9) */
     int scenario;            /* dans un scénario (§ 9.7) : les variables du programme y sont invisibles, comme dans un calcul */
+    size_t natif_debut;      /* le jeton qui suit le « vaut » d'un calcul : seule place d'une fonction C (3.14), ou 0 */
+    const Noeud *natif_params;   /* ses paramètres */
+    int natif_vu;            /* une fonction C vient d'être lue */
     const char **scenarios;  /* les titres déjà vus, pour les doublons */
     size_t nb_scenarios;
     size_t barriere;         /* dans un calcul, les variables d'index inférieur sont invisibles */
@@ -3162,6 +3165,40 @@ static Noeud *base(Analyse *a) {
             n->fin = fin_jeton(&a->j[a->i - 1]);
             return n;
         }
+        if (est_mot(t, "la") && est_mot(voir(a, 1), "fonction") && est_mot(voir(a, 2), "c") && voir(a, 3)->type == J_TEXTE
+            && !visible(a, "fonction c")) {
+            /* « Le niveau d'un signal vaut la fonction C « signal_niveau ». » (3.14, § 21.10) */
+            const Jeton *tf = voir(a, 3);
+            if (a->formule != 1 || a->i != a->natif_debut || !a->natif_params)
+                return erreur(a, t, grym_dupliquer("Une fonction C est tout le corps d'un calcul : « Le niveau d'un signal vaut "
+                                                   "la fonction C « signal_niveau ». » (§ 21.10)."));
+            const int b = bibliotheque_courante(a->portee);
+            if (b <= 0 || (size_t)b > a->portee->nb_bibs)
+                return erreur(a, t, grym_dupliquer("Une fonction C s'écrit dans une bibliothèque, qui livre son code à côté "
+                                                   "d'elle : range ce calcul dans « bibliothèques/… » (§ 21.10)."));
+            const char *f = tf->valeur;
+            int bon = (*f >= 'a' && *f <= 'z') || (*f >= 'A' && *f <= 'Z') || *f == '_';
+            for (const char *q = f; bon && *q; q++)
+                bon = (*q >= 'a' && *q <= 'z') || (*q >= 'A' && *q <= 'Z') || (*q >= '0' && *q <= '9') || *q == '_';
+            if (!bon || strncmp(f, "grym_natif", 10) == 0)
+                return erreur(a, tf, grym_formater("« %s » n'est pas un nom de fonction C : des lettres sans accent, des "
+                                                   "chiffres et « _ », sans chiffre en tête ; « grym_natif… » est réservé.", f));
+            Noeud *n = noeud_creer(N_NATIF, t->ligne, t->colonne, t->debut);
+            n->texte = grym_dupliquer(f);
+            n->texte2 = grym_dupliquer(a->portee->bib_noms[b - 1]);
+            for (size_t q = 0; q < a->natif_params->nb_enfants; q++) {
+                const Noeud *pa = a->natif_params->enfants[q];
+                Noeud *x = noeud_creer(N_NOM, pa->ligne, pa->colonne, pa->debut);
+                x->texte = grym_dupliquer(pa->texte);
+                x->local = pa->local;
+                x->article = pa->article;
+                noeud_ajouter(n, x);
+            }
+            a->i += 4;
+            a->natif_vu = 1;
+            n->fin = fin_jeton(tf);
+            return n;
+        }
         if ((est_mot(t, "la") || a->article_force == ART_LA) && !visible(a, "sortie")) {
             /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) */
             const int m = est_mot(t, "la") ? 1 : 0;
@@ -4976,7 +5013,7 @@ static Noeud *essayer(Analyse *a, int colonne) {
     n->local = sorte;
     noeud_ajouter(n, corps);
     static const char *const SORTES[] = { "division", "nombre", "lecture", "absence", "clé", "rang", "texte", "unicité", "lien",
-                                          "fichier", "réseau", "port", "saisie", "refus", "commande", "autre" };
+                                          "fichier", "réseau", "port", "saisie", "refus", "commande", "natif", "autre" };
     int seul_vu = 0, ligne_vue[sizeof SORTES / sizeof *SORTES] = { 0 };
     while (en_cas_d_echec(a, a->i) && premier_de_ligne(a, a->i) && cour(a)->retrait == colonne) {
         const Jeton *te = cour(a);
@@ -5250,7 +5287,19 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     int forme;
     if (est_mot(verbe, "vaut")) {
         forme = 0;
+        a->natif_debut = a->i;   /* une fonction C n'a sa place qu'ici (3.14) */
+        a->natif_params = params;
+        a->natif_vu = 0;
         corps = valeur(a);
+        a->natif_debut = 0;
+        a->natif_params = NULL;
+        if (corps && a->natif_vu && corps->type != N_NATIF) {
+            erreur(a, tart, grym_dupliquer("Une fonction C est tout le corps d'un calcul : « Le niveau d'un signal vaut la "
+                                           "fonction C « signal_niveau ». » (§ 21.10)."));
+            noeud_liberer(corps);
+            corps = NULL;
+        }
+        a->natif_vu = 0;
         if (corps && !fin_phrase(a, 0)) { noeud_liberer(corps); corps = NULL; }
     } else {
         forme = 1;

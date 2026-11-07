@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.13 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.14 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2086,6 +2086,7 @@ En cas d'échec :
 | `saisie` | une question annulée par « . » (§ 17) |
 | `refus` | un `Refuser « … ».` (§ 18.1) |
 | `commande` | une commande (§ 15.10) : programme introuvable, échoué (code non nul), trop lente, sortie qui n'est pas du texte *(3.04)* |
+| `natif` | une fonction C (§ 21.10) : code natif absent ou qui ne se charge pas, contrat d'une autre version, fonction absente, argument qui ne passe pas, échec rendu par la fonction, valeur rendue mal formée *(3.14)* |
 | `autre` | tout le reste : en général une faute du programme plutôt qu'un aléa |
 
 - **Les blocs.** Après le bloc `Essayer`, un ou plusieurs blocs `En cas d'échec de … :`, alignés sur lui, chacun en forme courte ou en bloc ; la sorte suit `de` ou `d'` (`d'unicité`, `d'absence`), plusieurs se séparent par `ou` (`de réseau ou de fichier`). Le premier bloc dont une sorte convient s'exécute ; les autres sont sautés. Un bloc `En cas d'échec` sans sorte prend tout ce qui reste ; il vient en dernier : « « En cas d'échec » sans sorte vient après les blocs qui en ont une. »
@@ -2242,6 +2243,51 @@ Une facture, conservée, est une chose tarifée.
 - **Ouverte seule**, dans l'atelier ou par `grym lsp`, l'entrée cherche les autres bibliothèques dans le `bibliothèques/` qui la contient.
 - **Forme compacte** : `_utiliser _bibliothèque « Suisse santé » 2` et `_bibliothèque « Suisse santé » 2`.
 - **Pas encore** : des écrans, des parties et des documents dans une bibliothèque (un fichier utilisé n'en contient pas, § 21.2).
+
+### 21.10 Fonctions C *(3.14, implémenté le 7 novembre 2026)*
+
+Une bibliothèque peut écrire un calcul en C, quand GrymoiR ne sait pas le faire ou le fait trop lentement : un filtre de signal, une transformée, un format de fichier binaire.
+
+```
+Remarque : bibliothèques/Signal/bibliothèque.grym
+Cette bibliothèque est « Signal », version 1.
+
+Le rapport d'un signal et d'un plancher vaut la fonction C « signal_rapport ».
+```
+
+```c
+/* bibliothèques/Signal/natif.c, compilé à part en natif.dylib, natif.so ou natif.dll */
+#include "grym_natif.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+GRYM_EXPORTE int grym_natif_version(void) { return GRYM_NATIF_VERSION; }
+
+GRYM_EXPORTE void signal_rapport(int nb, const grym_valeur *a, grym_resultat *r) {
+    char t[64];
+    if (nb != 2 || a[0].sorte != GRYM_NOMBRE || a[1].sorte != GRYM_NOMBRE) { r->echec(r, "attend deux nombres"); return; }
+    snprintf(t, sizeof t, "%.2f", strtod(a[0].texte, NULL) / strtod(a[1].texte, NULL));
+    r->nombre(r, t);
+}
+```
+
+```
+Utiliser la bibliothèque « Signal », version 1.
+Afficher le rapport de 7 et de 2.                        →  3,50
+```
+
+- **La phrase.** `vaut la fonction C « nom »` est tout le corps d'un calcul d'une ligne (§ 9.1). Les paramètres du calcul passent à la fonction, dans l'ordre de l'en-tête ; l'en-tête GrymoiR reste le contrat qu'on lit, annotations comprises (§ 16.16). Le nom est celui de la fonction exportée : lettres sans accent, chiffres et `_`, sans chiffre en tête ; les noms qui commencent par `grym_natif` sont réservés.
+- **Seulement dans une bibliothèque**, jamais dans un programme : le code natif est livré, versionné et figé avec elle (§ 21.9). « Une fonction C s'écrit dans une bibliothèque, qui livre son code à côté d'elle : range ce calcul dans « bibliothèques/… ». »
+- **Seulement un calcul**, et tout son corps : ni dans une action, ni dans une expression (`… + 1`). « Une fonction C est tout le corps d'un calcul : … »
+- **Le code natif** est une bibliothèque partagée posée dans le dossier de la bibliothèque, au nom fixe : `natif.dylib` (macOS), `natif.so` (Linux), `natif.dll` (Windows). Une bibliothèque qui sert sur trois systèmes porte les trois fichiers. GrymoiR ne compile pas le C : on le compile une fois, par exemple `cc -shared -fPIC -I<grymoir>/src -o natif.so natif.c`. La machine la charge par le système (`dlopen`, `LoadLibrary`) au premier appel, la garde jusqu'à la fin du programme, et la cherche par rapport au dossier du programme (`bibliothèques/X/`), aussi pour un `.grymb`.
+- **Le contrat** est tout entier dans `src/grym_natif.h`, qu'on copie à côté de son code. La bibliothèque exporte `grym_natif_version`, qui rend `GRYM_NATIF_VERSION` (1), et une fonction `grym_fonction` par calcul. Les valeurs passent en texte, jamais en pointeur vers la machine : un nombre est un décimal exact écrit avec un point, sans exposant, ses décimales gardées (0,10 arrive « 0.10 ») ; un texte est de l'UTF-8 ; vrai ou faux est un entier ; absent n'a pas de valeur. Une date, une liste, un objet ne passent pas. La fonction rend sa valeur par exactement un des rappels de `grym_resultat` (`nombre`, `texte`, `verite`, `absent`, `echec`), qui copie ce qu'on lui donne.
+- **La promesse de la fonction.** C'est un calcul (§ 9.4) : mêmes arguments, même résultat, ni fichier, ni réseau, ni état gardé d'un appel à l'autre. La machine ne peut pas le vérifier ; la bibliothèque le promet, et ses exemples (§ 9.6) le vérifient. Un plantage de la fonction est un plantage du programme : c'est le prix du C.
+- **Les échecs** sont de sorte `natif` (§ 18.2) : « La bibliothèque « Signal » n'a pas de code natif pour ce système : il manque « bibliothèques/Signal/natif.so ». », « … ne se charge pas : … », « … suit le contrat natif 2 ; cette version de grym suit le contrat 1 : recompile-la avec son grym_natif.h. », « La bibliothèque « Signal » n'exporte pas la fonction C « … ». », « L'argument 1 de la fonction C « … » est une date : une fonction C reçoit un nombre, un texte, vrai ou faux, ou absent. », « La fonction C « … » n'a rien rendu. », « … a rendu plus d'une valeur. », « … a rendu « 1e5 », qui n'est pas un nombre écrit « -12.35 ». » ; un `echec` de la fonction donne « La fonction C « … » » suivi de son message.
+- **Pourquoi pas plus.** Pas d'action native : un effet sur le monde passe par une commande externe (§ 15.10), dans un processus séparé qui ne peut pas faire planter l'application. Pas de pointeur ni de structure partagée : le contrat survit aux changements internes de la machine, et une bibliothèque compilée aujourd'hui se charge dans les versions 1.x suivantes tant que `GRYM_NATIF_VERSION` vaut 1 (charte, art. 13). Pas de compilation par GrymoiR : un compilateur C en dépendance contredirait l'art. 3 de la charte.
+- **Sur macOS**, une application fabriquée, signée avec le *hardened runtime*, peut refuser une `natif.dylib` qui n'est pas signée par la même équipe. Non éprouvé au 7 novembre 2026 : signer la dylib avec le même certificat que l'application.
+- **Le navigateur** (`grym servir`) appelle la fonction comme la console : elle tourne sur la machine qui sert la page.
+- **Forme compacte** : `_calcul _le rapport(_un signal ; _un plancher) << _fonction_c(« signal_rapport »)`.
+- **Bytecode** : les paramètres, puis `NATIF` (`docs/vm.md`).
 
 ## 22. Écrans *(A3 : implémenté le 25 septembre 2026)*
 
@@ -3106,3 +3152,4 @@ Pour rappeler un patient :
 | 3.11 | 2026-11-07 | § 9.7 : précision, un exemplaire gardé qu'on rouvre ne compte pas parmi `les documents sortis`. La suite de Praxis passe à quatorze scénarios : la facturation (une facture réunit les séances dues du patient et seulement elles ; refacturer rouvre la même), les relances numérotées, la facture au comptoir |
 | 3.12 | 2026-11-07 | § 9.7 : les gestes de l'agenda, `On choisit le créneau du … à …` et `On déplace X au … à …` ; les créations de premier niveau du programme s'exécutent avant chaque scénario, son état de départ. La suite de Praxis passe à quinze scénarios : une séance prévue se déplace dans le calendrier. Formes compactes `_on_créneau`, `_on_déplace` |
 | 3.13 | 2026-11-07 | § 3.1 : limites d'une expression ; plus de 1000 opérations enchaînées sont refusées (« Expression trop longue »), au lieu d'épuiser la pile du compilateur et de l'imprimeur. `grym traduire` signale que les deux formes sont désormais côte à côte |
+| 3.14 | 2026-11-07 | § 21.10 : les fonctions C. Un calcul de bibliothèque s'écrit `… vaut la fonction C « f ».` ; le code natif, `natif.dylib`, `.so` ou `.dll` dans le dossier de la bibliothèque, est chargé par le système au premier appel. Contrat dans `src/grym_natif.h` (version 1) : valeurs en texte, décimaux exacts, un seul rappel. § 18.2 : nouvelle sorte d'échec `natif`. Forme compacte `_fonction_c(« f »)` |

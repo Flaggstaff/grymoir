@@ -946,6 +946,11 @@ static void expression(Impression *im, const Noeud *n) {
     case N_DOCUMENTS_SORTIS:   /* « les documents sortis » ; « _documents_sortis » (3.09) */
         aj(im, im->compact ? "_documents_sortis" : "les documents sortis");
         return;
+    case N_NATIF:   /* « la fonction C « f » » ; « _fonction_c(« f ») » (3.14, § 21.10) */
+        aj(im, im->compact ? "_fonction_c(« " : "la fonction C « ");
+        aj(im, n->texte);
+        aj(im, im->compact ? " »)" : " »");
+        return;
     case N_COMMANDE:   /* « la sortie de la commande « p » avec les a » ; « _commande(« p » ; a) » (§ 15.10) */
         if (im->compact) {
             aj(im, "_commande(");

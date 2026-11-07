@@ -269,6 +269,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_VERIFIER:       return "VÉRIFIER";
     case I_GESTE:          return "GESTE";
     case I_DOCUMENTS_SORTIS: return "DOCUMENTS_SORTIS";
+    case I_NATIF:          return "NATIF";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -291,7 +292,8 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_LISTE || code == I_RANG || code == I_EXTRAIRE
         || code == I_TABLE || code == I_TABLE_LIRE || code == I_TABLE_ECRIRE || code == I_TABLE_LISTE
         || code == I_COURRIEL || code == I_MATH || code == I_TRIER || code == I_PERMIS
-        || code == I_LIGNES || code == I_JSON || code == I_MINUTERIE || code == I_COMMANDE || code == I_VERIFIER || code == I_GESTE;
+        || code == I_LIGNES || code == I_JSON || code == I_MINUTERIE || code == I_COMMANDE || code == I_VERIFIER || code == I_GESTE
+        || code == I_NATIF;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -499,6 +501,12 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_COMMANDE: besoin = op ? 2 : 1; effet = 1 - besoin; break;
             case I_VERIFIER: besoin = 1; effet = -1; break;
             case I_DOCUMENTS_SORTIS: besoin = 0; effet = 1; break;
+            case I_NATIF: {   /* « n␟bibliothèque␟fonction » : dépile n, empile 1 (3.14) */
+                const char *dn = op < b->nb_constantes && b->constantes[op].type == C_TEXTE ? b->constantes[op].texte : "";
+                besoin = strtol(dn, NULL, 10);
+                effet = 1 - besoin;
+                break;
+            }
             case I_GESTE: {   /* écrire (1) et choisir (2) dépilent leur valeur */
                 const char *dg = op < b->nb_constantes && b->constantes[op].type == C_TEXTE ? b->constantes[op].texte : "";
                 besoin = dg[0] == '1' || dg[0] == '2' ? 1 : dg[0] == '7' ? 2 : dg[0] == '8' ? 3 : 0;

@@ -1,6 +1,6 @@
 # GrymoiR : manuel du mainteneur
 
-Version 1.0, rédigée le 24 septembre 2026.
+Version 1.10, révisée le 7 novembre 2026 (rédigée le 24 septembre 2026).
 Référence : Charte de GrymoiR v1.38, art. 14 ; grammaire 1.38 ; `docs/vm.md` 1.33.
 Toute modification passe par une révision numérotée. Ce manuel se révise à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 
@@ -34,7 +34,7 @@ texte ──► lexeur ──► analyseur ──► arbre ──► compilateur
 | Base | `src/base.c`, `base.h` | Tout ce qui parle à SQLite : tables des entités, recherches, migrations, corbeille. |
 | Affichage | `src/interface.h`, `console.c`, `serveur.c` | L'interface entre la machine et l'utilisateur (questions, formulaires, images). La console, le navigateur (`grym servir`) et l'atelier l'implémentent chacun. |
 
-Autour : `decimal.c` (nombres décimaux exacts), `date.c` (calendrier), `texte.c` (chaînes et allocation), `chemins.c` (fichiers utilisés, § 21), `grym.c` (les commandes), `lsp.c` et `json.c` (aide à la saisie pour les éditeurs), `src/atelier/` (l'atelier en C++ et Qt).
+Autour : `decimal.c` (nombres décimaux exacts), `date.c` (calendrier), `texte.c` (chaînes et allocation), `chemins.c` (fichiers utilisés, § 21), `natif.c` (le chargement des fonctions C par le système, § 21.10 ; leur contrat est `grym_natif.h`, promis par la charte, art. 13), `grym.c` (les commandes), `lsp.c` et `json.c` (aide à la saisie pour les éditeurs), `src/atelier/` (l'atelier en C++ et Qt).
 
 ## 2. Construire et essayer
 
@@ -281,3 +281,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.7 | 2026-10-10 | § 2 : `./paquet-windows`, l'installateur Windows (Inno Setup), et le manifeste UTF-8 des exécutables |
 | 1.8 | 2026-10-10 | § 2 : `grym_fopen` et `grym_supprimer`, les chemins UTF-8 sous Windows ; le manifeste sur tous les exécutables, essais compris |
 | 1.9 | 2026-10-27 | § 2 : `./appliquer` à plusieurs patchs ; le patch déjà appliqué reconnu ; l'envoi refusé dit quoi relancer ; le script tourne depuis une copie |
+| 1.10 | 2026-11-07 | § 1 : `natif.c` et `grym_natif.h`, les fonctions C (grammaire 3.14) |

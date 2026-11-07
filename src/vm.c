@@ -16,6 +16,8 @@
 #include "decimal.h"
 #include "types.h"
 #include "empreinte.h"
+#include "natif.h"
+#include "grym_natif.h"
 
 #include <errno.h>
 #include <ctype.h>
@@ -226,6 +228,9 @@ struct Machine {
     int xml_balise;         /* la balise du dernier élément ouvert n'est pas encore fermée par « > » : un attribut y va */
     int envoi_ouvert;       /* les valeurs d'un envoi s'évaluent : un secret s'y lit (2.42) */
     char *dossier;          /* dossier du programme : base des chemins relatifs */
+    char **natifs_noms;     /* les bibliothèques natives chargées (3.14) : leur nom, leur poignée système */
+    void **natifs;
+    size_t nb_natifs;
     char *dossier_ecriture; /* où s'écrit un fichier au chemin relatif, s'il diffère (une application fabriquée) */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
     char *mdp_base;         /* le mot de passe de la base chiffrée (§ 16.18), en mémoire seulement, ou NULL */
@@ -789,6 +794,12 @@ void machine_detruire(Machine *m) {
     free(m->chemin_base);
     free(m->dossier);
     free(m->dossier_ecriture);
+    for (size_t i = 0; i < m->nb_natifs; i++) {   /* 3.14 */
+        free(m->natifs_noms[i]);
+        natif_fermer(m->natifs[i]);
+    }
+    free(m->natifs_noms);
+    free(m->natifs);
     for (size_t i = 0; i < m->nb_cases; i++) {
         free(m->cases[i].nom);
         if (m->cases[i].definie) valeur_liberer(&m->cases[i].valeur);
@@ -1030,6 +1041,147 @@ static void vider(Pile *p) {
     free(p->v);
     p->v = NULL;
     p->cap = 0;
+}
+
+/* ---------- Les fonctions C (3.14, § 21.10, grym_natif.h) ---------- */
+
+static int utf8_bien_forme(const unsigned char *s, size_t n);
+
+typedef struct {
+    grym_resultat r;   /* en tête : la fonction ne voit qu'elle */
+    Valeur v;
+    int rendus;        /* rappels reçus : exactement un */
+    char *erreur;
+} RetourNatif;
+
+static RetourNatif *retour_natif(grym_resultat *r) { return (RetourNatif *)(void *)r; }
+
+static int natif_premier(RetourNatif *x) {
+    if (x->rendus++ == 0) return 1;
+    if (!x->erreur) x->erreur = grym_dupliquer("a rendu plus d'une valeur");
+    return 0;
+}
+
+static void natif_nombre(grym_resultat *r, const char *d) {
+    RetourNatif *x = retour_natif(r);
+    if (!natif_premier(x)) return;
+    if (!d || !dec_canonique_valide(d))
+        x->erreur = grym_formater("a rendu « %s », qui n'est pas un nombre écrit « -12.35 »", d ? d : "(rien)");
+    else x->v = vi_nombre_canonique(d);
+}
+
+static void natif_texte(grym_resultat *r, const char *t) {
+    RetourNatif *x = retour_natif(r);
+    if (!natif_premier(x)) return;
+    if (!t || !utf8_bien_forme((const unsigned char *)t, strlen(t))) x->erreur = grym_dupliquer("a rendu un texte qui n'est pas de l'UTF-8");
+    else x->v = vi_texte(t);
+}
+
+static void natif_verite(grym_resultat *r, int vrai) {
+    RetourNatif *x = retour_natif(r);
+    if (natif_premier(x)) x->v = vi_booleen(vrai != 0);
+}
+
+static void natif_absent(grym_resultat *r) {
+    RetourNatif *x = retour_natif(r);
+    if (natif_premier(x)) x->v = vi_absent(NULL);
+}
+
+static void natif_echec(grym_resultat *r, const char *message) {
+    RetourNatif *x = retour_natif(r);
+    if (natif_premier(x)) x->erreur = grym_dupliquer(message && *message ? message : "a échoué");
+}
+
+/* La bibliothèque partagée de « bib », chargée au premier appel puis gardée ; NULL et *erreur sinon. */
+static void *natif_charger(Machine *m, const char *bib, char **erreur) {
+    *erreur = NULL;
+    for (size_t k = 0; k < m->nb_natifs; k++)
+        if (strcmp(m->natifs_noms[k], bib) == 0) return m->natifs[k];
+    const char *d = m->dossier ? m->dossier : ".";
+    size_t ld = strlen(d);
+    const char *sep = ld && (d[ld - 1] == '/' || d[ld - 1] == '\\') ? "" : "/";
+    char *chemin = grym_formater("%s%sbibliothèques/%s/natif.%s", d, sep, bib, natif_extension());
+    char *rel = grym_formater("bibliothèques/%s/natif.%s", bib, natif_extension());
+    void *h = NULL;
+    if (!chemin_existe(chemin))
+        *erreur = grym_formater("La bibliothèque « %s » n'a pas de code natif pour ce système : il manque « %s ».", bib, rel);
+    else {
+        char *e = NULL;
+        h = natif_ouvrir(chemin, &e);
+        if (!h) *erreur = grym_formater("« %s » ne se charge pas : %s.", rel, e ? e : "raison inconnue");
+        free(e);
+    }
+    if (h) {
+        int (*version)(void) = NULL;
+        void *s = natif_symbole(h, "grym_natif_version");
+        memcpy(&version, &s, sizeof s);   /* dlsym rend un pointeur d'objet ; POSIX garantit la conversion */
+        int v = version ? version() : 0;
+        if (!version)
+            *erreur = grym_formater("« %s » n'exporte pas « grym_natif_version » : compile-la avec grym_natif.h.", rel);
+        else if (v != GRYM_NATIF_VERSION)
+            *erreur = grym_formater("« %s » suit le contrat natif %d ; cette version de grym suit le contrat %d : "
+                                    "recompile-la avec son grym_natif.h.", rel, v, GRYM_NATIF_VERSION);
+        if (*erreur) { natif_fermer(h); h = NULL; }
+    }
+    free(rel);
+    free(chemin);
+    if (!h) return NULL;
+    m->natifs_noms = realloc(m->natifs_noms, (m->nb_natifs + 1) * sizeof *m->natifs_noms);
+    m->natifs = realloc(m->natifs, (m->nb_natifs + 1) * sizeof *m->natifs);
+    if (!m->natifs_noms || !m->natifs) { fprintf(stderr, "grym : mémoire épuisée\n"); exit(1); }
+    m->natifs_noms[m->nb_natifs] = grym_dupliquer(bib);
+    m->natifs[m->nb_natifs++] = h;
+    return h;
+}
+
+/* Appelle « fonction » de « bib » sur nb arguments ; rend le message d'échec, ou NULL et *r. */
+static char *natif_appeler(Machine *m, const char *bib, const char *fonction, Valeur *args, size_t nb, Valeur *r) {
+    char *e = NULL;
+    void *h = natif_charger(m, bib, &e);
+    if (!h) return e;
+    void *s = natif_symbole(h, fonction);
+    if (!s) return grym_formater("La bibliothèque « %s » n'exporte pas la fonction C « %s ».", bib, fonction);
+    grym_fonction f;
+    memcpy(&f, &s, sizeof s);
+    grym_valeur *va = grym_allouer((nb ? nb : 1) * sizeof *va);
+    char **a_liberer = grym_allouer((nb ? nb : 1) * sizeof *a_liberer);
+    char *mp = NULL;
+    for (size_t q = 0; q < nb; q++) {
+        a_liberer[q] = NULL;
+        va[q].texte = NULL;
+        va[q].vrai = 0;
+        switch (args[q].type) {
+        case V_NOMBRE: va[q].sorte = GRYM_NOMBRE; a_liberer[q] = dec_canonique(&args[q].nombre); va[q].texte = a_liberer[q]; break;
+        case V_TEXTE: va[q].sorte = GRYM_TEXTE; va[q].texte = args[q].texte ? args[q].texte : ""; break;
+        case V_BOOLEEN: va[q].sorte = GRYM_VERITE; va[q].vrai = args[q].vrai != 0; break;
+        case V_ABSENT: va[q].sorte = GRYM_ABSENT; break;
+        default:
+            if (!mp) mp = grym_formater("L'argument %lu de la fonction C « %s » est %s : une fonction C reçoit un nombre, un "
+                                        "texte, vrai ou faux, ou absent.", (unsigned long)q + 1, fonction, nom_type(args[q].type));
+        }
+    }
+    if (!mp) {
+        RetourNatif x;
+        memset(&x, 0, sizeof x);
+        x.r.machine = m;
+        x.r.nombre = natif_nombre;
+        x.r.texte = natif_texte;
+        x.r.verite = natif_verite;
+        x.r.absent = natif_absent;
+        x.r.echec = natif_echec;
+        x.v.type = V_ABSENT;
+        f((int)nb, va, &x.r);
+        if (!x.rendus && !x.erreur) x.erreur = grym_dupliquer("n'a rien rendu");
+        if (x.erreur) {
+            if (x.rendus > 0) valeur_liberer(&x.v);
+            mp = grym_formater("La fonction C « %s » %s.", fonction, x.erreur);
+            free(x.erreur);
+        } else *r = x.v;
+    }
+    for (size_t q = 0; q < nb; q++) free(a_liberer[q]);
+    free(a_liberer);
+    free(va);
+    return mp;
 }
 
 static int echouer(Diagnostic *d, const Bloc *b, size_t decalage, char *message) {
@@ -7538,6 +7690,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_NATIF: {   /* « la fonction C « f » » (3.14, § 21.10) : « n␟bibliothèque␟fonction » */
+            const char *dn = b->constantes[op].texte;
+            const char *s1 = strchr(dn, '\x1f'), *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL;
+            size_t nb = (size_t)strtoul(dn, NULL, 10);
+            if (!s1 || !s2 || nb > pile.n) { ok = echouer(diag, b, debut, grym_dupliquer("Appel natif mal formé.")); break; }
+            char *bib = grym_allouer((size_t)(s2 - s1));
+            memcpy(bib, s1 + 1, (size_t)(s2 - s1 - 1));
+            bib[s2 - s1 - 1] = 0;
+            Valeur *args = &pile.v[pile.n - nb];
+            Valeur r;
+            memset(&r, 0, sizeof r);
+            r.type = V_ABSENT;
+            char *mp = natif_appeler(m, bib, s2 + 1, args, nb, &r);
+            free(bib);
+            for (size_t q = 0; q < nb; q++) { Valeur x = depiler(&pile); valeur_liberer(&x); }
+            if (mp) { ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
+            break;
+        }
         case I_DOCUMENTS_SORTIS: {   /* « les documents sortis » (3.09) : leurs titres, une liste */
             Valeur r = liste_vide();
             for (size_t k = 0; k < m->nb_documents; k++) ensemble_gagner(&r, vi_texte_pris(grym_dupliquer(m->documents[k])));
@@ -9055,6 +9226,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         if (!ok && !m->sorte_fixee) {   /* les instructions au contexte sans ambiguïté fixent la sorte (§ 18.2) */
             if (code == I_ENVOI || code == I_COURRIEL) m->sorte_fixee = "réseau";
             else if (code == I_COMMANDE) m->sorte_fixee = "commande";   /* § 15.10 */
+            else if (code == I_NATIF) m->sorte_fixee = "natif";         /* § 21.10 */
             else if (code == I_PORTS || code == I_PORT_SERIE || code == I_WSJTX) m->sorte_fixee = "port";
             else if (code == I_REFUSER) m->sorte_fixee = "refus";
             else if (code == I_LIRE_FICHIER || code == I_ENREGISTRER) m->sorte_fixee = "fichier";

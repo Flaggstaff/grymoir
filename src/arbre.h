@@ -216,6 +216,8 @@ typedef enum {
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
     N_DOCUMENTS_SORTIS,   /* « les documents sortis » (3.09), dans un scénario : une liste de titres */
     N_COMMANDE,      /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) : enfants : le programme [, la liste] */
+    N_NATIF,         /* « la fonction C « signal_niveau » » (3.14, § 21.10), tout le corps d'un calcul de bibliothèque : texte : la
+                        fonction ; texte2 : la bibliothèque ; enfants : les paramètres du calcul (N_NOM, leur case locale) */
     N_LIGNES,        /* « les lignes de x » (§ 15.9) : enfants[0] : un texte ou un fichier ; une liste */
     N_JSON_ECRIT,    /* « le JSON de x » (§ 15.9) : enfants[0] : la valeur ; un texte */
     N_TRI,           /* « les notes triées [par ordre décroissant] », « les inscrits triés par nom [décroissant] » (§ 13.12) :

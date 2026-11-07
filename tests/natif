@@ -1,0 +1,120 @@
+#!/bin/sh
+# Les fonctions C (grammaire 3.14, § 21.10, 7 novembre 2026) : un calcul de bibliothèque écrit « vaut la fonction C
+# « f » » appelle f dans bibliothèques/X/natif.so (.dylib, .dll), chargée par le système. Valeurs en texte (grym_natif.h),
+# un seul rappel, échecs de sorte « natif ». Le code natif se compile ici avec le compilateur des essais ($CC, sinon cc).
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+cc="${CC:-cc}"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); case "$1" in *"$2"*) ;; *) echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans « $1 »)";; esac; }
+case "$(uname -s)" in Darwin) ext=dylib;; MINGW*|MSYS*|CYGWIN*) ext=dll;; *) ext=so;; esac
+S="bibliothèques/Signal"
+mkdir -p "$S"
+cat > "$S/bibliothèque.grym" <<'EOF'
+Cette bibliothèque est « Signal », version 1.
+
+Le rapport d'un signal et d'un plancher vaut la fonction C « signal_rapport ».
+Le salut d'un nom vaut la fonction C « signal_salut ».
+La parité d'un nombre vaut la fonction C « signal_pair ».
+Le muet d'un x vaut la fonction C « signal_muet ».
+Le bavard d'un x vaut la fonction C « signal_bavard ».
+Le bancal d'un x vaut la fonction C « signal_bancal ».
+Le fantôme d'un x vaut la fonction C « signal_fantome ».
+EOF
+cat > natif.c <<'EOF'
+#include "grym_natif.h"
+#include <stdio.h>
+#include <stdlib.h>
+GRYM_EXPORTE int grym_natif_version(void) { return GRYM_NATIF_VERSION; }
+/* le texte d'un nombre, tel que la machine l'envoie, puis une division en double, rendue avec deux décimales */
+GRYM_EXPORTE void signal_rapport(int nb, const grym_valeur *a, grym_resultat *r) {
+    char t[64];
+    if (nb != 2 || a[0].sorte != GRYM_NOMBRE || a[1].sorte != GRYM_NOMBRE) { r->echec(r, "attend deux nombres"); return; }
+    if (strtod(a[1].texte, NULL) == 0) { r->echec(r, "attend un plancher non nul"); return; }
+    snprintf(t, sizeof t, "%.2f", strtod(a[0].texte, NULL) / strtod(a[1].texte, NULL));
+    r->nombre(r, t);
+}
+GRYM_EXPORTE void signal_salut(int nb, const grym_valeur *a, grym_resultat *r) {
+    char t[256];
+    if (nb == 1 && a[0].sorte == GRYM_ABSENT) { r->absent(r); return; }
+    snprintf(t, sizeof t, "%d %s", (int)a[0].sorte, a[0].texte ? a[0].texte : "");
+    r->texte(r, t);
+}
+GRYM_EXPORTE void signal_pair(int nb, const grym_valeur *a, grym_resultat *r) { (void)nb; r->verite(r, atoi(a[0].texte) % 2 == 0); }
+GRYM_EXPORTE void signal_muet(int nb, const grym_valeur *a, grym_resultat *r) { (void)nb; (void)a; (void)r; }
+GRYM_EXPORTE void signal_bavard(int nb, const grym_valeur *a, grym_resultat *r) { (void)nb; (void)a; r->texte(r, "un"); r->texte(r, "deux"); }
+GRYM_EXPORTE void signal_bancal(int nb, const grym_valeur *a, grym_resultat *r) { (void)nb; (void)a; r->nombre(r, "1e5"); }
+EOF
+if ! "$cc" -shared -fPIC -I"$racine/src" -o "$S/natif.$ext" natif.c > cc.txt 2>&1; then
+    echo "tests/natif : la bibliothèque d'essai ne se compile pas avec « $cc » :"; cat cc.txt; exit 1
+fi
+programme() { printf 'Utiliser la bibliothèque « Signal », version 1.\n%s\n' "$1" > p.grym; }
+lancer() { "$grym" lancer p.grym 2>&1 < /dev/null; }
+
+programme 'Afficher le rapport de 7 et de 2.'
+verifier "$(lancer)" "3,50" "un nombre aller et retour"
+programme 'Le oui vaut vrai.
+Afficher le salut de « Noé » puis le salut de 0,10 puis le salut du oui.'
+verifier "$(lancer)" "2 Noé 1 0.10 3 " "texte en UTF-8, nombre écrit « 0.10 » (ses décimales gardées), vrai ou faux sans texte"
+programme 'Afficher la parité de 4 puis la parité de 7.'
+verifier "$(lancer)" "vrai faux" "vrai ou faux rendu"
+printf 'Utiliser la bibliothèque « Signal », version 1.\nUne fiche, conservée, a :\n    une note (texte), facultative.\nLa f vaut une nouvelle fiche.\nAfficher le salut de la note de f.\n' > p.grym
+verifier "$(lancer)" "absent" "absent aller et retour"
+programme 'Essayer :
+    Afficher le rapport de 1 et de 0.
+En cas d'"'"'échec de natif :
+    Afficher la sorte de l'"'"'échec puis le motif de l'"'"'échec.'
+verifier "$(lancer)" "natif La fonction C « signal_rapport » attend un plancher non nul." "un échec rendu par la fonction, de sorte « natif »"
+programme 'Afficher le muet de 1.'
+contient "$(lancer)" "« signal_muet » n'a rien rendu" "aucun rappel"
+programme 'Afficher le bavard de 1.'
+contient "$(lancer)" "« signal_bavard » a rendu plus d'une valeur" "deux rappels"
+programme 'Afficher le bancal de 1.'
+contient "$(lancer)" "a rendu « 1e5 », qui n'est pas un nombre" "un nombre mal écrit"
+programme 'Afficher le fantôme de 1.'
+contient "$(lancer)" "n'exporte pas la fonction C « signal_fantome »" "une fonction absente"
+programme "Afficher le salut d'aujourd'hui."
+contient "$(lancer)" "est une date : une fonction C reçoit" "un argument qui ne passe pas"
+printf 'Utiliser la bibliothèque « Signal », version 1.\nExemple : le rapport de 9 et de 4 vaut 2,25.\n' > p.grym
+contient "$("$grym" exemples p.grym 2>&1)" "tout est juste" "un exemple vérifie une fonction C"
+programme 'Afficher le rapport de 7 et de 2.'
+"$grym" compiler p.grym > /dev/null 2>&1
+verifier "$("$grym" lancer p.grymb 2>&1 < /dev/null)" "3,50" "le programme compilé, la bibliothèque native à côté"
+rm -f p.grymb
+
+(cd "$S" && "$grym" traduire bibliothèque.grym > /dev/null 2>&1)
+verifier "$(sed -n 3p "$S/bibliothèque.grymc")" "_calcul _le rapport(_un signal ; _un plancher) << _fonction_c(« signal_rapport »)" "forme compacte"
+(cd "$S" && mv bibliothèque.grym b0 && "$grym" traduire bibliothèque.grymc > /dev/null 2>&1)
+verifier "$(cmp -s "$S/bibliothèque.grym" "$S/b0" && echo pareil)" "pareil" "aller-retour par la forme compacte"
+mv "$S/b0" "$S/bibliothèque.grym"; rm -f "$S/bibliothèque.grymc"
+
+mv "$S/natif.$ext" natif.garde
+programme 'Afficher le rapport de 7 et de 2.'
+contient "$(lancer)" "n'a pas de code natif pour ce système : il manque « bibliothèques/Signal/natif.$ext »" "le code natif manque"
+printf '#include "grym_natif.h"\nGRYM_EXPORTE int grym_natif_version(void) { return 99; }\n' > v.c
+"$cc" -shared -fPIC -I"$racine/src" -o "$S/natif.$ext" v.c > /dev/null 2>&1
+contient "$(lancer)" "suit le contrat natif 99" "un autre contrat"
+printf '#include "grym_natif.h"\nGRYM_EXPORTE int signal_rien(void) { return 0; }\n' > v.c
+"$cc" -shared -fPIC -I"$racine/src" -o "$S/natif.$ext" v.c > /dev/null 2>&1
+contient "$(lancer)" "n'exporte pas « grym_natif_version »" "le contrat absent"
+echo "pas une bibliothèque" > "$S/natif.$ext"
+contient "$(lancer)" "ne se charge pas" "un fichier qui n'est pas une bibliothèque"
+mv natif.garde "$S/natif.$ext"
+
+printf 'Le x d'"'"'un a vaut la fonction C « f ».\n' > p.grym
+contient "$(lancer)" "Une fonction C s'écrit dans une bibliothèque" "hors d'une bibliothèque"
+printf 'Cette bibliothèque est « Signal », version 1.\nLe x d'"'"'un a vaut la fonction C « f » + 1.\n' > "$S/autre.grym"
+contient "$(cd "$S" && "$grym" lancer autre.grym 2>&1)" "Une fonction C est tout le corps d'un calcul" "dans une expression"
+printf 'Cette bibliothèque est « Signal », version 1.\nPour faire un a :\n    Afficher la fonction C « f ».\n' > "$S/autre.grym"
+contient "$(cd "$S" && "$grym" lancer autre.grym 2>&1)" "Une fonction C est tout le corps d'un calcul" "dans une action"
+printf 'Cette bibliothèque est « Signal », version 1.\nLe x d'"'"'un a vaut la fonction C « 2f ».\n' > "$S/autre.grym"
+contient "$(cd "$S" && "$grym" lancer autre.grym 2>&1)" "« 2f » n'est pas un nom de fonction C" "un nom de fonction invalide"
+printf 'Cette bibliothèque est « Signal », version 1.\nLe x d'"'"'un a vaut la fonction C « grym_natif_version ».\n' > "$S/autre.grym"
+contient "$(cd "$S" && "$grym" lancer autre.grym 2>&1)" "est réservé" "un nom réservé"
+rm -f "$S/autre.grym"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]
