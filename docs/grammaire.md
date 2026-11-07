@@ -2045,7 +2045,7 @@ En cas d'échec :
     Afficher la sorte de l'échec puis le motif de l'échec.
 ```
 
-- Chaque échec a une **sorte**, un mot de la liste ci-dessous. La sorte est **promise** : elle ne change pas d'une version à l'autre (charte, art. 13.3). Le texte du motif, lui, ne l'est pas (art. 13.4) : un programme qui choisit sa conduite d'après le motif se casserait à la première reformulation, d'où les sortes.
+- Chaque échec a une **sorte**, un mot de la liste ci-dessous. La sorte est **promise** : elle ne change pas d'une version à l'autre (charte, art. 13.4). Le texte du motif, lui, ne l'est pas (art. 13.5) : un programme qui choisit sa conduite d'après le motif se casserait à la première reformulation, d'où les sortes.
 - **Les sortes.**
 
 | Sorte | Échecs |

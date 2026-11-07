@@ -1,13 +1,13 @@
 # Charte de GrymoiR
 
-Version 1.63, révisée le 1er novembre 2026.
+Version 1.64, révisée le 7 novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
 
 ## 1. Raison d'être
 
-GrymoiR sert à écrire des applications de gestion fiables, en réunissant langage, base de données et déploiement dans un seul outil, avec un modèle objet pur.
+GrymoiR sert à écrire des applications de gestion fiables, en réunissant langage, base de données et déploiement dans un seul outil, autour d'un modèle objet.
 
 Cible : le développeur seul ou la petite équipe.
 Hors cible : calcul intensif, programmation système, web à grande échelle.
@@ -51,59 +51,73 @@ Forme littéraire :
 
 ```
 Pour relancer un client :
-    Si le solde du client est négatif,
-        créer un rappel pour le client.
+    Si le solde du client < 0 :
+        Le r vaut un nouveau rappel :
+            Le débiteur vaut client.
+        Conserver le r.
 ```
 
 Forme compacte :
 
 ```
-_formule relancer(client)
+_action relancer(_un client)
     _si client.solde < 0 _alors
-        créer_rappel(client)
+        _le r << _nouveau rappel _avec
+            débiteur << client
+        _fin
+        _conserver r
     _fin
 _fin
 ```
 
 ## 5. Typage
 
-- Code ordinaire : typage dynamique.
+- Code ordinaire : typage dynamique, que des annotations facultatives resserrent. Une variable ou un paramètre annoté (`Le total (nombre) vaut 0.`, `un statut (état)`) est vérifié à chaque écriture : à l'analyse quand la valeur y est connue, sinon à l'exécution (grammaire, § 16.16).
 - Entités persistées : typage strict, vérifié à la compilation quand le type de la valeur y est connu, sinon avant toute écriture. Aucune valeur d'un mauvais type n'atteint la base.
+- Un type nommé (`Un état est « à faire » ou « fini ».`) se partage entre champs, variables et paramètres (grammaire, § 16.16).
 
 Justification : l'erreur la plus coûteuse est celle qui corrompt la base (principe 1). La rigueur se concentre là.
 
 ## 6. Modèle objet
 
-- Tout est objet.
+- Les classes et les entités donnent des **objets** : des champs, une identité, des formules qui leur sont propres. Les nombres, textes, dates, heures, vrai ou faux, listes et tables sont des **valeurs** : sans identité, comparées par ce qu'elles contiennent, copiées quand on les range. (Jusqu'à la révision 1.63, cet article disait « Tout est objet », ce que le langage n'a jamais fait.)
 - Héritage simple.
-- Aptitude : paquet de formules et de champs qu'une classe adopte sans en hériter.
+- Aptitude : paquet de formules et de champs qu'une classe adopte sans en hériter. Une aptitude peut exiger des formules de ses classes (contrat) ; l'analyse vérifie que chacune en a une version (grammaire, § 13.7 bis).
 - Si deux aptitudes définissent la même formule, la compilation échoue jusqu'à ce que le développeur tranche explicitement. Aucune résolution implicite.
 
 Forme littéraire :
 
 ```
-Une chose horodatée a :
-    une date de création,
-    une date de modification.
+Une personne, conservée, a :
+    un nom (texte).
 
-Un membre est une personne horodatée. Un membre a :
-    une licence, unique.
+Une chose horodatée a :
+    une date de création (date),
+    une date de modification (date).
+
+Un membre, conservé, est une personne horodatée.
+Un membre a :
+    une licence (texte), unique.
 ```
 
 Forme compacte :
 
 ```
-_aptitude horodatée
-    créé_le : date
-    modifié_le : date
+_classe _une personne _conservé
+    _un nom (texte)
 _fin
 
-_entité Membre _hérite Personne _adopte horodatée
-    licence : texte unique
+_aptitude horodatée
+    _une date_de_création (date)
+    _une date_de_modification (date)
+_fin
+
+_classe _un membre _conservé _est _une personne _adopte horodatée
+    _une licence (texte) _unique
 _fin
 ```
 
-La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples montrent l'intention, pas la syntaxe définitive.
+Ces exemples se compilent tels quels ; la grammaire exacte est `docs/grammaire.md` (§ 13 et § 16).
 
 ## 7. Persistance
 
@@ -111,6 +125,7 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 - Moteur : SQLite embarqué, invisible pour le développeur, qui n'écrit jamais de SQL.
 - Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Une question posée à l'utilisateur referme cette transaction et en ouvre une autre : ce qu'il a vu confirmé est acquis, et la base n'est pas verrouillée pendant qu'elle attend. Une formule qui échoue n'écrit donc rien non plus. Ce qu'elle a affiché reste affiché, suivi d'une phrase qui dit ce qui a été annulé. Un bloc `Essayer` rattrape l'erreur à sa mesure : il annule tout ce qu'il a fait, depuis son début ou depuis la dernière question, puis exécute son bloc `En cas d'échec` (grammaire, § 18).
 - Exception, à partir des écrans (grammaire, § 22) : `Ouvrir` un écran valide ce qui précède, puis découpe l'exécution en transactions, une par événement. Un programme sans écran reste une seule transaction.
+- Ce qui sort du programme ne s'annule pas : un envoi web, un courriel parti, une commande lancée (grammaire, § 22.18, § 22.27, § 15.10). Une transaction annulée n'efface que ce qu'elle a écrit en mémoire et dans la base ; le programme envoie en dernier ce qui ne doit partir qu'après réussite.
 - Migrations de schéma automatiques pour tout ajout ; aucune donnée détruite en silence.
 - Tout nombre est un décimal exact, jamais un flottant, en mémoire comme en base. Un type `montant` (devise, arrondi) n'est pas prévu pour la v0.3.
 - Versions parallèles des données : horizon post-v1.
@@ -121,7 +136,7 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 - Le message s'exprime dans la forme du fichier concerné.
 - Correction proposée quand c'est possible (« `soldee` inconnu, voulais-tu `solde` ? »).
 - Une phrase littéraire hors grammaire produit une erreur qui propose la tournure valide la plus proche.
-- Aucune erreur avalée en silence : un `Essayer` exige son bloc `En cas d'échec`, qui reçoit le motif de l'erreur.
+- Aucune erreur avalée en silence : un `Essayer` exige au moins un bloc `En cas d'échec`, qui reçoit le motif et la sorte de l'erreur. Un bloc peut ne rattraper que certaines sortes (`En cas d'échec de réseau :`) ; une erreur qu'aucun bloc ne rattrape remonte, intacte (grammaire, § 18.2).
 
 ## 9. Aide à la saisie
 
@@ -141,7 +156,9 @@ L'architecture de la VM prévoit la recompilation à chaud d'une formule dans un
 
 Interface graphique, réseau, concurrence, optimisation.
 
-Depuis la v2.0 : interface graphique par le navigateur, servie par `grym` ; réseau limité à l'écoute locale (127.0.0.1), pendant l'exécution d'un programme (`docs/v2.md`, § 5). Concurrence et optimisation restent hors périmètre.
+Depuis la v2.0 : interface graphique par le navigateur, servie par `grym` ; écoute limitée à la machine locale (127.0.0.1), pendant l'exécution d'un programme (`docs/v2.md`, § 5). Concurrence et optimisation restent hors périmètre.
+
+Depuis, le réseau sortant existe, à l'initiative du programme seulement : les envois web en HTTPS (grammaire 2.42, § 22.18), les courriels (2.94, § 22.27). Un programme lance aussi d'autres programmes, sans shell (3.04, § 15.10). Une minuterie d'écran (3.03) n'est pas de la concurrence : ses échéances passent une à une, entre les événements.
 
 Depuis l'atelier (décidé le 24 septembre 2026, `docs/atelier.md`) : interface graphique native par Qt 6, pour l'atelier et pour les applications qu'il produit ; `grym servir` reste un mode d'affichage parmi d'autres.
 
@@ -181,7 +198,7 @@ Critères de sortie de la v1.0, tous remplis :
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
 - intégrité : une règle ne se revérifie que si une entité qu'elle a lue a été écrite (grammaire, § 16.14, fait le 13 octobre 2026) ; quand elle se revérifie, c'est sur tous les objets qu'elle concerne. Ne revérifier que les objets touchés, en prouvant que c'est exact, reste à faire. Mesuré le 13 octobre 2026 : 0,5 s par écriture comptable ajoutée sur 50'000 ;
-- objets (grammaire, § 13.9) : listes ordonnées avec positions, après les ensembles (faits) ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
+- objets (grammaire, § 13) : racine commune `objet` de toutes les classes. Les listes ordonnées (§ 13.10), les tables (§ 13.11) et le tri (§ 13.12) sont faits (grammaire 2.89 à 2.97) ; les nombres, textes et dates restent des valeurs (art. 6) ;
 - relations : test d'appartenance en mémoire (`Si baroque est parmi les genres de o`), gagner plusieurs objets en une phrase, champs multiples de textes ou de nombres ; lien facultatif qui devient absent quand son objet est effacé ;
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
 - saisie par l'utilisateur de l'application : autocomplétion des valeurs déjà saisies, y compris celles des objets de la corbeille (avec l'interface des applications) ;
@@ -198,8 +215,9 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 1. **Bases.** Une base créée ou modifiée par une version 1.x s'ouvre dans toute version 1.x ultérieure, sans perte, par migration automatique (art. 7). Chaque base porte le numéro de son format. Une version qui rencontre une base d'un format plus récent que le sien la refuse, avant toute écriture, et dit qu'une version plus récente de `grym` l'ouvrira.
 2. **Sources.** Un programme accepté par une version 1.x est accepté par les versions ultérieures et y produit le même effet. Seule exception : un mot nouvellement réservé ou un nouveau mot de construction. Chacun est alors inscrit au journal de la grammaire, et le message d'erreur propose la correction (le nom entre crochets, ou un autre verbe).
 3. **Comportement.** Même programme, même base, mêmes réponses : même résultat (art. 4). Corriger un écart entre le programme et la spécification n'est pas une rupture.
-4. **Hors promesse.** Le libellé des messages d'erreur, le bytecode `.grymb` (on recompile depuis les sources ; la machine lit les anciens formats par commodité), l'interface des fichiers de `src/`.
-5. **Version 2.** Elle peut rompre les sources. Elle ne rompt jamais une base : elle l'ouvre, ou fournit la commande qui la convertit (principe 1).
+4. **Sortes d'échec.** La sorte d'une erreur (grammaire, § 18.2 : `réseau`, `fichier`, `unicité`…) est promise, comme le reste du comportement : un programme qui rattrape une sorte la rattrape dans les versions ultérieures. Une sorte peut s'ajouter (`commande`, 3.04) ; aucune ne disparaît ni ne change de sens.
+5. **Hors promesse.** Le libellé des messages d'erreur (c'est pourquoi un programme décide par la sorte, jamais par le motif), le bytecode `.grymb` (on recompile depuis les sources ; la machine lit les anciens formats par commodité), l'interface des fichiers de `src/`.
+6. **Version 2.** Elle peut rompre les sources. Elle ne rompt jamais une base : elle l'ouvre, ou fournit la commande qui la convertit (principe 1).
 
 
 ## 14. Pérennité
@@ -279,3 +297,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.61 | 2026-10-19 | Art. 4 : les sigles. Un nom reste insensible à la casse ; un mot qu'on écrit toujours en capitales les garde dans les libellés et la forme canonique, parce que « Numéro rcc » sur la fiche d'un thérapeute serait une faute (grammaire 2.21, § 2.4) |
 | 1.62 | 2026-11-01 | Art. 12 : plusieurs erreurs à la fois, faites (l'atelier et `grym lsp` montrent, après la première, celles des déclarations suivantes) |
 | 1.63 | 2026-11-01 | Art. 12 : renommer un nom dans tout le projet, fait dans l'atelier (vérifié dans une copie avant d'écrire) ; reste à faire dans `grym lsp` |
+| 1.64 | 2026-11-07 | Relecture après l'audit du langage (grammaire 2.89 à 3.06). Art. 6 : « Tout est objet » était faux ; objets et valeurs distingués ; contrats d'aptitude. Art. 1 : « modèle objet pur » devient « autour d'un modèle objet ». Art. 4 et 6 : exemples réécrits dans la syntaxe réelle, compilés et traduits par `grym`, au lieu d'esquisses qui ne se compilaient pas. Art. 5 : annotations facultatives et types nommés. Art. 7 : ce qui sort du programme (envoi, courriel, commande) ne s'annule pas. Art. 8 : sortes d'échec, plusieurs blocs, l'erreur non rattrapée remonte. Art. 11 : réseau sortant, commandes, minuterie. Art. 12 : listes, tables et tri faits ; « nombres comme objets » abandonné. Art. 13 : nouveau point 4, les sortes d'échec sont promises (le motif reste hors promesse) ; points 4 et 5 renumérotés 5 et 6 |
