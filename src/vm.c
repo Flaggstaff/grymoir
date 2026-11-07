@@ -8249,6 +8249,24 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, mp);
                 break;
             }
+            /* « Les relevés gagnent x. » se compile LIRE r ; x ; AJOUTER ; ÉCRIRE r. La case tient encore la liste que
+             * la pile tient aussi : gagner la copierait en entier à chaque tour, et une boucle de n gains coûtait n²
+             * (mesuré le 7 novembre 2026 : 8000 gains, 2,4 s). Quand l'instruction suivante récrit la même case, et
+             * que le journal d'annulation n'a pas besoin de son ancienne valeur (déjà écrite à cette époque, § 18),
+             * la case lâche la liste d'abord : la liste n'a plus qu'un tenant, et gagne sur place. */
+            if (ip + 3 <= b->taille_code && (b->code[ip] == I_ECRIRE || b->code[ip] == I_ECRIRE_LOCAL)) {
+                const unsigned k_suiv = (unsigned)b->code[ip + 1] | ((unsigned)b->code[ip + 2] << 8);
+                Valeur *tenue = NULL;
+                if (b->code[ip] == I_ECRIRE) {
+                    Case *c = &m->cases[liaison[k_suiv]];
+                    if (c->definie && c->epoque == m->epoque) tenue = &c->valeur;
+                } else if (cadre->definis[k_suiv]) tenue = &cadre->locaux[k_suiv];
+                if (tenue && tenue->liste == e.liste && tenue->type == e.type) {
+                    valeur_liberer(tenue);
+                    memset(tenue, 0, sizeof *tenue);
+                    tenue->type = V_ABSENT;
+                }
+            }
             if (op == 0) ensemble_gagner(&e, x);
             else {
                 long k = ensemble_rang(&e, &x);

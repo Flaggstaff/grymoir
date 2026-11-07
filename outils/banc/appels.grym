@@ -1,0 +1,6 @@
+Remarque : banc de mesure (outils/banc-de-mesure), comparé à appels.py.
+Les nombres s'affichent sans séparateur.
+Le fib d'un n :
+    Si n < 2, rendre n.
+    Rendre le fib de (n − 1) + le fib de (n − 2).
+Afficher le fib de 27.

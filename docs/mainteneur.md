@@ -1,6 +1,6 @@
 # GrymoiR : manuel du mainteneur
 
-Version 1.10, révisée le 7 novembre 2026 (rédigée le 24 septembre 2026).
+Version 1.11, révisée le 7 novembre 2026 (rédigée le 24 septembre 2026).
 Référence : Charte de GrymoiR v1.38, art. 14 ; grammaire 1.38 ; `docs/vm.md` 1.33.
 Toute modification passe par une révision numérotée. Ce manuel se révise à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 
@@ -46,6 +46,11 @@ Au quotidien, deux scripts suffisent, depuis le dossier du dépôt :
 ./appliquer ~/Downloads/x.patch  # applique un patch, construit, fait tourner tous les essais, publie (git push), relance
 ./appliquer a.patch b.patch      # plusieurs, dans l'ordre : une seule construction, un seul essai, l'atelier une fois
 ```
+
+`outils/banc-de-mesure [N]` mesure quatre programmes de `outils/banc/` (boucle décimale, appels récursifs, tri de textes,
+base) contre leur équivalent Python 3 : médiane de N exécutions. Il ne vérifie rien et ne bloque rien ; il sert à voir
+un ordre de grandeur, et à retrouver ce qu'un changement a coûté. Il a montré, le 7 novembre 2026, que les gains d'une
+liste la recopiaient à chaque tour (`tests/listes-sur-place`).
 
 Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `test_guide` exécute le programme de chaque chapitre (`docs/guide/chapitre-NN.grym`), exige qu'il soit en forme canonique, que chaque bloc ```` ```grymoir ```` du chapitre en soit un extrait et que chaque bloc ```` ```sortie ```` apparaisse dans ce qu'il affiche, dans l'ordre. Un chapitre en plusieurs fichiers vit dans un dossier (`docs/guide/chapitre-12/association.grym` et les fichiers qu'il utilise) ; ses extraits peuvent venir de n'importe lequel. `test_guide` ne fait que compiler un programme à écrans, que la console n'ouvre pas : les chapitres 11 et 12 s'exécutent vraiment dans `test_atelier`, qui clique à la place du lecteur. Un changement du langage qui casse un exemple du guide casse donc les essais : corrigez le programme du chapitre, puis le texte.
 
@@ -282,3 +287,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.8 | 2026-10-10 | § 2 : `grym_fopen` et `grym_supprimer`, les chemins UTF-8 sous Windows ; le manifeste sur tous les exécutables, essais compris |
 | 1.9 | 2026-10-27 | § 2 : `./appliquer` à plusieurs patchs ; le patch déjà appliqué reconnu ; l'envoi refusé dit quoi relancer ; le script tourne depuis une copie |
 | 1.10 | 2026-11-07 | § 1 : `natif.c` et `grym_natif.h`, les fonctions C (grammaire 3.14) |
+| 1.11 | 2026-11-07 | § 2 : `outils/banc-de-mesure` |

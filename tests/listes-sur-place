@@ -1,0 +1,43 @@
+#!/bin/sh
+# Les gains d'une liste sur place (7 novembre 2026) : « Les mots gagnent x. » dans une boucle ne recopie plus la liste
+# à chaque tour (n gains coûtaient n², outils/banc-de-mesure l'a montré) ; une copie partagée et l'annulation d'un
+# « Essayer » gardent leur sens.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+cat > p.grym <<'EOF'
+Les valeurs valent la liste 1 et 2.
+Les autres valent les valeurs.
+Les valeurs gagnent 3.
+Afficher les valeurs puis « / » puis les autres.
+Essayer :
+    Les valeurs gagnent 4.
+    Les valeurs perdent 1.
+    Afficher le 9e élément des valeurs.
+En cas d'échec :
+    Afficher les valeurs.
+Pour copier la liste :
+    Les miennes valent la liste 7.
+    Les copies valent les miennes.
+    Les miennes gagnent 8.
+    Afficher les miennes puis « / » puis les copies.
+Copier la liste.
+EOF
+verifier "$("$grym" lancer p.grym 2>&1)" "1, 2, 3 / 1, 2
+1, 2, 3
+7, 8 / 7" "copie partagée, annulation, case locale"
+# 200 000 gains : quelques dixièmes de seconde sur place ; recopiés à chaque tour, des heures. 60 s laissent de la marge
+# à la machine la plus lente de l'intégration continue (et aux sanitizers).
+printf 'Les valeurs valent une liste vide.\nPour chaque i de 1 à 200000 :\n    Les valeurs gagnent i.\nAfficher le nombre de valeurs.\n' > g.grym
+"$grym" lancer g.grym > sortie.txt 2>&1 &
+pid=$!
+s=0
+while kill -0 "$pid" 2> /dev/null && [ "$s" -lt 60 ]; do sleep 1; s=$((s + 1)); done
+if kill -0 "$pid" 2> /dev/null; then kill "$pid"; echo "ÉCHEC : 200 000 gains en plus de 60 s"; echecs=$((echecs + 1)); total=$((total + 1))
+else wait "$pid"; verifier "$(cat sortie.txt)" "200'000" "200 000 gains"; fi
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

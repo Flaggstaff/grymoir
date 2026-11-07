@@ -1,0 +1,8 @@
+Remarque : banc de mesure (outils/banc-de-mesure), comparé à tri.py.
+Les nombres s'affichent sans séparateur.
+Les mots valent une liste vide.
+Pour chaque i de 1 à 100000 :
+    Le n vaut le reste de (i × 7919) par 100003.
+    Les mots gagnent « k » suivi de n.
+Les classés valent les mots triés.
+Afficher le premier élément des classés puis le dernier élément des classés.

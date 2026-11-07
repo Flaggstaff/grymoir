@@ -1,0 +1,6 @@
+Remarque : banc de mesure (outils/banc-de-mesure), comparé à boucle.py.
+Les nombres s'affichent sans séparateur.
+La somme vaut 0.
+Pour chaque i de 1 à 1000000 :
+    La somme devient somme + i × 1,05.
+Afficher somme.

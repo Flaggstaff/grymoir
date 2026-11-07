@@ -1,0 +1,15 @@
+Remarque : banc de mesure (outils/banc-de-mesure), comparé à base.py.
+Les nombres s'affichent sans séparateur.
+Un compte, conservé, a :
+    un numéro (nombre), unique,
+    un solde (nombre).
+Pour chaque i de 1 à 10000 :
+    Le c vaut un nouveau compte :
+        Le numéro vaut i.
+        Le solde vaut le reste de (i × 37) par 10000.
+    Conserver le c.
+Afficher le nombre de comptes conservés dont le solde est supérieur à 5000.
+Le d vaut le compte conservé dont le numéro est 1.
+Pour chaque i de 1 à 1000 :
+    Le d devient le compte conservé dont le numéro est i × 7.
+Afficher le solde de d.
