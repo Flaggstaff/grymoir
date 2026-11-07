@@ -294,6 +294,10 @@ int main(void) {
                  "_la c (couleur) << « bleu »\nc << « rouge »\n", NULL);
     ALLER_RETOUR("_le ok (vrai_ou_faux) << 1 > 2\n_action relancer(_un client ; _un délai (nombre))\n    _afficher délai\n_fin\n\n"
                  "relancer(1 ; 2)\n", NULL);
+    ALLER_RETOUR("_aptitude payable\n    _un montant\n_fin\n\n_contrat payable _calcul _la remise(_une chose_payable ; _un taux)\n"
+                 "_contrat payable _action encaisser(_une chose_payable ; _un mode)\n", NULL);
+    ERR("_aptitude payable\n    _un montant\n_fin\n_contrat payable _calcul montant(_une chose_payable)\n", 4, 1,
+        "Forme attendue : « _contrat payable _calcul _le montant_dû(_une chose_payable) »");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

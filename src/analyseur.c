@@ -41,6 +41,7 @@ typedef struct {
     int liste;         /* cet ensemble est une liste, qui garde ses doublons (§ 13.10) */
     int table;         /* variable qui contient une table, nommée au pluriel avec « les » (§ 13.11) */
     char *permises;       /* variable d'un type nommé (§ 16.16) : « état␝à faire␞en cours␞fini », ou NULL ; possédé */
+    int abstrait;         /* formule : une version exigée par un contrat d'aptitude, sans corps (§ 13.7 bis) */
     char *types_params;   /* formule : le type de chaque paramètre, séparés par U+001F (vide : sans type), ou NULL (3.00) */
     Noeud *facultatifs;   /* action : ses paramètres facultatifs (N_BLOC de N_NOM, chacun avec sa valeur de départ en
                              enfant), dans l'ordre ; NULL sans facultatif (2.98). Possédé, comme nom et classe. */
@@ -532,6 +533,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->facultatifs = NULL;   /* 2.98 */
     s->permises = NULL;      /* § 16.16 */
     s->types_params = NULL;  /* 3.00 */
+    s->abstrait = 0;         /* § 13.7 bis */
     s->table = 0;   /* § 13.11 */
     s->classe = NULL;
     s->rend = 0;
@@ -1264,6 +1266,7 @@ static char *pluriel(int n, const char *mot) {
 static int comme_classe(Analyse *a, const Symbole *s, Noeud *n);
 
 static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel);
+static Noeud *definition_contrat(Analyse *a, size_t kdoit);
 
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
@@ -5065,7 +5068,7 @@ static char *version_de_formule(Analyse *a, const char *nom, Sorte sorte, const 
               ? grym_formater("« %s » existe déjà : déclaré dans « %s », ligne %d.", nom, nom_court(a->portee, s->fichier),
                               s->ligne_decl)
               : grym_formater("« %s » existe déjà.", nom);
-        else if (strcmp(s->classe, classe) == 0)
+        else if (strcmp(s->classe, classe) == 0 && !s->abstrait)   /* la version d'un contrat se remplit (§ 13.7 bis) */
             m = grym_formater("« %s » existe déjà pour « %s ».", nom, classe);
         else if (s->sorte != sorte)
             m = grym_formater("« %s » est déjà %s : toutes ses versions sont de la même sorte.", nom,
@@ -11348,6 +11351,13 @@ static Noeud *phrase(Analyse *a, int colonne) {
         size_t k = a->i + 1;
         while (k < a->n && (mot_de_nom(a, k) || a->j[k].type == J_CROCHETS) && !est_mot(&a->j[k], "est")) k++;
         if (k > a->i + 1 && k + 1 < a->n && est_mot(&a->j[k], "est") && a->j[k + 1].type == J_TEXTE) return definition_type(a, k);
+        /* « Une chose payable doit savoir : … » : un contrat d'aptitude (§ 13.7 bis) */
+        size_t kd = a->i + 2;
+        if (kd < a->n && a->j[kd].type == J_CROCHETS) kd++;   /* « [payable] », de la forme compacte */
+        else while (kd < a->n && mot_de_nom(a, kd) && !est_mot(&a->j[kd], "doit")) kd++;
+        if (est_mot(voir(a, 1), "chose") && kd > a->i + 2 && kd + 2 < a->n && est_mot(&a->j[kd], "doit")
+            && est_mot(&a->j[kd + 1], "savoir") && a->j[kd + 2].type == J_DEUX_POINTS)
+            return definition_contrat(a, kd);
         return definition_classe(a);
     }
     if (est_mot(t, "rendre")) {
@@ -11502,6 +11512,111 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
 
 /* Charte, art. 6 : si deux aptitudes d'une classe définissent la même formule, la classe tranche
  * avec sa propre version ; sinon, l'analyse échoue (§ 13.7). */
+/* « Une chose payable doit savoir : le montant dû d'une chose payable. » ; « … : encaisser une chose payable et un mode. »
+ * (§ 13.7 bis) : la formule, déclarée pour l'aptitude, sans corps ; chaque classe qui adopte l'aptitude en aura une version. */
+static Noeud *definition_contrat(Analyse *a, size_t kdoit) {
+    Jeton *tun = cour(a);
+    if (!premier_niveau(a, tun)) return NULL;
+    char *apt = a->j[a->i + 2].type == J_CROCHETS ? grym_dupliquer(a->j[a->i + 2].valeur) : cle(a, a->i + 2, kdoit);
+    Classe *ap = NULL;
+    for (size_t q = 0; q < a->portee->nb_classes && !ap; q++)
+        if (a->portee->classes[q].aptitude && strcmp(a->portee->classes[q].nom, apt) == 0) ap = &a->portee->classes[q];
+    if (!ap) {
+        Noeud *x = erreur(a, &a->j[a->i + 2], grym_formater("L'aptitude « %s » n'est pas déclarée (avant ce contrat) : « Une chose %s a : … ».", apt, apt));
+        free(apt);
+        return x;
+    }
+    size_t fin = kdoit + 3;
+    while (fin < a->n && a->j[fin].type != J_POINT && a->j[fin].type != J_FIN) fin++;
+    const size_t d = kdoit + 3;
+    const Jeton *tart = &a->j[d];
+    const Article art = article_de(tart);
+    const int calcul = art == ART_LE || art == ART_LA || art == ART_L;
+    const size_t debut = calcul ? d + 1 : d;
+    size_t k = debut;
+    Genre g;
+    if (calcul) while (k < fin && !marque_parametre(a, k)) k++;
+    else if (k < fin && a->j[k].type == J_CROCHETS) k++;   /* « [encaisser] », de la forme compacte */
+    else while (k < fin && mot_de_nom(a, k) && !est_un(&a->j[k], &g)) k++;
+    if (k == debut || k >= fin) {
+        free(apt);
+        return erreur(a, &a->j[d], grym_dupliquer("Formule attendue : « le montant dû d'une chose payable » (un calcul) ou « encaisser une chose payable » (une action)."));
+    }
+    char *nom = a->j[debut].type == J_CROCHETS && k == debut + 1 ? grym_dupliquer(a->j[debut].valeur) : cle(a, debut, k);
+    Noeud *params = parametres(a, k, fin, calcul);
+    if (!params) { free(apt); free(nom); return NULL; }
+    if (!params->nb_enfants || !params->enfants[0]->texte2 || strcmp(params->enfants[0]->texte2, ap->nom) != 0) {
+        Noeud *x = erreur(a, &a->j[k], grym_formater("Le premier paramètre d'un contrat est l'aptitude elle-même : « une chose %s ».", ap->nom));
+        noeud_liberer(params);
+        free(apt);
+        free(nom);
+        return x;
+    }
+    int refus;
+    char *classe = version_de_formule(a, nom, calcul ? S_CALCUL : S_ACTION, params, &a->j[debut], &refus);
+    if (refus) { noeud_liberer(params); free(apt); free(nom); free(classe); return NULL; }
+    a->i = fin;
+    if (!fin_phrase(a, 0)) { noeud_liberer(params); free(apt); free(nom); free(classe); return NULL; }
+    portee_declarer(a->portee, nom, calcul ? (art == ART_LA ? GENRE_FEMININ : art == ART_LE ? GENRE_MASCULIN : GENRE_LIBRE) : GENRE_LIBRE,
+                    tun->ligne);
+    Symbole *s = &a->portee->s[a->portee->n - 1];
+    s->sorte = calcul ? S_CALCUL : S_ACTION;
+    s->nb_parametres = (int)params->nb_enfants;
+    s->classe = classe;
+    s->abstrait = 1;
+    s->types_params = types_des_parametres(params);
+    Noeud *n = noeud_creer(P_CONTRAT, tun->ligne, tun->colonne, tun->debut);
+    n->texte = nom;
+    n->texte2 = apt;
+    n->forme = calcul ? 1 : 2;
+    n->article = calcul ? art : ART_AUCUN;
+    noeud_ajouter(n, params);
+    n->fin = fin_jeton(&a->j[fin]);
+    return n;
+}
+
+/* La classe de ce nom, ou NULL. */
+static const Classe *classe_nommee(const Portee *p, const char *nom) {
+    for (size_t q = 0; nom && q < p->nb_classes; q++) if (strcmp(p->classes[q].nom, nom) == 0) return &p->classes[q];
+    return NULL;
+}
+
+/* Fin d'analyse (§ 13.7 bis) : chaque classe qui adopte une aptitude à contrat, elle-même ou par sa lignée, a une version
+ * concrète de chaque formule exigée : la sienne, celle d'un ancêtre, ou celle d'une aptitude de sa lignée. */
+static void verifier_contrats(Analyse *a) {
+    const Portee *p = a->portee;
+    for (size_t sv = 0; sv < p->n && !a->echec; sv++) {
+        const Symbole *v = &p->s[sv];
+        if (!v->abstrait || !v->classe) continue;
+        for (size_t q = 0; q < p->nb_classes && !a->echec; q++) {
+            const Classe *c = &p->classes[q];
+            if (c->aptitude) continue;
+            int adopte = 0;   /* la classe ou un ancêtre adopte l'aptitude */
+            for (const Classe *l = c; l && !adopte; l = classe_nommee(p, l->parent))
+                for (size_t r = 0; r < l->nb_aptitudes && !adopte; r++) adopte = strcmp(l->aptitudes[r], v->classe) == 0;
+            if (!adopte) continue;
+            int couvert = 0;
+            for (size_t sw = 0; sw < p->n && !couvert; sw++) {
+                const Symbole *w = &p->s[sw];
+                if (w->abstrait || !w->classe || w->sorte != v->sorte || strcmp(w->nom, v->nom) != 0) continue;
+                for (const Classe *l = c; l && !couvert; l = classe_nommee(p, l->parent)) {
+                    couvert = strcmp(w->classe, l->nom) == 0;
+                    for (size_t r = 0; r < l->nb_aptitudes && !couvert; r++) couvert = strcmp(l->aptitudes[r], w->classe) == 0;
+                }
+            }
+            if (couvert) continue;
+            const char *un = c->genre == GENRE_FEMININ ? "une" : "un";
+            if (v->sorte == S_CALCUL)
+                erreur_a(a, c->ligne, 1, grym_formater("« %s » est une chose %s : il lui faut sa version de « %s », que l'aptitude exige. "
+                                                       "Écris : %s%s d'%s %s …", c->nom, v->classe, v->nom,
+                                                       v->genre == GENRE_FEMININ ? "La " : "Le ", v->nom, un, c->nom));
+            else
+                erreur_a(a, c->ligne, 1, grym_formater("« %s » est une chose %s : il lui faut sa version de « %s », que l'aptitude exige. "
+                                                       "Écris : Pour %s %s %s …", c->nom, v->classe, v->nom, v->nom, un, c->nom));
+        }
+    }
+}
+
 static void verifier_conflits(Analyse *a) {
     Portee *p = a->portee;
     for (size_t i = 0; i < p->nb_classes && !a->echec; i++) {
@@ -11778,6 +11893,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].retrait; break; }
     Noeud *racine = bloc(&a, colonne, 1);
     if (racine && !a.echec) verifier_conflits(&a);
+    if (racine && !a.echec && !interactif) verifier_contrats(&a);   /* § 13.7 bis ; pas dans la boucle interactive */
     if (racine && !a.echec && !interactif && copie.fichier_index == 0) {   /* un bouton sans événement (§ 22.2) */
         const char *ecran = NULL;
         const Noeud *orphelin = bouton_orphelin(racine->enfants, racine->nb_enfants, racine->enfants, racine->nb_enfants, &ecran);

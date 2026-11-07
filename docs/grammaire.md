@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.00 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.01 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1031,6 +1031,31 @@ Pour dater une chose horodatée :
 - Choix de la version, pour chaque classe de la lignée, en partant de la classe réelle : la version de la classe, sinon celle de l'une de ses aptitudes, sinon on passe à la classe parente.
 - Conflit (charte, art. 6) : si deux aptitudes d'une classe définissent la même formule, la classe doit définir sa propre version, sinon l'analyse échoue. Aucune résolution implicite.
 - En forme compacte : `_aptitude horodatée`, `_aptitude active (actif)` ; `_classe _un membre _est _une personne _adopte horodatée ; active` ; `_une chose_horodatée` pour le paramètre.
+
+### 13.7 bis Contrats d'aptitude *(3.01)*
+
+```
+Une chose payable a :
+    un montant.
+Une chose payable doit savoir : le montant dû d'une chose payable.
+Une chose payable doit savoir : encaisser une chose payable et un mode.
+
+Une facture est une chose payable.
+Un abonnement est une chose payable.
+Le montant dû d'une facture vaut montant de la facture.
+Le montant dû d'un abonnement vaut montant de l'abonnement × 12.
+Pour encaisser une chose payable et un mode :
+    Afficher « encaissé » puis le montant dû de la chose puis mode.
+```
+
+- **`Une chose payable doit savoir : …`** déclare une formule que chaque classe de l'aptitude doit avoir, écrite comme l'en-tête de sa définition : un **calcul** avec son article (`le montant dû d'une chose payable`), une **action** à l'infinitif (`encaisser une chose payable et un mode`). Le premier paramètre est l'aptitude elle-même (« Le premier paramètre d'un contrat est l'aptitude elle-même : « une chose payable ». »). L'aptitude est déclarée plus haut ; un contrat par phrase, au premier niveau.
+- **Ce qui le remplit** : pour chaque classe qui adopte l'aptitude, elle-même ou par sa lignée, une version concrète de la formule, la sienne, celle d'un ancêtre, ou celle d'une aptitude de sa lignée. Une version écrite pour l'aptitude (`Pour encaisser une chose payable et un mode :`) sert de version par défaut à toutes ses classes : le contrat est rempli d'un coup.
+- **La vérification** se fait à la fin de l'analyse, quand toutes les versions sont connues, et signale la classe, à sa ligne, avec ce qu'il faut écrire : « « abonnement » est une chose payable : il lui faut sa version de « montant dû », que l'aptitude exige. Écris : Le montant dû d'un abonnement … » Une sous-classe hérite de la version de sa classe parente ; une version sur la seule sous-classe laisse la classe parente en faute.
+- Les versions suivent les règles du § 13.6 : même sorte, même nombre de paramètres que le contrat.
+- **Dans la boucle interactive**, la vérification n'a pas lieu : une classe et sa version arrivent souvent sur deux saisies.
+- Le contrat ne produit aucun code : c'est une promesse vérifiée à l'analyse. L'appel choisit la version comme d'habitude (§ 13.7).
+- `doit savoir` après `Une chose …` est une tournure nouvelle ; aucune phrase ne commençait ainsi.
+- En forme compacte : `_contrat payable _calcul _le montant_dû(_une chose_payable)`, `_contrat payable _action encaisser(_une chose_payable ; _un mode)`.
 
 ### 13.8 Appeler une autre version
 
@@ -2971,3 +2996,4 @@ Pour rappeler un patient :
 | 2.98 | 2026-11-06 | Nouveau § 9.3 bis : les paramètres facultatifs des actions, `Pour relancer un client, avec un délai de 30 :`, `Relancer le client, avec le délai de 10.` ; valeur de départ constante, recopiée à la compilation dans l'appel : la machine ne change pas. Formes compactes `_un délai << 30`, `relancer(c ; délai << 10)` |
 | 2.99 | 2026-11-06 | Nouveau § 16.16 : les types nommés, `Un état est « à faire », « en cours » ou « fini ».` ; un champ `(état)` prend ses valeurs permises (§ 16.15) ; une variable `Le prochain (état) vaut …` est vérifiée à chaque écriture (`devient`, `qui donne`), à l'analyse pour un texte écrit en clair, à l'exécution sinon (instruction `PERMIS`). Formes compactes `_type _un état « a » ; « b »`, `_le p (état) << …` |
 | 3.00 | 2026-11-06 | § 16.16 : les annotations (point 8 de l'audit) ; une variable ou un paramètre de formule se type, `(nombre)`, `(texte)`, `(date)`, `(heure)`, `(vrai ou faux)` ou un type nommé ; constante vérifiée à l'analyse, à la ligne de l'appel pour un argument ; le reste à l'exécution (`PERMIS`, étendu aux types simples ; en tête de formule pour un paramètre) |
+| 3.01 | 2026-11-06 | Nouveau § 13.7 bis : les contrats d'aptitude, `Une chose payable doit savoir : le montant dû d'une chose payable.` ; une version abstraite, sans code ; à la fin de l'analyse, chaque classe qui adopte l'aptitude a une version concrète (la sienne, d'un ancêtre ou d'une aptitude), hors boucle interactive. Forme compacte `_contrat payable _calcul …` |

@@ -2719,6 +2719,31 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, fleche + 1, f);
             if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
             point(r, f);
+        } else if (!strcmp(c, "contrat")) {
+            /* _contrat payable _calcul _le montant_dû(_une chose_payable) → Une chose payable doit savoir : le montant dû d'une
+             * chose payable. ; _contrat payable _action encaisser(…) → … : encaisser une chose payable. (§ 13.7 bis) */
+            size_t q = d + 3;
+            const int calcul = d + 2 < f && est_cle(&r->e[d + 2], "calcul");
+            const Jeton *art = calcul && q < f && (est_cle(&r->e[q], "le") || est_cle(&r->e[q], "la") || est_cle(&r->e[q], "l'")) ? &r->e[q++] : NULL;
+            if (d + 2 >= f || r->e[d + 1].type != J_CROCHETS || (!calcul && !est_cle(&r->e[d + 2], "action")) || (calcul && !art)
+                || q + 1 >= f || r->e[q].type != J_CROCHETS || r->e[q + 1].type != J_PAR_OUV || fermante(r, q + 1, f) != f - 1) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _contrat payable _calcul _le montant_dû(_une chose_payable) » ou "
+                                             "« _contrat payable _action encaisser(_une chose_payable) »."));
+                return;
+            }
+            mot(r, "une", t);
+            mot(r, "chose", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "doit", t);
+            mot(r, "savoir", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            if (art) {
+                if (!strcmp(art->valeur, "l'")) emettre(r, J_ELISION, "l", art, 1);
+                else mot(r, art->valeur, art);
+            }
+            copier(r, &r->e[q]);
+            parametres(r, q + 2, f - 1, calcul);
+            point(r, f);
         } else if (!strcmp(c, "type")) {   /* _type _un état « a » ; « b » → Un état est « a », « b ». (§ 16.16) */
             if (d + 4 >= f || (!est_cle(&r->e[d + 1], "un") && !est_cle(&r->e[d + 1], "une")) || r->e[d + 2].type != J_CROCHETS) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _type _un état « à faire » ; « fini » »."));

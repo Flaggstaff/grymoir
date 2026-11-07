@@ -206,6 +206,12 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Contrats d'aptitude (§ 13.7 bis) */
+    V("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\n"
+      "Une chose payable doit savoir : encaisser une chose payable et un mode.\nLe montant dû d'une chose payable vaut 1.\n"
+      "Pour encaisser une chose payable et un mode :\n    Afficher mode.",
+      "(aptitude [payable] [montant])\n(contrat payable calcul [montant dû] ([chose]))\n(contrat payable action [encaisser] ([chose] [mode]))\n"
+      "(calcul [montant dû] ([chose]) 1)\n(action [encaisser] ([chose] [mode]) (bloc (afficher [mode])))");
     /* Types nommés (§ 16.16) : un champ « (état) » a les valeurs permises du type */
     V("Un état est « a » ou « b ».\nUne tâche, conservée, a : un statut (état).\nLe p (état) vaut « a ».\nLe p devient « b ».",
       "(type état «a|b»)\n(entité [tâche] [statut : texte])\n(créer [p] «a»)\n(modifier [p] «b»)");

@@ -2426,6 +2426,29 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         expression(im, n->enfants[0]);
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_CONTRAT: {   /* « Une chose payable doit savoir : le montant dû d'une chose payable. » ; compacte : « _contrat payable
+                         * _calcul _le montant_dû(_une chose_payable) », « _contrat payable _action encaisser(…) » (§ 13.7 bis) */
+        const int calcul = n->forme == 1;
+        if (c) {
+            aj(im, "_contrat ");
+            ecrire_nom(im, n->texte2, 0);
+            aj(im, calcul ? " _calcul " : " _action ");
+            if (calcul) aj(im, n->article == ART_LA ? "_la " : n->article == ART_L ? "_l'" : "_le ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, "(");
+            parametres(im, n->enfants[0], 0);
+            aj(im, ")\n");
+            return;
+        }
+        aj(im, "Une chose ");
+        aj(im, n->texte2);
+        aj(im, " doit savoir : ");
+        if (calcul) aj(im, n->article == ART_LA ? "la " : n->article == ART_L ? "l'" : "le ");
+        ecrire_nom(im, n->texte, 0);
+        parametres(im, n->enfants[0], calcul ? 1 : 0);
+        aj(im, ".\n");
+        return;
+    }
     case P_TYPE: {   /* « Un état est « a », « b » ou « c ». » ; « _type _un état « a » ; « b » ; « c » » (§ 16.16) */
         const Noeud **t = grym_allouer((im->nb_types + 1) * sizeof *t);
         if (im->nb_types) memcpy(t, im->types, im->nb_types * sizeof *t);

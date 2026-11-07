@@ -1063,6 +1063,7 @@ static void document(Compilation *c, const Noeud *n, int montrer) {
 
 static void phrase(Compilation *c, const Noeud *ph) {
     switch (ph->type) {
+    case P_CONTRAT:   /* une version abstraite : sans code ; l'analyse a vérifié les versions concrètes (§ 13.7 bis) */
     case P_TYPE:   /* « Un état est … » : une déclaration, sans code (§ 16.16) */
         return;
     case P_CREATION:

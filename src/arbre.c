@@ -451,6 +451,19 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_CONTRAT:   /* (contrat payable calcul [montant dû] ([chose])) (§ 13.7 bis) */
+        chaine_ajouter(c, "(contrat ");
+        chaine_ajouter(c, n->texte2 ? n->texte2 : "");
+        chaine_ajouter(c, n->forme == 1 ? " calcul " : " action ");
+        chaine_ajouter(c, "[");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] (");
+        for (size_t k = 0; k < n->enfants[0]->nb_enfants; k++) {   /* comme les paramètres d'une formule */
+            if (k) chaine_ajouter(c, " ");
+            decrire(n->enfants[0]->enfants[k], c);
+        }
+        chaine_ajouter(c, "))");
+        return;
     case P_TYPE:   /* (type état «à faire|en cours») (§ 16.16) */
         chaine_ajouter(c, "(type ");
         chaine_ajouter(c, n->texte);

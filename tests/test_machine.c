@@ -2399,6 +2399,27 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Contrats d'aptitude (§ 13.7 bis) */
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nUne chose payable doit savoir : encaisser une chose payable et un mode.\nUne facture est une chose payable.\n"
+         "Un abonnement est une chose payable.\nLe montant dû d'une facture vaut montant de la facture.\n"
+         "Le montant dû d'un abonnement vaut montant de l'abonnement × 12.\nPour encaisser une chose payable et un mode :\n"
+         "    Afficher « encaissé » puis le montant dû de la chose puis mode.\nLa f vaut une nouvelle facture :\n    Le montant vaut 100.\n"
+         "Le a vaut un nouvel abonnement :\n    Le montant vaut 10.\nAfficher le montant dû de la f puis le montant dû du a.\n"
+         "Encaisser le a et « TWINT ».", "100 120\nencaissé 120 TWINT");
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nUne facture est une chose payable.\nUne facture urgente est une facture.\nLe montant dû d'une facture vaut 7.\n"
+         "La u vaut une nouvelle facture urgente.\nAfficher le montant dû de la u.", "7");
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nLe montant dû d'une chose payable vaut 1.\nUne facture est une chose payable.\nLa f vaut une nouvelle facture.\n"
+         "Afficher le montant dû de la f.", "1");
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nUne facture est une chose payable.\nUne facture urgente est une facture.\nLe montant dû d'une facture urgente vaut 9.",
+         "ERREUR 4:1 « facture » est une chose payable : il lui faut sa version de « montant dû », que l'aptitude exige. Écris : Le montant dû d'une facture …");
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nUne chose payable doit savoir : encaisser une chose payable.\nUn abonnement est une chose payable.\n"
+         "Le montant dû d'un abonnement vaut 1.",
+         "ERREUR 5:1 « abonnement » est une chose payable : il lui faut sa version de « encaisser », que l'aptitude exige. Écris : Pour encaisser un abonnement …");
+    PROG("Une chose payable doit savoir : le montant dû d'une chose payable.",
+         "ERREUR 1:11 L'aptitude « payable » n'est pas déclarée (avant ce contrat) : « Une chose payable a : … ».");
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'un nombre.",
+         "ERREUR 3:47 Le premier paramètre d'un contrat est l'aptitude elle-même : « une chose payable ».");
+    PROG("Une chose payable a :\n    un montant.\nUne chose payable doit savoir : le montant dû d'une chose payable.\nLe montant dû d'une chose payable et d'un taux vaut 1.", "ERREUR 4:4 « montant dû » a déjà 1 paramètre : toutes ses versions en ont autant.");
     /* Annotations (§ 16.16, 3.00) */
     PROG("Le total (nombre) vaut 0.\nLe total devient total + 5.\nAfficher total.\nLe carré d'un x (nombre) vaut x × x.\n"
          "Afficher le carré de 4.\nPour relancer un client et un délai (nombre) :\n    Afficher client puis délai.\nRelancer « Ana » et 30.\n"

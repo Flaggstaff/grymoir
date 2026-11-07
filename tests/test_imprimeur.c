@@ -174,6 +174,10 @@ int main(void) {
          "Pour relancer un client et un délai (nombre) :\n    Afficher délai.\n");
     COMP("Le total (nombre) vaut 0.\nLe carré d'un x (nombre) vaut x × x.\n",
          "_le total (nombre) << 0\n_calcul _le carré(_un x (nombre)) << x × x\n");
+    FIXE("Une chose payable a :\n    un montant.\n\nUne chose payable doit savoir : le montant dû d'une chose payable.\n"
+         "Une chose payable doit savoir : la remise d'une chose payable et d'un taux.\nUne chose payable doit savoir : encaisser une chose payable et un mode.\n");
+    COMP("Une chose payable a :\n    un montant.\n\nUne chose payable doit savoir : le montant dû d'une chose payable.\n",
+         "_aptitude payable\n    _un montant\n_fin\n\n_contrat payable _calcul _le montant_dû(_une chose_payable)\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"
