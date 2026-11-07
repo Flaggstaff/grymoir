@@ -1272,6 +1272,7 @@ static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel);
 static Noeud *definition_contrat(Analyse *a, size_t kdoit);
 static Noeud *minuterie(Analyse *a, int colonne);
 static Noeud *scenario(Analyse *a, const Jeton *t, int colonne);
+static Noeud *geste(Analyse *a, const Jeton *t);
 
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
@@ -9964,8 +9965,8 @@ static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom) {
 }
 
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
-    if (a->scenario)   /* § 9.7 : les gestes simulés d'un écran viendront */
-        return erreur(a, t, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : il éprouve les actions et la base."));
+    if (a->scenario && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")))   /* 3.08 : l'écran, oui ; la fiche, le document, pas encore */
+        return erreur(a, t, grym_dupliquer("Un scénario n'ouvre pas encore de fiche ni de document : il ouvre des écrans, joués par ses gestes."));
     a->ouvrir_vu = 1;
     if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvre-le dans une action."));
     if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
@@ -11017,6 +11018,74 @@ static Noeud *scenario(Analyse *a, const Jeton *t, int colonne) {
     return n;
 }
 
+/* Un geste d'un scénario (3.08) : « On écrit « Ana » dans le nom de l'écran de saisie. », « On choisit « Suisse » dans le
+ * pays de l'écran de saisie. », « On choisit le p dans l'écran de saisie. », « On clique sur « OK » dans l'écran de
+ * saisie. », « On ferme l'écran de saisie. » Préparé avant « Ouvrir », joué par l'écran simulé. */
+static Noeud *geste(Analyse *a, const Jeton *t) {
+    if (!a->scenario) return erreur(a, t, grym_dupliquer("Un geste (« On clique sur … ») s'écrit dans un scénario (§ 9.7)."));
+    const Jeton *verbe = voir(a, 1);
+    const int forme = est_mot(verbe, "écrit") ? 1 : est_mot(verbe, "choisit") ? 2 : est_mot(verbe, "clique") ? 3 : 4;
+    Noeud *n = noeud_creer(P_GESTE, t->ligne, t->colonne, t->debut);
+    n->forme = forme;
+    a->i += 2;
+    if (forme == 3) {   /* « sur « B » dans l'écran E » */
+        if (!est_mot(cour(a), "sur") || voir(a, 1)->type != J_TEXTE || !est_mot(voir(a, 2), "dans")) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« On clique sur « Enregistrer » dans l'écran … » attendu."));
+        }
+        n->texte = grym_dupliquer(voir(a, 1)->valeur);
+        a->i += 3;
+    } else if (forme == 1 || forme == 2) {   /* la valeur, jusqu'à « dans » */
+        Noeud *v = expression_avant(a, "dans", NULL);
+        if (!v) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, v);
+        if (!est_mot(cour(a), "dans")) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« dans le nom de l'écran … » attendu."));
+        }
+        avancer(a);
+        if (!(cour(a)->type == J_ELISION && est_mot(voir(a, 1), "écran"))) {   /* une zone : « le nom de l'écran … » */
+            const Article art = article_de(cour(a));
+            if (art != ART_LE && art != ART_LA && art != ART_L && art != ART_IMPLICITE) {   /* implicite : la forme compacte */
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("La zone s'écrit avec son article : « dans le nom de l'écran … »."));
+            }
+            n->article = art;
+            avancer(a);
+            size_t d = a->i, f = d;
+            while (f + 2 < a->n && !(est_mot(&a->j[f], "de") && a->j[f + 1].type == J_ELISION && est_mot(&a->j[f + 2], "écran"))) f++;
+            if (f == d || f + 2 >= a->n) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("« de l'écran … » attendu après la zone."));
+            }
+            n->texte = a->j[d].type == J_CROCHETS && f == d + 1 ? grym_dupliquer(a->j[d].valeur) : cle(a, d, f);
+            a->i = f + 1;
+        } else if (forme == 1) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("On écrit dans une zone : « dans le nom de l'écran … »."));
+        }
+    }
+    size_t f;
+    char *nom = NULL;
+    EcranConnu *e = ecran_nomme(a, a->i, &f, &nom);
+    if (!e) { free(nom); noeud_liberer(n); return NULL; }
+    if (forme == 3) {   /* le bouton existe-t-il ? */
+        int vu = 0;
+        for (size_t k = 0; k < e->nb_boutons && !vu; k++) vu = strcmp(e->boutons[k], n->texte) == 0;
+        if (!vu) {
+            Noeud *x = erreur(a, voir(a, -1), grym_formater("« %s » n'est pas un bouton de l'écran %s.", n->texte, nom));
+            free(nom);
+            noeud_liberer(n);
+            return x;
+        }
+    }
+    n->texte3 = nom;
+    a->i = f;
+    if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 static Noeud *exemple(Analyse *a, const Jeton *t) {
     if (a->formule || t->colonne != 1)
         return erreur(a, t, grym_dupliquer("Un exemple se place au premier niveau du fichier, hors d'une formule."));
@@ -11255,6 +11324,9 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
     if (est_mot(t, "scénario") && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_DEUX_POINTS) return scenario(a, t, colonne);   /* § 9.7 */
+    if (est_mot(t, "on") && (est_mot(voir(a, 1), "écrit") || est_mot(voir(a, 1), "choisit") || est_mot(voir(a, 1), "clique")
+                             || est_mot(voir(a, 1), "ferme")))
+        return geste(a, t);   /* 3.08 */
     if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "que") && !visible(a, "vérifier que")) {   /* § 9.7 */
         if (!a->scenario) return erreur(a, t, grym_dupliquer("« Vérifier que … » s'écrit dans un scénario (§ 9.7)."));
         a->i += 2;

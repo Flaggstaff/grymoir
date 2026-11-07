@@ -188,6 +188,10 @@ int main(void) {
     FIXE("Un client, conservé, a :\n    un nom (texte).\n\nScénario « un client se crée » :\n    Le c vaut un nouveau client :\n"
          "        Le nom vaut « Ana ».\n    Conserver le c.\n    Vérifier que le nombre de clients conservés = 1.\n");
     COMP("Scénario « a » :\n    Le x vaut 1.\n    Vérifier que x = 1.\n", "_scénario « a »\n    _le x << 1\n    _vérifier _nu x = 1\n_fin\n");
+    FIXE("L'écran de saisie montre :\n    un nom (texte),\n    un bouton « OK ».\n\nQuand on clique sur « OK » dans l'écran de saisie :\n"
+         "    Fermer l'écran.\n\nScénario « a » :\n    On écrit « Ana » dans le nom de l'écran de saisie.\n"
+         "    On choisit « Ana » dans la nom de l'écran de saisie.\n    On clique sur « OK » dans l'écran de saisie.\n"
+         "    On ferme l'écran de saisie.\n    Ouvrir l'écran de saisie.\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

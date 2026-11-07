@@ -469,6 +469,17 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_GESTE: {   /* (geste clic «OK» de saisie), (geste écrit [nom] de saisie «Ana») (3.08) */
+        static const char *const S[] = { "", "écrit", "choisit", "clic", "ferme" };
+        chaine_ajouter(c, "(geste ");
+        chaine_ajouter(c, n->forme >= 1 && n->forme <= 4 ? S[n->forme] : "?");
+        if (n->texte) { chaine_ajouter(c, n->forme == 3 ? " «" : " ["); chaine_ajouter(c, n->texte); chaine_ajouter(c, n->forme == 3 ? "»" : "]"); }
+        chaine_ajouter(c, " ");
+        chaine_ajouter(c, n->texte3 ? n->texte3 : "");
+        if (n->nb_enfants) { chaine_ajouter(c, " "); decrire(n->enfants[0], c); }
+        chaine_ajouter(c, ")");
+        return;
+    }
     case P_VERIFIER:   /* (vérifier condition) */
         chaine_ajouter(c, "(vérifier ");
         decrire(n->enfants[0], c);

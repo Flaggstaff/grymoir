@@ -135,6 +135,8 @@ typedef enum {
     P_COURRIEL,      /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » (§ 22.27) : enfants : a, o, m, t */
     P_SCENARIO,      /* « Scénario « titre » : » et son bloc (§ 9.7) : texte : le titre ; enfants[0] : le bloc ; entier : locaux */
     P_VERIFIER,      /* « Vérifier que condition. » (§ 9.7) : enfants[0] : la condition */
+    P_GESTE,         /* un geste d'un scénario (3.08) : forme 1 écrire, 2 choisir, 3 cliquer, 4 fermer ; texte : la zone ou le
+                        bouton, ou NULL ; texte3 : l'écran ; article : celui de la zone ; enfants[0] : la valeur (écrire, choisir) */
     P_CONTRAT,       /* « Une chose payable doit savoir : le montant dû d'une chose payable. » (§ 13.7 bis) : texte : la formule ;
                         texte2 : l'aptitude ; forme : 1 calcul, 2 action ; article : celui du calcul ; enfants[0] : les
                         paramètres (N_BLOC). Une version abstraite : aucun code */

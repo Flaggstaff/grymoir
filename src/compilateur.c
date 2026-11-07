@@ -1165,6 +1165,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
     }
     case P_SCENARIO:   /* § 9.7 : ne se compile qu'en mode scénario, à part (voir compiler) */
         return;
+    case P_GESTE: {   /* [la valeur,] puis GESTE « forme␟ligne␟écran␟élément » (3.08) */
+        char *d = grym_formater("%d\x1f%d\x1f%s\x1f%s", ph->forme, ph->ligne, ph->texte3 ? ph->texte3 : "", ph->texte ? ph->texte : "");
+        long k = bloc_constante(c->b, C_TEXTE, d);
+        free(d);
+        if (k < 0) { trop_grand(c, ph); return; }
+        if (ph->nb_enfants) expression(c, ph->enfants[0]);
+        emettre(c, I_GESTE, k, ph->ligne, ph->colonne);
+        return;
+    }
     case P_VERIFIER: {   /* la condition, puis VÉRIFIER « ligne N : … » (§ 9.7) */
         char *t = imprimer_phrase(c->programme, ph, 0);
         size_t l = strlen(t);
@@ -1951,7 +1960,8 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
         for (size_t k = 0; k < p->nb; k++) {
             TypeNoeud t = p->phrases[k]->type;
             if (t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER
-                || t == P_STYLE || t == P_TYPE || t == P_CONTRAT)
+                || t == P_STYLE || t == P_TYPE || t == P_CONTRAT
+                || t == P_ECRAN || t == P_QUAND || t == P_XML || t == P_BIBLIOTHEQUE || t == P_INTERNE)   /* 3.08 : les écrans */
                 garde[n++] = p->phrases[k];
             if (t == P_SCENARIO && ++rang == mode_scenario) sc = p->phrases[k];
         }

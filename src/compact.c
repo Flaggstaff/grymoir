@@ -3339,6 +3339,36 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 1], 1);
             fixer_retrait(r, premier, prof);
             ouvrir(r, O_FORMULE, prof, t);
+        } else if (!strcmp(c, "on_écrit") || !strcmp(c, "on_choisit") || !strcmp(c, "on_clique") || !strcmp(c, "on_ferme")) {
+            /* _on_écrit X _dans nom _écran de_saisie → On écrit X dans le nom de l'écran de saisie. (3.08) */
+            const size_t ke = chercher(r, d + 1, f, "écran");
+            const size_t kd = chercher(r, d + 1, f, "dans");
+            if (ke + 2 != f || r->e[ke + 1].type != J_CROCHETS) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _on_clique « OK » _écran de_saisie »."));
+                return;
+            }
+            mot(r, "on", t);
+            mot(r, !strcmp(c, "on_écrit") ? "écrit" : !strcmp(c, "on_choisit") ? "choisit" : !strcmp(c, "on_clique") ? "clique" : "ferme", t);
+            if (!strcmp(c, "on_clique")) {
+                mot(r, "sur", t);
+                if (d + 1 < ke) copier(r, &r->e[d + 1]);
+                mot(r, "dans", &r->e[ke]);
+            } else if (strcmp(c, "on_ferme") != 0) {
+                const size_t fv = kd < ke ? kd : ke;
+                emettre(r, J_PAR_OUV, NULL, &r->e[d + 1], 1);
+                expression(r, d + 1, fv);
+                emettre(r, J_PAR_FERM, NULL, &r->e[fv], 1);
+                mot(r, "dans", &r->e[fv]);
+                if (kd < ke) {   /* la zone : article implicite, la forme littéraire reprend le sien */
+                    emettre(r, J_ARTICLE_IMPLICITE, NULL, &r->e[kd + 1], 1);
+                    copier(r, &r->e[kd + 1]);
+                    mot(r, "de", &r->e[kd + 1]);
+                }
+            }
+            emettre(r, J_ELISION, "l", &r->e[ke], 1);
+            mot(r, "écran", &r->e[ke]);
+            copier(r, &r->e[ke + 1]);
+            point(r, f);
         } else if (!strcmp(c, "vérifier")) {   /* _vérifier c → Vérifier que c. (§ 9.7) */
             if (d + 1 == f) { echouer(r, t, grym_dupliquer("Forme attendue : « _vérifier _nombre_de relance _conservé = 1 ».")); return; }
             mot(r, "vérifier", t);

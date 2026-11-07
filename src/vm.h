@@ -75,6 +75,8 @@ void machine_essai_migration(Machine *m, Chaine *rapport);
 /* grym scenarios (§ 9.7) : un programme qui contient des écrans tourne quand même ; ouvrir un écran, une fiche ou un
  * document y échoue, à sa ligne. */
 void machine_mode_scenario(Machine *m, int actif);
+/* Les gestes d'un scénario restés sans écran (3.08) : leur nombre ; *texte (alloué) dit le premier. */
+size_t machine_gestes_restants(const Machine *m, char **texte);
 
 /* Après une exécution ratée : ce qui a été annulé, à dire à l'utilisateur (§ 3.3), ou NULL
  * s'il n'y a rien à dire. À libérer. */

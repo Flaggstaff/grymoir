@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.07 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.08 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -765,7 +765,20 @@ Scénario « une relance se crée » :
 - **`Vérifier que condition.`** : fausse, le scénario échoue, à sa ligne : « Vérification fausse : le nombre de relances conservées = 3. » Elle ne s'écrit que dans un scénario.
 - **`grym scenarios fichier.grym`** joue chaque scénario **seul, sur une base neuve en mémoire** : ce qu'un scénario conserve, le suivant ne le voit pas, et la base du programme n'est jamais touchée. Le programme lui-même ne s'exécute pas : seules ses déclarations (classes, entités, aptitudes, types, contrats, calculs, actions, règles, fichiers utilisés) sont compilées. Chaque scénario s'affiche, `✓ « une relance se crée »` ou `✗ « un échec se voit » : fichier:25:5 : Vérification fausse : …`, puis le bilan : « 3 scénarios, 2 réussis. » La commande réussit si tous réussissent : un script ou l'intégration continue s'y fie. Les règles (§ 16.14) se vérifient à la fin du scénario comme à la fin d'un programme.
 - **Ce qu'un scénario voit** : les déclarations du programme, et ses propres noms, qui disparaissent avec lui. Les variables du programme lui sont invisibles, puisque le programme ne s'exécute pas (« « total » est une variable du programme : un scénario ne la voit pas … Crée-la dans le scénario. »).
-- **Ce qu'il ne fait pas encore** : ouvrir un écran, une fiche ou un document (refusé dès l'analyse : les gestes simulés viendront) ; une saisie y échoue au lieu d'attendre le clavier (« Aucune entrée : la question ne peut pas être posée ici. »).
+- **Les gestes** *(3.08)* : un scénario ouvre des écrans, joués par des gestes préparés **avant** `Ouvrir`, puisque l'ouverture attend jusqu'à la fermeture :
+  ```
+  On écrit « Ana Roth » dans le nom de l'écran de saisie.
+  On choisit « Suisse » dans le pays de l'écran de saisie.
+  On choisit le p dans l'écran liste.
+  On clique sur « Enregistrer » dans l'écran de saisie.
+  On ferme l'écran de saisie.
+  Ouvrir l'écran de saisie.
+  ```
+  `On écrit` va dans une zone ; `On choisit` une valeur d'une zone à choix, ou un objet conservé d'une liste de l'écran ; `On clique sur « B »` ; `On ferme l'écran`. Chaque geste nomme son écran : il est joué quand cet écran attend, dans l'ordre écrit ; un écran qui ouvre un autre écran reçoit ses gestes à son tour. Quand il n'y a plus de geste, l'écran se ferme seul.
+  - **Un geste impossible arrête le scénario**, à sa ligne : un bouton inactif ou caché (« Geste de la ligne 28 : « Enregistrer » est inactif dans l'écran de saisie : le geste ne peut pas se faire. »), une zone en lecture seule, un choix hors de la liste, un objet qu'aucune liste ne montre, un geste destiné à un autre écran que celui qui attend. Un geste préparé qu'aucun écran ne reçoit est une erreur aussi. Une erreur qu'un événement montre dans l'écran (`Refuser`) arrête le scénario, avec son message.
+  - Un bouton inconnu se signale dès l'analyse. Un geste hors d'un scénario est refusé.
+  - En forme compacte : `_on_écrit X _dans nom _écran de_saisie`, `_on_choisit X [_dans pays] _écran …`, `_on_clique « B » _écran …`, `_on_ferme _écran …`.
+- **Ce qu'il ne fait pas encore** : ouvrir une fiche ou un document (refusé dès l'analyse ; une action qui en ouvre un échoue à sa ligne) ; une saisie y échoue au lieu d'attendre le clavier (« Aucune entrée : la question ne peut pas être posée ici. »).
 - `grym lancer` ignore les scénarios, comme les exemples. Aucun mot réservé : `Scénario` ne commence une phrase que suivi d'un titre et de « : », `Vérifier` que suivi de « que ».
 - En forme compacte : `_scénario « titre »` … `_fin` ; `_vérifier condition`.
 
@@ -3079,3 +3092,4 @@ Pour rappeler un patient :
 | 3.05 | 2026-11-06 | Nouveau § 9.7 (point 20 de l'audit) : les scénarios, `Scénario « titre » :`, `Vérifier que condition.`, joués par `grym scenarios`, chacun seul sur une base neuve en mémoire, sans exécuter le programme ; sans écran pour l'instant. Instruction `VÉRIFIER`. Forme compacte `_scénario`, `_vérifier` |
 | 3.06 | 2026-11-07 | Ménage (points 21 à 23 de l'audit, première part) : `vrai` et `faux` comme éléments d'un ensemble ou d'une liste (§ 13.9) ; sept fuites de mémoire préexistantes corrigées dans la machine et le serveur, que l'audit avait relevées (25 et 49 octets) : les dix programmes d'essai tournent désormais sans aucune fuite |
 | 3.07 | 2026-11-07 | Plan du § 22 : ses 27 sections rangées par thème (un écran, son déroulement, son apparence, ses documents, les données sensibles, les échanges avec l'extérieur, le matériel et la radio), sans renumérotation, ses numéros étant cités par les messages, les essais et le code (point 21 de l'audit) |
+| 3.08 | 2026-11-07 | § 9.7 : les gestes d'un scénario, `On écrit … dans le nom de l'écran …`, `On choisit …`, `On clique sur « B » dans l'écran …`, `On ferme l'écran …`, préparés avant `Ouvrir` et joués par un écran simulé dans la machine ; un geste impossible arrête le scénario à sa ligne. Instruction `GESTE`. Forme compacte `_on_écrit`, `_on_choisit`, `_on_clique`, `_on_ferme` |

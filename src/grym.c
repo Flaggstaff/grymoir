@@ -293,14 +293,6 @@ static int exemples(const char *chemin) {
     return ok && !rates ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-/* Dans un scénario, personne ne répond au clavier (§ 9.7) : une saisie y est refusée au lieu d'attendre. */
-static Issue scenario_sans_saisie(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret, Validation valider,
-                                  void *vcontexte) {
-    (void)contexte; (void)sortie; (void)champs; (void)n; (void)valider; (void)vcontexte;
-    *arret = 0;
-    return ISSUE_FIN;
-}
-
 /* grym scenarios : joue chaque « Scénario « … » : » du programme, seul, sur une base neuve en mémoire, sans exécuter le
  * reste du programme (grammaire, § 9.7). Réussit si tous réussissent. */
 static int scenarios(const char *chemin) {
@@ -324,15 +316,16 @@ static int scenarios(const char *chemin) {
         Machine *m = machine_creer();
         situer(m, chemin);
         machine_base(m, ":memory:");
-        machine_mode_scenario(m, 1);
-        Console console;
-        memset(&console, 0, sizeof console);
-        Interface i = console_interface(&console);
-        i.formulaire = scenario_sans_saisie;
-        machine_interface(m, &i);
+        machine_mode_scenario(m, 1);   /* l'interface simulée : console, écrans joués par les gestes (3.08) */
         Chaine sortie = {0};
         Diagnostic d;
-        const int ok = machine_executer(m, b, &sortie, &d);
+        int ok = machine_executer(m, b, &sortie, &d);
+        char *reste = NULL;
+        if (ok && machine_gestes_restants(m, &reste)) {   /* un geste préparé que nul écran n'a reçu : le scénario échoue */
+            ok = 0;
+            memset(&d, 0, sizeof d);
+            d.message = reste;
+        }
         if (sortie.d && *sortie.d) fputs(sortie.d, stdout);
         free(sortie.d);
         const char *titre = compilateur_titre_scenario() ? compilateur_titre_scenario() : "";

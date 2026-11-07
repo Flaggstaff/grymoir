@@ -233,7 +233,11 @@ struct Machine {
     void *contexte_mdp;
     int essais_mdp;         /* plus de 1 : un mot de passe faux se redemande, l'hôte le sachant (6 novembre 2026) */
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
-    int scenario;              /* grym scenarios (§ 9.7) : sans écran ; une action qui en ouvrirait un échoue, à sa ligne */
+    int scenario;              /* grym scenarios (§ 9.7) : les écrans sont simulés, joués par les gestes préparés (3.08) */
+    struct Geste *gestes;      /* les gestes préparés par « On clique sur … », dans l'ordre (3.08) */
+    size_t nb_gestes, cap_gestes, geste_prochain;
+    char *geste_erreur;        /* un geste impossible : l'attente s'interrompt avec ce message (3.08) */
+    struct HoteScenario *hote; /* l'interface simulée d'un scénario, possédée */
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
@@ -403,7 +407,7 @@ void machine_interface(Machine *m, const Interface *i) {
 }
 
 void machine_essai_migration(Machine *m, Chaine *rapport) { m->essai_migration = rapport; }
-void machine_mode_scenario(Machine *m, int actif) { m->scenario = actif; }
+
 
 void machine_base(Machine *m, const char *chemin) {
     free(m->signature);
@@ -476,6 +480,7 @@ void machine_dossier_ecriture(Machine *m, const char *dossier) {
 /* L'écran ouvert (grammaire, § 22). */
 typedef struct EcranVM {
     char *titre;
+    char *nom;             /* le nom déclaré (« de saisie ») : les gestes d'un scénario le désignent (§ 9.7, 3.08) */
     int titre_calcule;  /* 2.33 : le titre vient d'une expression, relue à chaque tour (ÉCRAN_TEXTE 0xFFFF) */
     int taille_titre;   /* −1 en petit, 1 en grand, 0 celle du thème (§ 22.5) */
     size_t n;
@@ -508,9 +513,201 @@ typedef struct EcranVM {
     long numero;           /* 2.67 : un numéro propre à cet écran, pour le retrouver dans la pile sans garder son adresse */
 } EcranVM;
 
+static char *texte_valeur(const Machine *m, const Valeur *v);
+
+/* ---------- Les gestes d'un scénario (§ 9.7, 3.08) ---------- */
+
+typedef struct Geste {
+    int sorte;      /* 1 écrire, 2 choisir, 3 cliquer, 4 fermer */
+    char *ecran;    /* le nom déclaré de l'écran */
+    char *element;  /* la zone (écrire, choisir une valeur), le bouton (cliquer), ou NULL (choisir un objet, fermer) */
+    Valeur v;       /* ce qu'on écrit ou choisit ; absent sinon */
+    int ligne;
+} Geste;
+
+/* L'interface d'un scénario : la console pour le reste, les écrans simulés. Console en tête : ses fonctions reçoivent ce
+ * contexte comme le leur. */
+typedef struct HoteScenario {
+    Console console;
+    Machine *m;
+    long choisies[64];     /* la ligne choisie de chaque liste de l'écran ouvert, gardée d'un geste à l'autre */
+    char *erreur_ecran;    /* ce qu'un événement a montré comme erreur : le scénario échoue */
+} HoteScenario;
+
+static void sim_ouvrir(void *c, Chaine *s, const char *t, const ElementEcran *el, size_t n) {
+    HoteScenario *h = c;
+    (void)s; (void)t; (void)el; (void)n;
+    for (size_t k = 0; k < 64; k++) h->choisies[k] = -1;
+}
+static void sim_lignes(void *c, size_t e, const char *const *cel, size_t nb) { (void)c; (void)e; (void)cel; (void)nb; }
+static void sim_valeurs(void *c, const char *const *v, size_t n) { (void)c; (void)v; (void)n; }
+static void sim_apparence(void *c, int coul, const unsigned char *l, size_t t, const char *f) { (void)c; (void)coul; (void)l; (void)t; (void)f; }
+static void sim_etats(void *c, const unsigned char *e, size_t n) { (void)c; (void)e; (void)n; }
+static void sim_image(void *c, size_t e, const unsigned char *o, size_t t, const char *f) { (void)c; (void)e; (void)o; (void)t; (void)f; }
+static void sim_theme(void *c, const char *const *n, const char *const *cl, const char *const *so, size_t nb, int ci,
+                      const unsigned char *p, size_t tp) { (void)c; (void)n; (void)cl; (void)so; (void)nb; (void)ci; (void)p; (void)tp; }
+static void sim_signature(void *c, const unsigned char *o, size_t t, const char *f) { (void)c; (void)o; (void)t; (void)f; }
+static void sim_texte(void *c, size_t e, const char *t) { (void)c; (void)e; (void)t; }
+static void sim_transcrire(void *c, size_t ci, const unsigned char *o, size_t t) { (void)c; (void)ci; (void)o; (void)t; }
+static void sim_choix(void *c, size_t e, const char *const *ch, size_t n) { (void)c; (void)e; (void)ch; (void)n; }
+static void sim_signaler(void *c, Chaine *s, const char *message) { (void)c; chaine_ajouter(s, message); chaine_ajouter(s, "\n"); }
+static void sim_erreur(void *c, Chaine *s, const char *message) {
+    HoteScenario *h = c;
+    (void)s;
+    if (!h->erreur_ecran) h->erreur_ecran = grym_dupliquer(message);
+}
+static void sim_fermer(void *c, Chaine *s) {
+    HoteScenario *h = c;
+    (void)s;
+    for (size_t k = 0; k < 64; k++) h->choisies[k] = -1;
+}
+
+static Issue sim_refuser(Machine *m, char *message) {
+    free(m->geste_erreur);
+    m->geste_erreur = message;
+    return ISSUE_INTERROMPU;
+}
+
+/* Un geste refusé : sa ligne en tête du message. */
+static Issue sim_refuser_l(Machine *m, int ligne, char *message) {
+    char *x = grym_formater("Geste de la ligne %d : %s", ligne, message);
+    free(message);
+    return sim_refuser(m, x);
+}
+
+/* Le geste suivant, rendu en événement ; plus aucun : l'écran se ferme. Un geste impossible arrête le scénario. */
+static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
+    HoteScenario *h = c;
+    Machine *m = h->m;
+    static char texte[1024];
+    (void)sortie;
+    memset(e, 0, sizeof *e);
+    e->sorte = EVENEMENT_FERMETURE;
+    EcranVM *ec = m->ecran;
+    e->choisies = h->choisies;
+    e->nb_choisies = ec && ec->n < 64 ? ec->n : 64;
+    if (h->erreur_ecran) {
+        char *x = grym_formater("L'écran %s a montré une erreur : %s", ec && ec->nom ? ec->nom : "", h->erreur_ecran);
+        free(h->erreur_ecran);
+        h->erreur_ecran = NULL;
+        return sim_refuser(m, x);
+    }
+    if (!ec || m->geste_prochain >= m->nb_gestes) return ISSUE_REPONDU;   /* plus de geste : l'écran se ferme */
+    const Geste *g = &m->gestes[m->geste_prochain];
+    if (!ec->nom || strcmp(ec->nom, g->ecran) != 0)
+        return sim_refuser(m, grym_formater("Le geste de la ligne %d attendait l'écran %s ; c'est l'écran %s qui est ouvert.",
+                                            g->ligne, g->ecran, ec->nom ? ec->nom : ""));
+    m->geste_prochain++;
+    if (g->sorte == 4) return ISSUE_REPONDU;   /* fermer */
+    size_t k = 0;
+    if (g->sorte == 3) {   /* cliquer sur « B » */
+        while (k < ec->n && !(ec->elements[k].sorte == ELEMENT_BOUTON && strcmp(ec->elements[k].texte, g->element) == 0)) k++;
+        if (k == ec->n) return sim_refuser_l(m, g->ligne, grym_formater("« %s » n'est pas un bouton de l'écran %s.", g->element, ec->nom));
+        if (ec->etats[k] & 3)
+            return sim_refuser_l(m, g->ligne, grym_formater("« %s » est %s dans l'écran %s : le geste ne peut pas se faire.", g->element,
+                                                ec->etats[k] & 2 ? "caché" : "inactif", ec->nom));
+        e->sorte = EVENEMENT_CLIC;
+        e->element = k;
+        return ISSUE_REPONDU;
+    }
+    if (g->sorte == 2 && !g->element) {   /* choisir un objet : la liste qui le montre */
+        if (g->v.type != V_OBJET || !g->v.objet->id)
+            return sim_refuser_l(m, g->ligne, grym_formater("Ligne %d : on choisit dans une liste un objet conservé ; ailleurs, nomme la zone "
+                                                "(« dans le pays de l'écran … »).", g->ligne));
+        for (k = 0; k < ec->n; k++) {
+            if (ec->elements[k].sorte != ELEMENT_LISTE || ec->listes[k].type != V_LISTE) continue;
+            const Liste *l = ec->listes[k].liste;
+            for (size_t r = 0; r < l->n; r++)
+                if (l->ids[r] == g->v.objet->id && strcmp(l->classes[r], g->v.objet->classe->nom) == 0) {
+                    if (ec->etats[k] & 3)
+                        return sim_refuser_l(m, g->ligne, grym_formater("La liste qui montre cet objet est %s dans l'écran %s.",
+                                                            ec->etats[k] & 2 ? "cachée" : "inactive", ec->nom));
+                    if (k < 64) h->choisies[k] = (long)r;
+                    e->sorte = EVENEMENT_CHOIX;
+                    e->element = k;
+                    e->ligne = r;
+                    return ISSUE_REPONDU;
+                }
+        }
+        char *n = texte_valeur(m, &g->v);
+        Issue i = sim_refuser_l(m, g->ligne, grym_formater("« %s » n'est dans aucune liste de l'écran %s.", n, ec->nom));
+        free(n);
+        return i;
+    }
+    /* écrire, ou choisir une valeur : la zone de ce nom */
+    while (k < ec->n && !(ec->elements[k].sorte == ELEMENT_ZONE && ec->champ[k] >= 0 && ec->objet
+                          && strcmp(ec->objet->classe->champs[ec->champ[k]], g->element) == 0)) k++;
+    if (k == ec->n) return sim_refuser_l(m, g->ligne, grym_formater("« %s » n'est pas une zone de l'écran %s.", g->element, ec->nom));
+    if ((ec->etats[k] & 3) || ec->elements[k].lecture_seule)
+        return sim_refuser_l(m, g->ligne, grym_formater("La zone « %s » est %s dans l'écran %s : le geste ne peut pas se faire.", g->element,
+                                            ec->etats[k] & 2 ? "cachée" : ec->etats[k] & 1 ? "inactive" : "en lecture seule", ec->nom));
+    char *t = g->v.type == V_TEXTE ? grym_dupliquer(g->v.texte ? g->v.texte : "") : texte_valeur(m, &g->v);
+    if (g->sorte == 2 && ec->elements[k].nb_choix) {
+        size_t q = 0;
+        while (q < ec->elements[k].nb_choix && strcmp(ec->elements[k].choix[q], t) != 0) q++;
+        if (q == ec->elements[k].nb_choix) {
+            Issue i = sim_refuser_l(m, g->ligne, grym_formater("« %s » n'est pas un choix de la zone « %s » de l'écran %s.", t, g->element, ec->nom));
+            free(t);
+            return i;
+        }
+    }
+    snprintf(texte, sizeof texte, "%s", t);
+    free(t);
+    e->sorte = EVENEMENT_CHANGEMENT;
+    e->element = k;
+    e->texte = texte;
+    return ISSUE_REPONDU;
+}
+
+/* Dans un scénario, personne ne répond au clavier : une saisie y est refusée au lieu d'attendre. */
+static Issue sim_formulaire(void *c, Chaine *s, Champ *ch, size_t n, size_t *arret, Validation v, void *vc) {
+    (void)c; (void)s; (void)ch; (void)n; (void)v; (void)vc;
+    *arret = 0;
+    return ISSUE_FIN;
+}
+
+void machine_mode_scenario(Machine *m, int actif) {
+    m->scenario = actif;
+    if (!actif || m->hote) return;
+    m->hote = grym_allouer(sizeof *m->hote);
+    memset(m->hote, 0, sizeof *m->hote);
+    m->hote->m = m;
+    Interface i = console_interface(&m->hote->console);
+    i.formulaire = sim_formulaire;
+    i.ecran_ouvrir = sim_ouvrir;
+    i.ecran_lignes = sim_lignes;
+    i.ecran_attendre = sim_attendre;
+    i.ecran_erreur = sim_erreur;
+    i.ecran_fermer = sim_fermer;
+    i.ecran_valeurs = sim_valeurs;
+    i.ecran_apparence = sim_apparence;
+    i.ecran_etats = sim_etats;
+    i.ecran_image = sim_image;
+    i.ecran_theme = sim_theme;
+    i.ecran_signature = sim_signature;
+    i.ecran_texte = sim_texte;
+    i.ecran_transcrire = sim_transcrire;
+    i.ecran_choix = sim_choix;
+    i.ecran_signaler = sim_signaler;
+    machine_interface(m, &i);
+}
+
+/* Les gestes préparés qui n'ont pas servi, après un scénario ; 0 s'il n'en reste aucun. *texte : le premier, à libérer. */
+size_t machine_gestes_restants(const Machine *m, char **texte) {
+    const size_t n = m->nb_gestes - m->geste_prochain;
+    if (n && texte) *texte = grym_formater("Le geste de la ligne %d n'a pas servi : aucun écran ne l'a reçu.", m->gestes[m->geste_prochain].ligne);
+    return n;
+}
+
+
 static void ecran_detruire(EcranVM *e);
 
 void machine_detruire(Machine *m) {
+    for (size_t k = 0; k < m->nb_gestes; k++) { free(m->gestes[k].ecran); free(m->gestes[k].element); valeur_liberer(&m->gestes[k].v); }
+    free(m->gestes);
+    free(m->geste_erreur);
+    if (m->hote) free(m->hote->erreur_ecran);
+    free(m->hote);
     if (!m) return;
     free(m->sorte_echec);   /* § 18.2 */
     free(m->sorte_relancee);
@@ -2949,6 +3146,7 @@ static void ecran_detruire(EcranVM *e) {
     free(e->doc_cellules);
     free(e->doc_lignes);
     free(e->titre);
+    free(e->nom);
     free(e->elements);
     free(e->textes);
     free(e->colonnes);
@@ -2997,6 +3195,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         *t = 0;
     }
     e->titre = np > 1 && parts[1][0] ? grym_dupliquer(parts[1]) : titre_d_ecran(parts[0]);
+    e->nom = grym_dupliquer(parts[0]);
     e->n = np > 2 ? np - 2 : 0;
     size_t t = e->n ? e->n : 1;
     e->elements = allouer_a_zero(t * sizeof *e->elements);
@@ -5925,10 +6124,6 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_ECRAN_OUVRIR: {
-            if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
-                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : cette action en ouvre un."));
-                break;
-            }
             /* « Ouvrir l'écran X. » (grammaire, § 22.3) : l'écran se montre ; la boucle compilée attend ensuite */
             char *probleme = NULL;
             EcranVM *e = ecran_lire(m, b->constantes[op].texte, &probleme);
@@ -6299,7 +6494,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_DOCUMENT: {
             if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
-                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : cette action en ouvre un."));
+                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore de fiche ni de document : cette action en ouvre un."));
                 break;
             }
             if (op == 2) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier tel qu'il est rangé */
@@ -6521,7 +6716,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *reprise = probleme ? NULL : fermer_attente(m);
             if (!probleme) probleme = reprise;
             if (!probleme && issue != ISSUE_REPONDU) {
-                probleme = grym_dupliquer("Interrompu (Ctrl+C).");
+                probleme = m->geste_erreur ? m->geste_erreur : grym_dupliquer("Interrompu (Ctrl+C).");   /* un geste impossible (3.08) */
+                m->geste_erreur = NULL;
                 fatal = 1;
             }
             /* la ligne choisie de chaque liste : « le compositeur choisi de l'écran » ; une échéance n'y touche pas (3.03) */
@@ -6746,7 +6942,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         case I_FICHE_ECRAN: {
             if (m->scenario) {   /* § 9.7 : les gestes simulés d'un écran viendront */
-                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore d'écran, de fiche ni de document : cette action en ouvre un."));
+                ok = echouer(diag, b, debut, grym_dupliquer("Un scénario n'ouvre pas encore de fiche ni de document : cette action en ouvre un."));
                 break;
             }
             /* « Ouvrir la fiche de c. » : l'écran déduit de l'entité (grammaire, § 22.3) */
@@ -7272,6 +7468,27 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&pr);
             if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
             empiler(&pile, r);
+            break;
+        }
+        case I_GESTE: {   /* un geste préparé (3.08) : rangé, joué par l'écran simulé à l'ouverture */
+            const char *d = b->constantes[op].texte;
+            const int forme = atoi(d);
+            const char *s1 = strchr(d, '\x1f'), *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL, *s3 = s2 ? strchr(s2 + 1, '\x1f') : NULL;
+            Valeur val = forme == 1 || forme == 2 ? depiler(&pile) : vi_absent(NULL);
+            if (!s3) { valeur_liberer(&val); break; }
+            if (m->nb_gestes == m->cap_gestes) {
+                m->cap_gestes = m->cap_gestes ? 2 * m->cap_gestes : 8;
+                Geste *ng = grym_allouer(m->cap_gestes * sizeof *ng);
+                if (m->nb_gestes) memcpy(ng, m->gestes, m->nb_gestes * sizeof *ng);
+                free(m->gestes);
+                m->gestes = ng;
+            }
+            Geste *g = &m->gestes[m->nb_gestes++];
+            g->sorte = forme;
+            g->ligne = atoi(s1 + 1);
+            g->ecran = grym_formater("%.*s", (int)(s3 - s2 - 1), s2 + 1);
+            g->element = s3[1] ? grym_dupliquer(s3 + 1) : NULL;
+            g->v = val;
             break;
         }
         case I_VERIFIER: {   /* « Vérifier que … » (§ 9.7) : fausse, le scénario échoue, avec la ligne et la condition */

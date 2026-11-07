@@ -2479,6 +2479,25 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         bloc(im, n->enfants[0], niveau + 1);
         if (c) fin_compacte(im, niveau);
         return;
+    case P_GESTE: {   /* « On clique sur « OK » dans l'écran de saisie. » ; « _on_clique « OK » _écran de_saisie » (3.08) */
+        static const char *const LIT[] = { "", "On écrit ", "On choisit ", "On clique sur ", "On ferme " };
+        static const char *const COMP[] = { "", "_on_écrit ", "_on_choisit ", "_on_clique ", "_on_ferme " };
+        aj(im, c ? COMP[n->forme] : LIT[n->forme]);
+        if (n->nb_enfants) { expression(im, n->enfants[0]); aj(im, " "); }
+        if (n->forme == 3) { ecrire_texte(im, n->texte); aj(im, " "); }
+        if (n->texte && n->forme != 3) {
+            if (c) { aj(im, "_dans "); ecrire_nom(im, n->texte, 0); aj(im, " "); }
+            else {
+                aj(im, "dans ");
+                aj(im, n->article == ART_LA ? "la " : n->article == ART_L ? "l'" : "le ");
+                ecrire_nom(im, n->texte, 0);
+                aj(im, " de ");
+            }
+        } else if (!c && n->forme != 4) aj(im, "dans ");
+        if (c) { aj(im, "_écran "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
+        else { aj(im, "l'écran "); aj_sigles(im, n->texte3); aj(im, ".\n"); }
+        return;
+    }
     case P_VERIFIER:   /* « Vérifier que c. » ; « _vérifier c » (§ 9.7) */
         aj(im, c ? "_vérifier " : "Vérifier que ");
         expression(im, n->enfants[0]);
