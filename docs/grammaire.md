@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.15 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.16 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1690,6 +1690,14 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - Les fichiers enregistrés (§ 15.2) sont écrits juste avant la validation de la base ; si la validation échoue, ils sont retirés.
 - La création des tables fait partie de la transaction : une première exécution ratée ne laisse aucune table.
 
+**Plusieurs programmes sur une base** *(3.16)*. Une question rend la base (§ 17) : pendant que l'utilisateur répond, un autre programme, une autre fenêtre de l'atelier ou, plus tard, une autre session du serveur peut écrire. Après la réponse, les objets déjà lus se relisent (`docs/vm.md`, § 8), et la machine garde ce qu'ils valaient avant : ce que l'utilisateur a eu sous les yeux. Écrire ensuite un champ que l'autre programme a changé entre-temps est refusé, avec la sorte `conflit` (§ 18.2) : « « ville » a changé dans la base depuis sa lecture : un autre programme ou une autre session l'a modifié entre-temps. Relis-le pour voir sa valeur actuelle, puis recommence. » Rien n'est écrasé en silence (charte, principe 1).
+
+- Le conflit se juge **champ par champ** : deux personnes qui changent deux champs différents d'un même patient ne se gênent pas ; une valeur réécrite à l'identique n'est pas un conflit.
+- Il ne vaut que pour l'écriture qui suit la question : la question suivante montre l'état nouveau, et ce qu'on y voit devient la référence.
+- Nos propres écritures, avant ou après une question, ne sont jamais un conflit.
+- Un champ multiple (`gagnent`, `perdent`, § 16.13) et une suppression ne se vérifient pas encore.
+- Dans un bloc `Essayer` ouvert pendant la question, les objets ne se relisent pas (comme avant la 3.16) : il n'y a donc pas de conflit à constater.
+
 ### 16.7 Migrations
 
 La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1 interdit de détruire des données en silence.
@@ -2087,6 +2095,7 @@ En cas d'échec :
 | `saisie` | une question annulée par « . » (§ 17) |
 | `refus` | un `Refuser « … ».` (§ 18.1) |
 | `commande` | une commande (§ 15.10) : programme introuvable, échoué (code non nul), trop lente, sortie qui n'est pas du texte *(3.04)* |
+| `conflit` | un champ écrit après une question, alors qu'un autre programme ou une autre session l'a changé dans la base pendant l'attente (§ 16.6) *(3.16)* |
 | `natif` | une fonction C (§ 21.10) : code natif absent ou qui ne se charge pas, contrat d'une autre version, fonction absente, argument qui ne passe pas, échec rendu par la fonction, valeur rendue mal formée *(3.14)* |
 | `autre` | tout le reste : en général une faute du programme plutôt qu'un aléa |
 
@@ -3155,3 +3164,4 @@ Pour rappeler un patient :
 | 3.13 | 2026-11-07 | § 3.1 : limites d'une expression ; plus de 1000 opérations enchaînées sont refusées (« Expression trop longue »), au lieu d'épuiser la pile du compilateur et de l'imprimeur. `grym traduire` signale que les deux formes sont désormais côte à côte |
 | 3.14 | 2026-11-07 | § 21.10 : les fonctions C. Un calcul de bibliothèque s'écrit `… vaut la fonction C « f ».` ; le code natif, `natif.dylib`, `.so` ou `.dll` dans le dossier de la bibliothèque, est chargé par le système au premier appel. Contrat dans `src/grym_natif.h` (version 1) : valeurs en texte, décimaux exacts, un seul rappel. § 18.2 : nouvelle sorte d'échec `natif`. Forme compacte `_fonction_c(« f »)` |
 | 3.15 | 2026-11-07 | § 16.3 : un nombre unique se compare par sa valeur, `1,0` est un doublon de `1` (la base comparait les textes). La recherche par clé passe par l'index : un nombre entier comparé à une valeur sans détour par le texte, un nombre unique avec un index unique en collation des nombres (`docs/vm.md`, § 8) ; 1 000 recherches dans 10 000 objets, de 3,7 s à 0,05 s (nombre entier) et de 2,4 s à 0,08 s (nombre) |
+| 3.16 | 2026-11-07 | § 16.6 : plusieurs programmes sur une base. Un champ écrit après une question, alors qu'un autre programme l'a changé pendant l'attente, est refusé (sorte `conflit`, § 18.2), champ par champ, au lieu d'écraser l'autre écriture. Première étape du client-serveur (S1) |

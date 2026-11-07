@@ -5013,7 +5013,7 @@ static Noeud *essayer(Analyse *a, int colonne) {
     n->local = sorte;
     noeud_ajouter(n, corps);
     static const char *const SORTES[] = { "division", "nombre", "lecture", "absence", "clé", "rang", "texte", "unicité", "lien",
-                                          "fichier", "réseau", "port", "saisie", "refus", "commande", "natif", "autre" };
+                                          "fichier", "réseau", "port", "saisie", "refus", "commande", "natif", "conflit", "autre" };
     int seul_vu = 0, ligne_vue[sizeof SORTES / sizeof *SORTES] = { 0 };
     while (en_cas_d_echec(a, a->i) && premier_de_ligne(a, a->i) && cour(a)->retrait == colonne) {
         const Jeton *te = cour(a);

@@ -1,0 +1,51 @@
+#!/bin/sh
+# Les conflits entre sessions (grammaire 3.16, § 16.6, 7 novembre 2026) : deux programmes sur la même base. A lit un
+# patient, pose une question ; pendant l'attente, B modifie le patient. Quand A écrit ensuite un champ que B a changé,
+# l'écriture est refusée (sorte « conflit ») au lieu d'écraser celle de B ; un autre champ s'écrit sans faute.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+decl='Un patient, conservé, a :
+    un nom (texte), unique,
+    une ville (texte),
+    un parrain (patient), facultatif,
+    un solde (nombre).'
+initialiser() {
+    rm -f p.grymd*
+    printf '%s\nLe p vaut un nouveau patient :\n    Le nom vaut « Ana ».\n    La ville vaut « Bulle ».\n    Le solde vaut 10.\nConserver le p.\nLe b vaut un nouveau patient :\n    Le nom vaut « Ben ».\n    La ville vaut « Riaz ».\n    Le solde vaut 0.\nConserver le b.\n' "$decl" > p.grym
+    "$grym" lancer p.grym > /dev/null 2>&1 < /dev/null
+}
+# A : lit Ana, attend, puis écrit « $1 » ; B, pendant l'attente : « $2 ». La sortie de A, sans la question.
+deux() {
+    initialiser
+    printf '%s\nLe p vaut le patient conservé dont le nom est « Ana ».\nAfficher la ville de p.\nLa r vaut la réponse à « ok ? ».\nEssayer :\n    %s\n    Afficher « écrit ».\nEn cas d'"'"'échec de conflit :\n    Afficher la sorte de l'"'"'échec.\n' "$decl" "$1" > a.grym
+    printf '%s\nLe q vaut le patient conservé dont le nom est « Ana ».\n%s\n' "$decl" "$2" > b.grym
+    cp a.grym p.grym
+    "$grym" compiler p.grym > /dev/null 2>&1 && mv p.grymb a.grymb
+    cp b.grym p.grym
+    "$grym" compiler p.grym > /dev/null 2>&1 && mv p.grymb b.grymb
+    # a.grymb et b.grymb, compilés à côté de p.grymd : leur base est la même (le nom du programme compilé)
+    cp a.grymb p.grymb
+    (sleep 2; echo oui) | "$grym" lancer p.grymb > sortieA.txt 2>&1 &
+    pa=$!
+    sleep 1
+    cp b.grymb p.grymb
+    "$grym" lancer p.grymb > sortieB.txt 2>&1 < /dev/null
+    wait "$pa"
+    tr -d '\n' < sortieA.txt | sed 's/ok ? //'
+}
+verifier "$(deux 'La ville de p devient « Fribourg ».' 'La ville de q devient « Romont ».')" "Bulleconflit" "le même champ : conflit"
+verifier "$(cat sortieB.txt)" "" "B a écrit pendant que A attendait"
+verifier "$(deux 'Le solde de p devient 5.' 'La ville de q devient « Romont ».')" "Bulleécrit" "un autre champ : écrit"
+verifier "$(deux 'Le parrain de p devient le patient conservé dont le nom est « Ben ».' 'Le parrain de q devient le patient conservé dont le nom est « Ben ».')" "Bulleconflit" "un lien posé ailleurs pendant que A le voyait absent"
+verifier "$(deux 'La ville de p devient « Fribourg ».' 'La ville de q devient « Bulle ».')" "Bulleécrit" "une valeur réécrite à l'identique : pas de conflit"
+# sans autre écrivain, nos propres écritures, avant et après les questions, ne sont jamais un conflit
+initialiser
+printf '%s\nLe p vaut le patient conservé dont le nom est « Ana ».\nLa ville de p devient « Marly ».\nLa r vaut la réponse à « ? ».\nLa ville de p devient « Fribourg ».\nLa s vaut la réponse à « ? ».\nLa ville de p devient « Bulle ».\nAfficher la ville de p.\n' "$decl" > p.grym
+verifier "$(printf 'a\nb\n' | "$grym" lancer p.grym 2>&1)" "? ? Bulle" "nos propres écritures"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.66, révisée le 7 novembre 2026.
+Version 1.67, révisée le 7 novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -215,7 +215,7 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 1. **Bases.** Une base créée ou modifiée par une version 1.x s'ouvre dans toute version 1.x ultérieure, sans perte, par migration automatique (art. 7). Chaque base porte le numéro de son format. Une version qui rencontre une base d'un format plus récent que le sien la refuse, avant toute écriture, et dit qu'une version plus récente de `grym` l'ouvrira.
 2. **Sources.** Un programme accepté par une version 1.x est accepté par les versions ultérieures et y produit le même effet. Seule exception : un mot nouvellement réservé ou un nouveau mot de construction. Chacun est alors inscrit au journal de la grammaire, et le message d'erreur propose la correction (le nom entre crochets, ou un autre verbe).
 3. **Comportement.** Même programme, même base, mêmes réponses : même résultat (art. 4). Corriger un écart entre le programme et la spécification n'est pas une rupture.
-4. **Sortes d'échec.** La sorte d'une erreur (grammaire, § 18.2 : `réseau`, `fichier`, `unicité`…) est promise, comme le reste du comportement : un programme qui rattrape une sorte la rattrape dans les versions ultérieures. Une sorte peut s'ajouter (`commande`, 3.04 ; `natif`, 3.14) ; aucune ne disparaît ni ne change de sens.
+4. **Sortes d'échec.** La sorte d'une erreur (grammaire, § 18.2 : `réseau`, `fichier`, `unicité`…) est promise, comme le reste du comportement : un programme qui rattrape une sorte la rattrape dans les versions ultérieures. Une sorte peut s'ajouter (`commande`, 3.04 ; `natif`, 3.14 ; `conflit`, 3.16) ; aucune ne disparaît ni ne change de sens.
 5. **Hors promesse.** Le libellé des messages d'erreur (c'est pourquoi un programme décide par la sorte, jamais par le motif), le bytecode `.grymb` (on recompile depuis les sources ; la machine lit les anciens formats par commodité), l'interface des fichiers de `src/`, sauf `src/grym_natif.h`. Ce contrat des fonctions C est promis : il ne change qu'avec `GRYM_NATIF_VERSION`, et une bibliothèque compilée pour un contrat que `grym` ne suit pas est refusée avec un message, jamais appelée (grammaire, § 21.10).
 6. **Version 2.** Elle peut rompre les sources. Elle ne rompt jamais une base : elle l'ouvre, ou fournit la commande qui la convertit (principe 1).
 
@@ -301,3 +301,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.64 | 2026-11-07 | Relecture après l'audit du langage (grammaire 2.89 à 3.06). Art. 6 : « Tout est objet » était faux ; objets et valeurs distingués ; contrats d'aptitude. Art. 1 : « modèle objet pur » devient « autour d'un modèle objet ». Art. 4 et 6 : exemples réécrits dans la syntaxe réelle, compilés et traduits par `grym`, au lieu d'esquisses qui ne se compilaient pas. Art. 5 : annotations facultatives et types nommés. Art. 7 : ce qui sort du programme (envoi, courriel, commande) ne s'annule pas. Art. 8 : sortes d'échec, plusieurs blocs, l'erreur non rattrapée remonte. Art. 11 : réseau sortant, commandes, minuterie. Art. 12 : listes, tables et tri faits ; « nombres comme objets » abandonné. Art. 13 : nouveau point 4, les sortes d'échec sont promises (le motif reste hors promesse) ; points 4 et 5 renumérotés 5 et 6 |
 | 1.65 | 2026-11-07 | Art. 11 : les fonctions C des bibliothèques (grammaire 3.14). Art. 13 : la sorte `natif` s'ajoute (point 4) ; le contrat `src/grym_natif.h` est promis, seule exception à « l'interface des fichiers de `src/` » hors promesse (point 5) |
 | 1.66 | 2026-11-07 | Art. 14 : la licence, EUPL v. 1.2 seulement, et l'exception pour les applications écrites en GrymoiR |
+| 1.67 | 2026-11-07 | Art. 13 : la sorte `conflit` s'ajoute (grammaire 3.16) |

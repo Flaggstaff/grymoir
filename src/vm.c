@@ -61,6 +61,10 @@ static void valeur_liberer(Valeur *v);
 
 static Valeur valeur_copier(const Valeur *v);
 
+/* 3.16 : les valeurs vues d'un objet, rendues */
+struct Objet;
+static void oublier_vus(struct Objet *o);
+
 static void valeur_liberer(Valeur *v) {
     dec_liberer(&v->nombre);
     free(v->texte);
@@ -825,6 +829,7 @@ void machine_detruire(Machine *m) {
         free(o->champs);
         free(o->definis);
         free(o->epoques);
+        oublier_vus(o);
         free(o);
     }
     for (size_t i = 0; i < m->nb_classes; i++) {
@@ -1387,6 +1392,7 @@ static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t n
         free(o->champs);
         free(o->definis);
         free(o->epoques);
+        oublier_vus(o);
         free(o);
     }
     m->nb_objets = vivants;
@@ -2091,6 +2097,7 @@ static void retirer_ecritures(Machine *m, size_t marque) {
 /* Nouvel objet du tas ; epoque : exécution où ses champs comptent comme déjà journalisés. */
 static Objet *creer_objet(Machine *m, const ClasseVM *cl, unsigned long epoque) {
     Objet *o = grym_allouer(sizeof *o);
+    memset(o, 0, sizeof *o);   /* un champ ajouté à Objet naît à zéro (les vues, 3.16) */
     size_t nc = cl->nb_champs ? cl->nb_champs : 1;
     o->classe = cl;
     o->champs = grym_allouer(nc * sizeof *o->champs);
@@ -2577,17 +2584,43 @@ static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
     return NULL;
 }
 
+static void oublier_vus(Objet *o) {
+    if (!o->vus) return;
+    for (size_t k = 0; k < o->classe->nb_champs; k++)
+        if (o->vus_definis[k]) valeur_liberer(&o->vus[k]);
+    free(o->vus);
+    free(o->vus_definis);
+    o->vus = NULL;
+    o->vus_definis = NULL;
+}
+
 /* Après la ligne lue : le verrou de la base reprend, avec les points de reprise des essais. */
 static char *fermer_attente(Machine *m) {
     char *probleme = NULL;
     if (m->base && !base_commencer(m->base, &probleme)) return probleme;
+    /* ce qui a été vu avant la question précédente ne compte plus : cette question-ci a montré l'état d'alors */
+    for (Objet *o = m->tas; o; o = o->suivant) oublier_vus(o);
     if (base_changee_ailleurs(m->base) && !m->nb_essais) {
-        /* un autre programme (l'atelier, une autre fenêtre) a écrit pendant l'attente : les objets déjà lus se
-         * relisent au prochain accès, au lieu de montrer ce que la base ne contient plus (docs/vm.md, § 8) */
+        /* un autre programme (l'atelier, une autre fenêtre, une autre session : 3.16) a écrit pendant l'attente : les
+         * objets déjà lus se relisent au prochain accès, au lieu de montrer ce que la base ne contient plus
+         * (docs/vm.md, § 8). Leurs valeurs d'avant, celles que l'utilisateur a eues sous les yeux, restent comme
+         * « vues » : écrire un champ que l'autre programme a changé entre-temps est un conflit, jamais un écrasement. */
         for (Objet *o = m->tas; o; o = o->suivant) {
             if (o->id <= 0 || o->a_charger) continue;
-            for (size_t k = 0; k < o->classe->nb_champs; k++)
-                if (o->definis[k]) { valeur_liberer(&o->champs[k]); o->definis[k] = 0; }
+            const size_t nc = o->classe->nb_champs ? o->classe->nb_champs : 1;
+            o->vus = grym_allouer(nc * sizeof *o->vus);
+            o->vus_definis = grym_allouer(nc);
+            memset(o->vus_definis, 0, nc);
+            for (size_t k = 0; k < o->classe->nb_champs; k++) {
+                if (!o->definis[k]) continue;
+                o->vus[k] = o->champs[k];   /* la valeur passe aux vues, sans copie */
+                if (o->vus[k].type == V_OBJET) {   /* un lien : son identifiant, l'objet pouvant être ramassé */
+                    o->vus[k].jours = o->vus[k].objet ? o->vus[k].objet->id : 0;
+                    o->vus[k].objet = NULL;
+                }
+                o->vus_definis[k] = 1;
+                o->definis[k] = 0;
+            }
             o->a_charger = 1;
         }
     }
@@ -9117,6 +9150,22 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 char *probleme = verifier_type_champ(m, champ, o->classe->types[k], &pile.v[pile.n - 1],
                                                      (o->classe->uniques[k] & 2) != 0 || zone_d_ecran, o->classe->valeurs[k]);
                 if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
+            }
+            if (code == I_ECRIRE_CHAMP && o->vus && o->vus_definis[k]) {
+                /* 3.16 : une autre session a écrit pendant la question ; ce champ-ci a-t-il changé depuis qu'on l'a vu ? */
+                const Valeur *vu = &o->vus[k], *la = o->definis[k] ? &o->champs[k] : NULL;
+                const int pareil = !la ? 0
+                                 : vu->type == V_OBJET ? la->type == V_OBJET && la->objet && la->objet->id == vu->jours
+                                 : valeurs_identiques(vu, la);
+                if (!pareil) {
+                    m->sorte_fixee = "conflit";
+                    ok = echouer(diag, b, debut, grym_formater(
+                        "« %s » a changé dans la base depuis sa lecture : un autre programme ou une autre session l'a "
+                        "modifié entre-temps. Relis-le pour voir sa valeur actuelle, puis recommence.", champ));
+                    break;
+                }
+                valeur_liberer(&o->vus[k]);   /* vérifié une fois : les écritures suivantes sont les nôtres */
+                o->vus_definis[k] = 0;
             }
             if (code == I_LIRE_CHAMP) {
                 if (!o->definis[k] && (o->classe->uniques[k] & 2)) {   /* facultatif : absent */

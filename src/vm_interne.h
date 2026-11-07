@@ -86,6 +86,9 @@ typedef struct Objet {
     int marque;
     long id;                  /* identifiant en base, 0 si l'objet n'est pas conservé (§ 16.3) */
     int a_charger;            /* objet retrouvé dont les champs ne sont pas encore lus (§ 16.4) */
+    Valeur *vus;              /* 3.16 : les valeurs lues avant une question, quand un autre programme a écrit pendant
+                                 l'attente ; NULL sinon. Un lien y est son identifiant (jours), sans pointeur. */
+    unsigned char *vus_definis;
     struct Objet *suivant;
 } Objet;
 
