@@ -114,3 +114,75 @@ Scénario « une absence se constate » :
     Clore la séance et « absence ».
     Vérifier que le statut de la séance = « absence ».
     Vérifier que le paiement de la séance = « à payer ».
+
+Remarque : la facturation et les relances (7 novembre 2026) : une facture réunit les séances dues du patient, et seulement elles.
+Scénario « une facture réunit toutes les séances dues du patient » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui − 7 jours et « faite », qui donne la première.
+    La seconde vaut une nouvelle séance :
+        Le patient vaut le patient de la première.
+        Le soin vaut s.
+        La date vaut aujourd'hui.
+        Le prix vaut 80.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver la seconde.
+    La troisième vaut une nouvelle séance :
+        Le patient vaut le patient de la première.
+        Le soin vaut s.
+        La date vaut aujourd'hui − 3 jours.
+        Le prix vaut 50.
+        Le statut vaut « annulée ».
+        Le paiement vaut « à payer ».
+    Conserver la troisième.
+    Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne l'autre.
+    Facturer la première.
+    La f vaut la facture de la première.
+    Vérifier que la f est présente.
+    Vérifier que le montant de la f = 200.
+    Vérifier que l'état de la f = « à régler ».
+    Vérifier que la facture de la seconde = la f.
+    Vérifier que la facture de la troisième est absente.
+    Vérifier que la facture de l'autre est absente.
+    Vérifier que les 2 premiers caractères du numéro de la f = « F- ».
+    Les docs valent les documents sortis.
+    Vérifier que le premier élément des docs = « Facture ».
+
+Scénario « facturer deux fois rouvre la même facture » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Facturer la séance.
+    Facturer la séance.
+    Vérifier que le nombre de factures conservées = 1.
+    Les docs valent les documents sortis.
+    Remarque : la seconde fois, l'exemplaire gardé se rouvre : la facture n'est pas refabriquée.
+    Vérifier que le nombre de docs = 1.
+
+Scénario « une facture se relance, ses rappels numérotés » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui − 40 jours et « faite », qui donne la séance.
+    Facturer la séance.
+    La f vaut la facture de la séance.
+    Relancer la f.
+    Relancer la f.
+    Vérifier que le nombre de rappels conservés = 2.
+    Vérifier que le dernier rappel de la f = aujourd'hui.
+    Les docs valent les documents sortis.
+    Vérifier que le dernier élément des docs = « Rappel ».
+
+Scénario « une séance prévue du jour se facture au comptoir, faite d'abord » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « prévue », qui donne la séance.
+    Facturer au comptoir la séance.
+    Vérifier que le statut de la séance = « faite ».
+    Vérifier que la facture de la séance est présente.
+
+Scénario « une séance à venir ne se facture pas » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui + 3 jours et « prévue », qui donne la séance.
+    Essayer :
+        Facturer au comptoir la séance.
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le motif de l'échec = « Une séance à venir se facture le jour venu. ».
+        Vérifier que le nombre de factures conservées = 0.
