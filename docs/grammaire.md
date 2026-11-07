@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.99 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.00 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1822,7 +1822,7 @@ Une tâche, conservée, a :
 - Une liste ne se déclare que sur un champ d'entité ou d'aptitude, comme tout type ; elle n'existe que pour le texte.
 - En forme compacte : `_un état (« à faire » ; « en cours » ; « fini »)`.
 
-### 16.16 Types nommés *(2.99)*
+### 16.16 Types nommés et annotations *(2.99, 3.00)*
 
 ```
 Un état est « à faire », « en cours » ou « fini ».
@@ -1838,7 +1838,13 @@ Le prochain devient « fermé ».       →  « « fermé » n'est pas une valeu
 - La comparaison est exacte, casse et accents compris, comme au § 16.15. Une valeur qui n'est pas un texte est refusée.
 - Un type n'est pas une valeur : son nom ne s'emploie qu'entre parenthèses, après un champ ou une variable. Il ne prend pas de place parmi les noms : une variable, un champ ou un calcul peuvent s'appeler `état` aussi.
 - `Un … est « …` est une tournure nouvelle : avant la 2.99, aucune phrase ne commençait ainsi.
-- Reporté : typer un paramètre de formule (`un statut (état)`), et les types simples, `(nombre)`, `(date)`, pour les variables (point 8 de l'audit).
+- **Les annotations** *(3.00, point 8 de l'audit)*. Entre parenthèses après le nom, un type nommé ou un type simple : `texte`, `nombre`, `date`, `heure`, `vrai ou faux`.
+  - **Une variable** : `Le total (nombre) vaut 0.` Chaque écriture est vérifiée comme pour un type nommé : à l'analyse pour une constante, à l'exécution sinon. « « total » est déclaré (nombre) : il ne reçoit pas un texte. »
+  - **Un paramètre de formule** : `Le carré d'un x (nombre) vaut x × x.`, `Pour marquer une tâche et un statut (état) :`. Un argument écrit en clair se vérifie dès l'analyse, à la ligne de l'appel ; une valeur calculée, à l'exécution, en tête de la formule, à la position du paramètre. Dans le corps, le paramètre garde son type : `Le n devient « x ».` y est refusé de même.
+  - Un type inconnu : « « couleur » n'est pas un type : texte, nombre, date, heure, vrai ou faux, ou un type déclaré plus haut (§ 16.16). »
+  - Sans annotation, rien ne change : une variable ou un paramètre reçoit toujours toute valeur. Les annotations sont facultatives, partout.
+  - Les paramètres facultatifs (§ 9.3 bis) n'en prennent pas : leur valeur de départ dit déjà leur sorte.
+  - En forme compacte : `_le total (nombre) << 0`, `_calcul _le carré(_un x (nombre))`, `(vrai_ou_faux)`.
 - En forme compacte : `_type _un état « à faire » ; « en cours » ; « fini »`, `_le prochain (état) << « à faire »`, `_un statut (état)`.
 
 ### 16.18 La base chiffrée *(2.37, implémenté le 21 octobre 2026)*
@@ -2964,3 +2970,4 @@ Pour rappeler un patient :
 | 2.97 | 2026-11-06 | § 13.12 : trier par un calcul, `les mots triés par le calcul longueur [décroissant]` ; le compilateur écrit une boucle qui appelle le calcul une fois par élément, puis `TRIER` range la liste selon ces clés (forme 4). Forme compacte `_trier(l ; _calcul c)` |
 | 2.98 | 2026-11-06 | Nouveau § 9.3 bis : les paramètres facultatifs des actions, `Pour relancer un client, avec un délai de 30 :`, `Relancer le client, avec le délai de 10.` ; valeur de départ constante, recopiée à la compilation dans l'appel : la machine ne change pas. Formes compactes `_un délai << 30`, `relancer(c ; délai << 10)` |
 | 2.99 | 2026-11-06 | Nouveau § 16.16 : les types nommés, `Un état est « à faire », « en cours » ou « fini ».` ; un champ `(état)` prend ses valeurs permises (§ 16.15) ; une variable `Le prochain (état) vaut …` est vérifiée à chaque écriture (`devient`, `qui donne`), à l'analyse pour un texte écrit en clair, à l'exécution sinon (instruction `PERMIS`). Formes compactes `_type _un état « a » ; « b »`, `_le p (état) << …` |
+| 3.00 | 2026-11-06 | § 16.16 : les annotations (point 8 de l'audit) ; une variable ou un paramètre de formule se type, `(nombre)`, `(texte)`, `(date)`, `(heure)`, `(vrai ou faux)` ou un type nommé ; constante vérifiée à l'analyse, à la ligne de l'appel pour un argument ; le reste à l'exécution (`PERMIS`, étendu aux types simples ; en tête de formule pour un paramètre) |

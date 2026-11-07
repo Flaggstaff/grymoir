@@ -1483,6 +1483,17 @@ static void expression(Impression *im, const Noeud *n) {
     }
 }
 
+/* Le nom affiché d'une annotation (3.00) : « état␝valeurs » → « état » ; « ␜nombre␜total » → « nombre » ; NULL sinon. */
+static char *nom_d_annotation(const char *t) {
+    if (!t) return NULL;
+    if (t[0] == '\x1c') {
+        const char *s = strchr(t + 1, '\x1c');
+        return s ? grym_formater("%.*s", (int)(s - t - 1), t + 1) : NULL;
+    }
+    const char *s = strchr(t, '\x1d');
+    return s ? grym_formater("%.*s", (int)(s - t), t) : NULL;
+}
+
 /* « (texte) », « (nombre entier), unique » ; en compacte « (nombre_entier) _unique ». */
 static void type_de_champ(Impression *im, const Noeud *ch) {
     if (!ch->texte2) return;
@@ -1647,6 +1658,14 @@ static void parametres(Impression *im, const Noeud *liste, int de) {
         }
         ecrire_nom(im, p->texte, 0);
         if (p->texte2) { aj(im, im->compact ? "_" : " "); aj(im, p->texte2); }   /* une chose horodatée */
+        char *tp = nom_d_annotation(p->texte3);   /* « un délai (nombre) » (3.00) */
+        if (tp) {
+            aj(im, " (");
+            if (im->compact) ecrire_nom(im, tp, 0);
+            else aj(im, tp);
+            aj(im, ")");
+            free(tp);
+        }
     }
 }
 
@@ -1925,8 +1944,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         Genre g = n->type == P_CREATION ? genre_article(n->article) : genre_de_nom(im, n->texte);
         const Noeud *bloc_init = nouveau_en_bloc(n->enfants[0]);
         /* « Le prochain (état) vaut … » : le type d'une variable, à sa création (§ 16.16) */
-        char *type_var = n->type == P_CREATION && n->texte2 && strchr(n->texte2, '\x1d')
-                         ? grym_formater("%.*s", (int)(strchr(n->texte2, '\x1d') - n->texte2), n->texte2) : NULL;
+        char *type_var = n->type == P_CREATION ? nom_d_annotation(n->texte2) : NULL;
         if (c) {
             if (n->type == P_CREATION)
                 aj(im, n->article == ART_LA ? "_la " : n->article == ART_L ? "_l'" : "_le ");

@@ -1068,7 +1068,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_CREATION:
     case P_MODIFICATION: {
         expression(c, ph->enfants[0]);
-        if (ph->texte2 && strchr(ph->texte2, '\x1d')) {   /* une variable d'un type nommé : la valeur vérifiée (§ 16.16) */
+        if (ph->texte2 && (strchr(ph->texte2, '\x1d') || ph->texte2[0] == '\x1c')) {   /* une variable typée (§ 16.16, 3.00) */
             long k = bloc_constante(c->b, C_TEXTE, ph->texte2);
             if (k < 0) { trop_grand(c, ph); return; }
             emettre(c, I_PERMIS, k, ph->ligne, ph->colonne);
@@ -1633,6 +1633,16 @@ static void phrase(Compilation *c, const Noeud *ph) {
             free(z);
             emettre(c, I_ECRAN_EXIGER, kz, ph->ligne, ph->colonne);
         } else free(chaine_rendre(&exige));
+        if (ph->type != P_QUAND)   /* les paramètres typés, vérifiés en tête : lus, vérifiés, remis (3.00) */
+            for (size_t k = 0; k < ph->enfants[0]->nb_enfants; k++) {
+                const Noeud *pa = ph->enfants[0]->enfants[k];
+                if (!pa->texte3 || pa->entier == 1 || pa->local < 0) continue;
+                long kt = bloc_constante(c->b, C_TEXTE, pa->texte3);
+                if (kt < 0) { trop_grand(c, ph); return; }
+                emettre(c, I_LIRE_LOCAL, pa->local, pa->ligne, pa->colonne);
+                emettre(c, I_PERMIS, kt, pa->ligne, pa->colonne);
+                emettre(c, I_ECRIRE_LOCAL, pa->local, pa->ligne, pa->colonne);
+            }
         if (ph->type == P_CALCUL && ph->forme == 0) {
             expression(c, corps);
             emettre(c, I_RENDRE, 0, corps->ligne, corps->colonne);

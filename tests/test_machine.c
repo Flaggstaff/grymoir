@@ -2399,6 +2399,19 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Annotations (§ 16.16, 3.00) */
+    PROG("Le total (nombre) vaut 0.\nLe total devient total + 5.\nAfficher total.\nLe carré d'un x (nombre) vaut x × x.\n"
+         "Afficher le carré de 4.\nPour relancer un client et un délai (nombre) :\n    Afficher client puis délai.\nRelancer « Ana » et 30.\n"
+         "Le ok (vrai ou faux) vaut 1 > 2.\nAfficher ok.", "5\n16\nAna 30\nfaux");
+    PROG("Le total (nombre) vaut « a ».", "ERREUR 1:24 « total » est déclaré (nombre) : il ne reçoit pas un texte.");
+    PROG("Le d (date) vaut 01.01.2026.\nLe d devient 3.", "ERREUR 2:14 « d » est déclaré (date) : il ne reçoit pas un nombre.");
+    PROG("Le t (texte) vaut « a ».\nLe x vaut 2.\nLe t devient x.", "ERREUR 3:1 « t » est déclaré (texte) : il ne reçoit pas un nombre.");
+    PROG("Le x (couleur) vaut 1.", "ERREUR 1:7 « couleur » n'est pas un type : texte, nombre, date, heure, vrai ou faux, ou un type déclaré plus haut (§ 16.16).");
+    PROG("Le carré d'un x (nombre) vaut x × x.\nAfficher le carré de « a ».", "ERREUR 2:22 « x » est déclaré (nombre) : il ne reçoit pas un texte.");
+    PROG("Le carré d'un x (nombre) vaut x × x.\nLe n vaut « 3 ».\nAfficher le carré de n.", "ERREUR 1:12 « x » est déclaré (nombre) : il ne reçoit pas un texte.");
+    PROG("Un état est « a » ou « b ».\nPour marquer un s (état) :\n    Afficher s.\nMarquer « a ».\nLe v vaut « z ».\nMarquer v.",
+         "ERREUR 2:14 « z » n'est pas une valeur permise de « état » : « a » ou « b ».");
+    PROG("Pour fixer un n (nombre) :\n    Le n devient « x ».", "ERREUR 2:18 « n » est déclaré (nombre) : il ne reçoit pas un texte.");
     /* Types nommés (§ 16.16) */
     PROG("Un état est « à faire », « en cours » ou « fini ».\nUne tâche, conservée, a : un titre (texte), un statut (état).\nLe prochain (état) vaut « à faire ».\nAfficher prochain.\n"
          "Le prochain devient « fini ».\nAfficher prochain.\nLa t vaut une nouvelle tâche :\n    Le titre vaut « écrire ».\n"
@@ -2412,7 +2425,7 @@ int main(void) {
     PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (état) vaut 3.", "ERREUR 2:18 3 n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
     PROG("Un état est « a » ou « b ».\nLe p (état) vaut « a ».\nPour donner un x :\n    Rendre x.\nDonner « b », qui donne le p.\nAfficher p.\n"
          "Donner « z », qui donne le p.", "ERREUR 7:1 « z » n'est pas une valeur permise de « état » : « a » ou « b ».");
-    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (statut) vaut « fini ».", "ERREUR 2:7 « statut » n'est pas un type déclaré : « Un statut est « … » ou « … ». »");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (statut) vaut « fini ».", "ERREUR 2:7 « statut » n'est pas un type : texte, nombre, date, heure, vrai ou faux, ou un type déclaré plus haut (§ 16.16).");
     PROG("Un état est « à faire », « en cours » ou « fini ».\nUn état est « a » ou « b ».", "ERREUR 2:4 Le type « état » existe déjà.");
     PROG("Un état est « a ».", "ERREUR 1:18 Au moins deux valeurs : « Un état est « ouvert » ou « fermé ». »");
     PROG("Un état est « a » ou « a ».", "ERREUR 1:22 « a » est déjà dans la liste.");

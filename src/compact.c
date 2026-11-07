@@ -1325,6 +1325,12 @@ static void parametres(Reecriture *r, size_t d, size_t f, int de) {
         copier(r, &r->e[k + 1]);
         premier = 0;
         k += 2;
+        if (k + 2 < f && r->e[k].type == J_PAR_OUV && r->e[k + 1].type == J_CROCHETS && r->e[k + 2].type == J_PAR_FERM) {
+            copier(r, &r->e[k]);   /* « _un délai (nombre) » : son type (3.00) */
+            copier(r, &r->e[k + 1]);
+            copier(r, &r->e[k + 2]);
+            k += 3;
+        }
         if (k < f) {
             if (r->e[k].type != J_POINT_VIRGULE) {
                 echouer(r, &r->e[k], grym_dupliquer("« ; » attendu entre deux paramètres."));

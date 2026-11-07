@@ -170,6 +170,10 @@ int main(void) {
     LITT("Un état est « a » ou « b ».\n\nUne tâche, conservée, a :\n    un statut (« a » ou « b »).\n",
          "Un état est « a » ou « b ».\n\nUne tâche, conservée, a :\n    un statut (état).\n");   /* la liste d'un type : son nom */
     COMP("Un état est « a » ou « b ».\n\nLe p (état) vaut « a ».\n", "_type _un état « a » ; « b »\n\n_le p (état) << « a »\n");
+    FIXE("Le total (nombre) vaut 0.\nLe nom (texte) vaut « a ».\nLe ok (vrai ou faux) vaut vrai.\nLe carré d'un x (nombre) vaut x × x.\n\n"
+         "Pour relancer un client et un délai (nombre) :\n    Afficher délai.\n");
+    COMP("Le total (nombre) vaut 0.\nLe carré d'un x (nombre) vaut x × x.\n",
+         "_le total (nombre) << 0\n_calcul _le carré(_un x (nombre)) << x × x\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

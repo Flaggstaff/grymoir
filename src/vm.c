@@ -7126,6 +7126,22 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_PERMIS: {   /* une variable d'un type nommé : sa valeur, l'une des permises (§ 16.16) */
             const char *d = b->constantes[op].texte, *sep = strchr(d, '\x1d');
             const Valeur *v = &pile.v[pile.n - 1];
+            if (d[0] == '\x1c') {   /* un type simple : « ␜nombre␜total » (3.00) */
+                const char *s2 = strchr(d + 1, '\x1c');
+                if (!s2) break;
+                static const struct { const char *nom; TypeValeur t; const char *un; } T[] = {
+                    { "texte", V_TEXTE, "un texte" }, { "nombre", V_NOMBRE, "un nombre" }, { "date", V_DATE, "une date" },
+                    { "heure", V_HEURE, "une heure" }, { "vrai ou faux", V_BOOLEEN, "vrai ou faux" } };
+                const size_t lt = (size_t)(s2 - d - 1);
+                int bon = 1;
+                for (size_t q = 0; q < sizeof T / sizeof *T; q++)
+                    if (strlen(T[q].nom) == lt && strncmp(T[q].nom, d + 1, lt) == 0) bon = v->type == T[q].t;
+                if (bon) break;
+                if (v->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(v)); break; }
+                ok = echouer(diag, b, debut, grym_formater("« %s » est déclaré (%.*s) : il ne reçoit pas %s.", s2 + 1, (int)lt, d + 1,
+                                                           nom_type(v->type)));
+                break;
+            }
             if (!sep) break;
             if (v->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(v)); break; }
             if (v->type == V_TEXTE && valeur_permise(sep + 1, v->texte ? v->texte : "")) break;

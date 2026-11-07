@@ -41,6 +41,7 @@ typedef struct {
     int liste;         /* cet ensemble est une liste, qui garde ses doublons (§ 13.10) */
     int table;         /* variable qui contient une table, nommée au pluriel avec « les » (§ 13.11) */
     char *permises;       /* variable d'un type nommé (§ 16.16) : « état␝à faire␞en cours␞fini », ou NULL ; possédé */
+    char *types_params;   /* formule : le type de chaque paramètre, séparés par U+001F (vide : sans type), ou NULL (3.00) */
     Noeud *facultatifs;   /* action : ses paramètres facultatifs (N_BLOC de N_NOM, chacun avec sa valeur de départ en
                              enfant), dans l'ordre ; NULL sans facultatif (2.98). Possédé, comme nom et classe. */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
@@ -224,7 +225,7 @@ static void classe_liberer(Classe *c) {
 }
 
 static void portee_vider(Portee *p) {
-    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); free(p->s[i].permises); }
+    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); free(p->s[i].permises); free(p->s[i].types_params); }
     free(p->s);
     p->s = NULL;
     p->n = p->cap = 0;
@@ -291,6 +292,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->s[i].classe = src->s[i].classe ? grym_dupliquer(src->s[i].classe) : NULL;
         dst->s[i].facultatifs = noeud_copier(src->s[i].facultatifs);   /* 2.98 */
         dst->s[i].permises = src->s[i].permises ? grym_dupliquer(src->s[i].permises) : NULL;   /* § 16.16 */
+        dst->s[i].types_params = src->s[i].types_params ? grym_dupliquer(src->s[i].types_params) : NULL;   /* 3.00 */
     }
     dst->fichier = src->fichier ? grym_dupliquer(src->fichier) : NULL;
     dst->fichier_index = src->fichier_index;
@@ -529,6 +531,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->liste = 0;   /* oubli de la 2.89 : un ensemble pouvait se croire liste, selon la mémoire */
     s->facultatifs = NULL;   /* 2.98 */
     s->permises = NULL;      /* § 16.16 */
+    s->types_params = NULL;  /* 3.00 */
     s->table = 0;   /* § 13.11 */
     s->classe = NULL;
     s->rend = 0;
@@ -544,6 +547,7 @@ static void portee_tronquer(Portee *p, size_t n) {
         free(p->s[p->n].classe);
         noeud_liberer(p->s[p->n].facultatifs);
         free(p->s[p->n].permises);
+        free(p->s[p->n].types_params);
     }
 }
 
@@ -1259,6 +1263,8 @@ static char *pluriel(int n, const char *mot) {
 
 static int comme_classe(Analyse *a, const Symbole *s, Noeud *n);
 
+static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel);
+
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
 static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
@@ -1312,7 +1318,7 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
         noeud_liberer(n);
         return NULL;
     }
-    if (!comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }
+    if (!verifier_arguments(a, s, n) || !comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }   /* 3.00 */
     return n;
 }
 
@@ -1718,6 +1724,8 @@ static Noeud *phrase_courriel(Analyse *a, const Jeton *t);
 static Noeud *trier_apres(Analyse *a, Noeud *g);
 static const TypeNomme *type_nomme(const Portee *p, const char *nom);
 static int verifier_permise(Analyse *a, const char *permises, const Noeud *v);
+static char *annotation(Analyse *a, size_t o, size_t f, const char *nom);
+static char *types_des_parametres(const Noeud *params);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -4524,15 +4532,10 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
         size_t o = f - 1;
         while (o > d && a->j[o].type != J_PAR_OUV) o--;
         if (a->j[o].type == J_PAR_OUV && o > d && o + 1 < f - 1) {
-            char *nt = a->j[o + 1].type == J_CROCHETS ? grym_dupliquer(a->j[o + 1].valeur) : cle(a, o + 1, f - 1);
-            const TypeNomme *tn = type_nomme(a->portee, nt);
-            if (!tn) {
-                Noeud *x = erreur(a, &a->j[o + 1], grym_formater("« %s » n'est pas un type déclaré : « Un %s est « … » ou « … ». »", nt, nt));
-                free(nt);
-                return x;
-            }
-            permises = grym_formater("%s\x1d%s", tn->nom, tn->valeurs);
-            free(nt);
+            char *nv = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, o);   /* le nom, pour le message */
+            permises = annotation(a, o, f - 1, nv);
+            free(nv);
+            if (!permises) return NULL;
             f = o;
         }
     }
@@ -4991,6 +4994,16 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
             return erreur(a, &a->j[debut], grym_dupliquer("Un paramètre ne commence pas par un article : écris « un nombre »."));
         }
         char *nom = a->j[debut].type == J_CROCHETS ? grym_dupliquer(a->j[debut].valeur) : cle(a, debut, k);
+        char *type_param = NULL;   /* « un délai (nombre) » (3.00) */
+        if (k + 2 < f && a->j[k].type == J_PAR_OUV) {
+            size_t fe = k + 1;
+            while (fe < f && a->j[fe].type != J_PAR_FERM) fe++;
+            if (fe < f && fe > k + 1) {
+                type_param = annotation(a, k, fe, nom);
+                if (!type_param) { free(nom); noeud_liberer(liste); return NULL; }
+                k = fe + 1;
+            }
+        }
         char *aptitude = NULL;
         if (strncmp(nom, "chose ", 6) == 0) {
             /* « une chose horodatée » : paramètre nommé « chose », de l'aptitude « horodatée » (§ 13.7) */
@@ -5012,6 +5025,7 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
         Noeud *p = noeud_creer(N_NOM, tun->ligne, tun->colonne, tun->debut);
         p->texte = nom;
         p->texte2 = aptitude;
+        p->texte3 = type_param;   /* son type, vérifié en tête de la formule (3.00) */
         p->forme = g == GENRE_FEMININ ? 2 : 1;
         noeud_ajouter(liste, p);
         if (k < f && est_mot(&a->j[k], "et")) { k++; continue; }
@@ -5082,6 +5096,7 @@ static Contexte entrer_formule(Analyse *a, int sorte, Noeud *params) {
         Noeud *p = params->enfants[k];
         portee_declarer(a->portee, p->texte, p->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN, p->ligne);
         a->portee->s[a->portee->n - 1].local = p->local = a->nb_locaux++;
+        if (p->texte3 && p->type == N_NOM && p->entier != 1) a->portee->s[a->portee->n - 1].permises = grym_dupliquer(p->texte3);
     }
     return c;
 }
@@ -5144,6 +5159,7 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_CALCUL;
     s->nb_parametres = (int)params->nb_enfants;
+    s->types_params = types_des_parametres(params);   /* 3.00 */
     s->classe = classe;
 
     Contexte ctx = entrer_formule(a, 1, params);
@@ -5225,6 +5241,58 @@ static const TypeNomme *type_nomme(const Portee *p, const char *nom) {
     return NULL;
 }
 
+/* Les types simples d'une annotation (point 8 de l'audit, 3.00) : « (nombre) », « (vrai ou faux) »… */
+static const char *const TYPES_SIMPLES[] = { "texte", "nombre", "date", "heure", "vrai ou faux" };
+
+/* « (état) », « (nombre) » aux index o (« ( ») à f (« ) ») : la forme pour la vérification, « état␝valeurs » d'un type
+ * nommé, « ␜nombre␜nom » d'un type simple, nom étant celui de la variable ou du paramètre ; NULL et une erreur sinon. */
+static char *annotation(Analyse *a, size_t o, size_t f, const char *nom) {
+    char *nt = a->j[o + 1].type == J_CROCHETS && f == o + 2 ? grym_dupliquer(a->j[o + 1].valeur) : cle(a, o + 1, f);
+    const TypeNomme *tn = type_nomme(a->portee, nt);
+    if (tn) { free(nt); return grym_formater("%s\x1d%s", tn->nom, tn->valeurs); }
+    for (size_t q = 0; q < sizeof TYPES_SIMPLES / sizeof *TYPES_SIMPLES; q++)
+        if (strcmp(nt, TYPES_SIMPLES[q]) == 0) {
+            char *r = grym_formater("\x1c%s\x1c%s", nt, nom);
+            free(nt);
+            return r;
+        }
+    erreur(a, &a->j[o + 1], grym_formater("« %s » n'est pas un type : texte, nombre, date, heure, vrai ou faux, ou un type déclaré "
+                                          "plus haut (§ 16.16).", nt));
+    free(nt);
+    return NULL;
+}
+
+/* Les types des paramètres, séparés par U+001F, vides pour un paramètre sans type ; NULL si aucun n'en a (3.00). */
+static char *types_des_parametres(const Noeud *params) {
+    int un = 0;
+    for (size_t k = 0; k < params->nb_enfants; k++) un |= params->enfants[k]->texte3 != NULL && params->enfants[k]->entier != 1;
+    if (!un) return NULL;
+    Chaine c = {0};
+    for (size_t k = 0; k < params->nb_enfants; k++) {
+        if (k) chaine_ajouter(&c, "\x1f");
+        const Noeud *q = params->enfants[k];
+        if (q->texte3 && q->entier != 1) chaine_ajouter(&c, q->texte3);
+    }
+    return chaine_rendre(&c);
+}
+
+/* Les arguments d'un appel, contre les types des paramètres : une constante se juge ici, le reste en tête de la formule. */
+static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel) {
+    if (!s->types_params) return 1;
+    const char *p = s->types_params;
+    for (size_t k = 0; k < appel->nb_enfants && p; k++) {
+        const char *q = strchr(p, '\x1f');
+        if (q != p && *p) {
+            char *t = q ? grym_formater("%.*s", (int)(q - p), p) : grym_dupliquer(p);
+            const int ok = verifier_permise(a, t, appel->enfants[k]);
+            free(t);
+            if (!ok) return 0;
+        }
+        p = q ? q + 1 : NULL;
+    }
+    return 1;
+}
+
 /* t est-il dans les valeurs (séparées par U+001E) ? */
 static int dans_valeurs(const char *valeurs, const char *t) {
     const size_t l = strlen(t);
@@ -5257,6 +5325,24 @@ static char *lister_permises(const char *valeurs) {
 /* Une valeur rangée dans une variable d'un type nommé (« nom␝valeurs ») : un texte écrit en clair se vérifie ici ; une valeur
  * calculée, à l'exécution (instruction PERMIS). Rend 0 sur un refus. */
 static int verifier_permise(Analyse *a, const char *permises, const Noeud *v) {
+    if (permises[0] == '\x1c') {   /* un type simple : « ␜nombre␜total » ; seule une constante se juge ici */
+        const char *s2 = strchr(permises + 1, '\x1c');
+        if (!s2) return 1;
+        char *type = grym_formater("%.*s", (int)(s2 - permises - 1), permises + 1);
+        const char *nom = s2 + 1;
+        const char *est = v->type == N_TEXTE ? "texte" : v->type == N_NOMBRE || v->type == N_NEGATION ? "nombre"
+                        : v->type == N_DATE ? "date" : v->type == N_HEURE ? "heure"
+                        : v->type == N_BOOLEEN || v->type == N_COMPARAISON || v->type == N_LOGIQUE ? "vrai ou faux" : NULL;
+        int ok = !est || strcmp(est, type) == 0;
+        if (!ok) {
+            static const char *const UN[] = { "un texte", "un nombre", "une date", "une heure", "vrai ou faux" };
+            const char *un = "cette valeur";
+            for (size_t q = 0; q < 5; q++) if (strcmp(est, TYPES_SIMPLES[q]) == 0) un = UN[q];
+            erreur_a(a, v->ligne, v->colonne, grym_formater("« %s » est déclaré (%s) : il ne reçoit pas %s.", nom, type, un));
+        }
+        free(type);
+        return ok;
+    }
     const char *sep = strchr(permises, '\x1d');
     if (!sep) return 1;
     char *nom = grym_formater("%.*s", (int)(sep - permises), permises);
@@ -5519,6 +5605,7 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_ACTION;
     s->nb_parametres = (int)params->nb_enfants;
+    s->types_params = types_des_parametres(params);   /* 3.00 */
     s->classe = classe;
     s->facultatifs = facultatifs;   /* le symbole les possède (2.98) */
     (void)nb_obligatoires;
@@ -5716,7 +5803,7 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
         return NULL;
     }
     if (nb_fac && !facultatifs_appel(a, s, n)) { noeud_liberer(n); return NULL; }
-    if (!comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }
+    if (!verifier_arguments(a, s, n) || !comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }   /* 3.00 */
     if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "qui") && est_mot(voir(a, 2), "donne")) {
         /* « Faire une quittance pour le p et 120, qui donne la q. » (2.57) : ce que l'action rend, dans une variable */
         if (!s->rend) {
@@ -10897,6 +10984,7 @@ static Noeud *declaration_xml(Analyse *a, int colonne, Jeton *tle) {
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_ACTION;
     s->nb_parametres = (int)params->nb_enfants;
+    s->types_params = types_des_parametres(params);   /* 3.00 */
     Contexte ctx = entrer_formule(a, 2, params);
     a->i = k + 5;
     a->dans_xml++;
