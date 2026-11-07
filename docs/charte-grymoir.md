@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.65, révisée le 7 novembre 2026.
+Version 1.66, révisée le 7 novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -227,6 +227,7 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 - `docs/mainteneur.md` décrit l'architecture, les outils de mise au point et la recette pour ajouter une phrase de bout en bout, avec sa liste de contrôle.
 - Il se révise, par une révision numérotée, à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 - Le code reste écrit en français, dans le vocabulaire de la grammaire, et chaque construction garde ses essais : ils sont le filet de qui modifie le langage.
+- GrymoiR est sous licence EUPL v. 1.2 seulement (`LICENCE`), choisie le 7 novembre 2026 : quiconque peut le reprendre, et qui le modifie et le distribue en publie le code. Une exception (`LICENCE-fr.md`) laisse les applications écrites en GrymoiR à leur auteur, sous la licence de son choix, même quand elles embarquent la machine sans la modifier.
 ---
 
 ## Journal des révisions
@@ -299,3 +300,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.63 | 2026-11-01 | Art. 12 : renommer un nom dans tout le projet, fait dans l'atelier (vérifié dans une copie avant d'écrire) ; reste à faire dans `grym lsp` |
 | 1.64 | 2026-11-07 | Relecture après l'audit du langage (grammaire 2.89 à 3.06). Art. 6 : « Tout est objet » était faux ; objets et valeurs distingués ; contrats d'aptitude. Art. 1 : « modèle objet pur » devient « autour d'un modèle objet ». Art. 4 et 6 : exemples réécrits dans la syntaxe réelle, compilés et traduits par `grym`, au lieu d'esquisses qui ne se compilaient pas. Art. 5 : annotations facultatives et types nommés. Art. 7 : ce qui sort du programme (envoi, courriel, commande) ne s'annule pas. Art. 8 : sortes d'échec, plusieurs blocs, l'erreur non rattrapée remonte. Art. 11 : réseau sortant, commandes, minuterie. Art. 12 : listes, tables et tri faits ; « nombres comme objets » abandonné. Art. 13 : nouveau point 4, les sortes d'échec sont promises (le motif reste hors promesse) ; points 4 et 5 renumérotés 5 et 6 |
 | 1.65 | 2026-11-07 | Art. 11 : les fonctions C des bibliothèques (grammaire 3.14). Art. 13 : la sorte `natif` s'ajoute (point 4) ; le contrat `src/grym_natif.h` est promis, seule exception à « l'interface des fichiers de `src/` » hors promesse (point 5) |
+| 1.66 | 2026-11-07 | Art. 14 : la licence, EUPL v. 1.2 seulement, et l'exception pour les applications écrites en GrymoiR |

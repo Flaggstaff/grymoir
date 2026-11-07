@@ -2,6 +2,9 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
+**Licence** : EUPL v. 1.2 seulement (`LICENCE`), avec une exception pour les applications écrites en GrymoiR, qui restent
+à leur auteur, sous la licence de son choix (`LICENCE-fr.md`). Les dossiers `vendor/` gardent la licence de leurs auteurs.
+
 ## État : v2.0 livrée : l'application en console (`grym lancer`) ou dans le navigateur (`grym servir`)
 
 Chaque poussée compile et lance les tests sous Linux (gcc, clang, puis ASan et UBSan), macOS (clang) et Windows (MinGW-w64 gcc) : `.github/workflows/tests.yml`. Jalons et critères : charte, art. 12 ; promesses de compatibilité : art. 13.
