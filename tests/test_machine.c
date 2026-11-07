@@ -2399,6 +2399,25 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Types nommés (§ 16.16) */
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nUne tâche, conservée, a : un titre (texte), un statut (état).\nLe prochain (état) vaut « à faire ».\nAfficher prochain.\n"
+         "Le prochain devient « fini ».\nAfficher prochain.\nLa t vaut une nouvelle tâche :\n    Le titre vaut « écrire ».\n"
+         "    Le statut vaut « en cours ».\nConserver t.\nAfficher statut de la t.", "à faire\nfini\nen cours");
+    PROG("Un état est « a » ou « b ».\nL'état vaut 3.\nAfficher état.\nUne tâche, conservée, a : un état (état).\nLa t vaut une nouvelle tâche :\n"
+         "    L'état vaut « b ».\nLe s (état) vaut l'état de la t.\nAfficher s.", "3\nb");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (état) vaut « fermé ».", "ERREUR 2:18 « fermé » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (état) vaut « fini ».\nLe p devient « x ».", "ERREUR 3:14 « x » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe x vaut « fer ».\nLe p (état) vaut x suivi de « mé ».",
+         "ERREUR 3:1 « fermé » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (état) vaut 3.", "ERREUR 2:18 3 n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Un état est « a » ou « b ».\nLe p (état) vaut « a ».\nPour donner un x :\n    Rendre x.\nDonner « b », qui donne le p.\nAfficher p.\n"
+         "Donner « z », qui donne le p.", "ERREUR 7:1 « z » n'est pas une valeur permise de « état » : « a » ou « b ».");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nLe p (statut) vaut « fini ».", "ERREUR 2:7 « statut » n'est pas un type déclaré : « Un statut est « … » ou « … ». »");
+    PROG("Un état est « à faire », « en cours » ou « fini ».\nUn état est « a » ou « b ».", "ERREUR 2:4 Le type « état » existe déjà.");
+    PROG("Un état est « a ».", "ERREUR 1:18 Au moins deux valeurs : « Un état est « ouvert » ou « fermé ». »");
+    PROG("Un état est « a » ou « a ».", "ERREUR 1:22 « a » est déjà dans la liste.");
+    PROG("Une couleur est « rouge » ou « bleu ».\nLa c (couleur) vaut « vert ».",
+         "ERREUR 2:21 « vert » n'est pas une valeur permise de « couleur » : « rouge » ou « bleu ».");
     /* Paramètres facultatifs des actions (§ 9.3 bis) */
     PROG("Un client a : un nom.\nPour relancer un client, avec un délai de 30 et un ton de « poli » :\n    Afficher nom du client puis délai puis ton.\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\nRelancer le c.\nRelancer le c, avec le ton de « ferme ».\nRelancer le c, avec le délai de 10 et le ton de « ferme ».\n"
          "Relancer le c, avec le ton du nom du c et le délai de 2 + 3.", "Ana 30 poli\nAna 30 ferme\nAna 10 ferme\nAna 5 Ana");

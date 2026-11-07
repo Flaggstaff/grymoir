@@ -1063,9 +1063,16 @@ static void document(Compilation *c, const Noeud *n, int montrer) {
 
 static void phrase(Compilation *c, const Noeud *ph) {
     switch (ph->type) {
+    case P_TYPE:   /* « Un état est … » : une déclaration, sans code (§ 16.16) */
+        return;
     case P_CREATION:
     case P_MODIFICATION: {
         expression(c, ph->enfants[0]);
+        if (ph->texte2 && strchr(ph->texte2, '\x1d')) {   /* une variable d'un type nommé : la valeur vérifiée (§ 16.16) */
+            long k = bloc_constante(c->b, C_TEXTE, ph->texte2);
+            if (k < 0) { trop_grand(c, ph); return; }
+            emettre(c, I_PERMIS, k, ph->ligne, ph->colonne);
+        }
         if (ph->local >= 0) {
             emettre(c, I_ECRIRE_LOCAL, ph->local, ph->ligne, ph->colonne);
             return;

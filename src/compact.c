@@ -2697,16 +2697,34 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         }
         if ((!strcmp(c, "le") || !strcmp(c, "la") || !strcmp(c, "l'"))
             && !(d + 3 < f && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_POINT)) {   /* « _la s.date << … » : plus bas (2.36) */
-            if (d + 2 >= f || r->e[d + 1].type != J_CROCHETS || r->e[d + 2].type != J_AFFECTE) {
+            /* « _le prochain (état) << « x » » : le type d'une variable (§ 16.16) */
+            const int typee = d + 5 < f && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_PAR_OUV
+                              && r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM && r->e[d + 5].type == J_AFFECTE;
+            const size_t fleche = typee ? d + 5 : d + 2;
+            if (fleche >= f || r->e[d + 1].type != J_CROCHETS || r->e[fleche].type != J_AFFECTE) {
                 echouer(r, t, grym_formater("Création attendue : « _%s nom << valeur ».", c));
                 return;
             }
             if (!strcmp(c, "l'")) emettre(r, J_ELISION, "l", t, 1);
             else mot(r, c, t);
             copier(r, &r->e[d + 1]);
-            mot(r, "vaut", &r->e[d + 2]);
-            expression(r, d + 3, f);
+            if (typee) { copier(r, &r->e[d + 2]); copier(r, &r->e[d + 3]); copier(r, &r->e[d + 4]); }
+            mot(r, "vaut", &r->e[fleche]);
+            expression(r, fleche + 1, f);
             if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
+            point(r, f);
+        } else if (!strcmp(c, "type")) {   /* _type _un état « a » ; « b » → Un état est « a », « b ». (§ 16.16) */
+            if (d + 4 >= f || (!est_cle(&r->e[d + 1], "un") && !est_cle(&r->e[d + 1], "une")) || r->e[d + 2].type != J_CROCHETS) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _type _un état « à faire » ; « fini » »."));
+                return;
+            }
+            mot(r, r->e[d + 1].valeur, &r->e[d + 1]);
+            copier(r, &r->e[d + 2]);
+            mot(r, "est", &r->e[d + 2]);
+            for (size_t q = d + 3; q < f; q++) {
+                if (r->e[q].type == J_POINT_VIRGULE) emettre(r, J_VIRGULE, NULL, &r->e[q], 1);
+                else copier(r, &r->e[q]);
+            }
             point(r, f);
         } else if (!strcmp(c, "essayer")) {   /* _essayer → Essayer : (§ 18) */
             if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _essayer » s'écrit seul sur sa ligne.")); return; }

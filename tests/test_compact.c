@@ -290,6 +290,8 @@ int main(void) {
                  "relancer(1)\nrelancer(1 ; remise << « y »)\nrelancer(1 ; délai << 2 ; remise << « z »)\n", NULL);
     ERR("_action relancer(_un c ; _un délai << 30)\n    _afficher délai\n_fin\nrelancer(délai << 2 ; 1)\n", 4, 23,
         "Les facultatifs viennent après les arguments : « relancer(c ; délai << 10) ».");
+    ALLER_RETOUR("_type _une couleur « rouge » ; « bleu »\n\n_classe _une pièce _conservé\n    _une teinte (couleur)\n_fin\n\n"
+                 "_la c (couleur) << « bleu »\nc << « rouge »\n", NULL);
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

@@ -40,6 +40,7 @@ typedef struct {
     int ensemble;      /* variable qui contient un ensemble, nommée au pluriel avec « les » (§ 13.9) */
     int liste;         /* cet ensemble est une liste, qui garde ses doublons (§ 13.10) */
     int table;         /* variable qui contient une table, nommée au pluriel avec « les » (§ 13.11) */
+    char *permises;       /* variable d'un type nommé (§ 16.16) : « état␝à faire␞en cours␞fini », ou NULL ; possédé */
     Noeud *facultatifs;   /* action : ses paramètres facultatifs (N_BLOC de N_NOM, chacun avec sa valeur de départ en
                              enfant), dans l'ordre ; NULL sans facultatif (2.98). Possédé, comme nom et classe. */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
@@ -74,11 +75,15 @@ typedef struct {
     size_t nb_multiples;
 } Classe;
 
+typedef struct { char *nom, *valeurs; int feminin; } TypeNomme;   /* « Un état est « a » ou « b ». » (§ 16.16) */
+
 struct Portee {
     Symbole *s;
     size_t n, cap;
     Classe *classes;
     size_t nb_classes;
+    TypeNomme *types;   /* les types nommés déclarés (§ 16.16), possédés */
+    size_t nb_types;
     /* Fichiers utilisés (§ 21). */
     char *fichier;        /* chemin du fichier qu'on analyse, tel que donné ; NULL : dossier courant */
     int fichier_index;    /* 0 : le fichier principal ; k : le k-ième fichier utilisé, en cours d'analyse */
@@ -147,6 +152,8 @@ Portee *portee_creer(void) {
     p->n = p->cap = 0;
     p->classes = NULL;
     p->nb_classes = 0;
+    p->types = NULL;
+    p->nb_types = 0;
     p->fichier = NULL;
     p->fichier_index = 0;
     p->fichiers = p->cles = NULL;
@@ -217,10 +224,14 @@ static void classe_liberer(Classe *c) {
 }
 
 static void portee_vider(Portee *p) {
-    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); }
+    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); free(p->s[i].permises); }
     free(p->s);
     p->s = NULL;
     p->n = p->cap = 0;
+    for (size_t i = 0; i < p->nb_types; i++) { free(p->types[i].nom); free(p->types[i].valeurs); }   /* § 16.16 */
+    free(p->types);
+    p->types = NULL;
+    p->nb_types = 0;
     for (size_t i = 0; i < p->nb_classes; i++) classe_liberer(&p->classes[i]);
     free(p->classes);
     p->classes = NULL;
@@ -279,6 +290,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->s[i].nom = grym_dupliquer(src->s[i].nom);
         dst->s[i].classe = src->s[i].classe ? grym_dupliquer(src->s[i].classe) : NULL;
         dst->s[i].facultatifs = noeud_copier(src->s[i].facultatifs);   /* 2.98 */
+        dst->s[i].permises = src->s[i].permises ? grym_dupliquer(src->s[i].permises) : NULL;   /* § 16.16 */
     }
     dst->fichier = src->fichier ? grym_dupliquer(src->fichier) : NULL;
     dst->fichier_index = src->fichier_index;
@@ -312,6 +324,10 @@ static void portee_copier(Portee *dst, const Portee *src) {
                                        copier_noms(e->ecoutes, e->nb_ecoutes), e->nb_ecoutes,
                                        copier_noms(e->postes, e->nb_postes), e->nb_postes };
     }
+    dst->nb_types = src->nb_types;   /* § 16.16 */
+    dst->types = src->nb_types ? grym_allouer(src->nb_types * sizeof *dst->types) : NULL;
+    for (size_t i = 0; i < src->nb_types; i++)
+        dst->types[i] = (TypeNomme){ grym_dupliquer(src->types[i].nom), grym_dupliquer(src->types[i].valeurs), src->types[i].feminin };
     dst->nb_classes = src->nb_classes;
     dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
     for (size_t i = 0; i < src->nb_classes; i++) {
@@ -512,6 +528,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->ensemble = 0;
     s->liste = 0;   /* oubli de la 2.89 : un ensemble pouvait se croire liste, selon la mémoire */
     s->facultatifs = NULL;   /* 2.98 */
+    s->permises = NULL;      /* § 16.16 */
     s->table = 0;   /* § 13.11 */
     s->classe = NULL;
     s->rend = 0;
@@ -526,6 +543,7 @@ static void portee_tronquer(Portee *p, size_t n) {
         free(p->s[p->n].nom);
         free(p->s[p->n].classe);
         noeud_liberer(p->s[p->n].facultatifs);
+        free(p->s[p->n].permises);
     }
 }
 
@@ -1698,6 +1716,8 @@ static int liste_de_table_en(Analyse *a, size_t k);
 static Noeud *phrase_dans(Analyse *a, const Jeton *t);
 static Noeud *phrase_courriel(Analyse *a, const Jeton *t);
 static Noeud *trier_apres(Analyse *a, Noeud *g);
+static const TypeNomme *type_nomme(const Portee *p, const char *nom);
+static int verifier_permise(Analyse *a, const char *permises, const Noeud *v);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -4498,6 +4518,24 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     avancer(a);
     size_t d = a->i, f = iverbe;
     Jeton *verbe = &a->j[f];
+    /* « Le prochain (état) vaut « à faire ». » : une variable d'un type nommé (§ 16.16) */
+    char *permises = NULL;
+    if (est_mot(verbe, "vaut") && f >= d + 4 && a->j[f - 1].type == J_PAR_FERM) {
+        size_t o = f - 1;
+        while (o > d && a->j[o].type != J_PAR_OUV) o--;
+        if (a->j[o].type == J_PAR_OUV && o > d && o + 1 < f - 1) {
+            char *nt = a->j[o + 1].type == J_CROCHETS ? grym_dupliquer(a->j[o + 1].valeur) : cle(a, o + 1, f - 1);
+            const TypeNomme *tn = type_nomme(a->portee, nt);
+            if (!tn) {
+                Noeud *x = erreur(a, &a->j[o + 1], grym_formater("« %s » n'est pas un type déclaré : « Un %s est « … » ou « … ». »", nt, nt));
+                free(nt);
+                return x;
+            }
+            permises = grym_formater("%s\x1d%s", tn->nom, tn->valeurs);
+            free(nt);
+            f = o;
+        }
+    }
 
     if (d == f) {
         char *x = texte_jeton(tart);
@@ -4684,9 +4722,11 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     }
     free(ecrit_nom);
 
-    a->i = f + 1; /* après le verbe */
+    a->i = iverbe + 1; /* après le verbe */
     Noeud *e = valeur(a);
-    if (!e) { free(nom); return NULL; }
+    if (!e) { free(nom); free(permises); return NULL; }
+    if (!permises && !creation && s && s->permises) permises = grym_dupliquer(s->permises);   /* « devient » : son type */
+    if (permises && !verifier_permise(a, permises, e)) { noeud_liberer(e); free(nom); free(permises); return NULL; }
     if (e->type == N_NOUVEAU && cour(a)->type == J_DEUX_POINTS) {
         if (!bloc_initialisation(a, e, tart)) { noeud_liberer(e); free(nom); return NULL; }
     } else if (!fin_phrase(a, 0)) { noeud_liberer(e); free(nom); return NULL; }
@@ -4696,6 +4736,7 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     if (creation) {
         portee_declarer(a->portee, nom, genre_de(art), tart->ligne);
         if (a->formule) a->portee->s[a->portee->n - 1].local = local = a->nb_locaux++;
+        if (permises) a->portee->s[a->portee->n - 1].permises = grym_dupliquer(permises);
     } else {
         local = s->local;
     }
@@ -4703,6 +4744,7 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     Noeud *n = noeud_creer(creation ? P_CREATION : P_MODIFICATION,
                            tart->ligne, tart->colonne, tart->debut);
     n->local = local;
+    n->texte2 = permises;   /* « état␝valeurs » : vérifiée à l'exécution, et « (état) » à l'impression d'une création */
     n->texte = nom;
     n->article = art == ART_IMPLICITE ? ART_AUCUN : art;
     n->crochets = crochets && !a->j[d].synthetique;
@@ -5176,6 +5218,121 @@ static int zones_dans_ecrans(Analyse *a, const Noeud *n, const char *const *ecra
 }
 
 /* Action : « Pour relancer un client : » suivi d'un bloc. */
+/* ---------- Types nommés (§ 16.16) ---------- */
+
+static const TypeNomme *type_nomme(const Portee *p, const char *nom) {
+    for (size_t i = 0; i < p->nb_types; i++) if (strcmp(p->types[i].nom, nom) == 0) return &p->types[i];
+    return NULL;
+}
+
+/* t est-il dans les valeurs (séparées par U+001E) ? */
+static int dans_valeurs(const char *valeurs, const char *t) {
+    const size_t l = strlen(t);
+    for (const char *p = valeurs; p;) {
+        const char *q = strchr(p, '\x1e');
+        const size_t n = q ? (size_t)(q - p) : strlen(p);
+        if (n == l && strncmp(p, t, l) == 0) return 1;
+        p = q ? q + 1 : NULL;
+    }
+    return 0;
+}
+
+/* « « à faire », « en cours » ou « fini » » */
+static char *lister_permises(const char *valeurs) {
+    Chaine c = {0};
+    size_t nb = 1, k = 0;
+    for (const char *p = valeurs; *p; p++) nb += *p == '\x1e';
+    for (const char *p = valeurs;; k++) {
+        const char *q = strchr(p, '\x1e');
+        if (k) chaine_ajouter(&c, k + 1 == nb ? " ou " : ", ");
+        char *x = q ? grym_formater("« %.*s »", (int)(q - p), p) : grym_formater("« %s »", p);
+        chaine_ajouter(&c, x);
+        free(x);
+        if (!q) break;
+        p = q + 1;
+    }
+    return chaine_rendre(&c);
+}
+
+/* Une valeur rangée dans une variable d'un type nommé (« nom␝valeurs ») : un texte écrit en clair se vérifie ici ; une valeur
+ * calculée, à l'exécution (instruction PERMIS). Rend 0 sur un refus. */
+static int verifier_permise(Analyse *a, const char *permises, const Noeud *v) {
+    const char *sep = strchr(permises, '\x1d');
+    if (!sep) return 1;
+    char *nom = grym_formater("%.*s", (int)(sep - permises), permises);
+    const char *valeurs = sep + 1;
+    int ok = 1;
+    if (v->type == N_TEXTE && !dans_valeurs(valeurs, v->texte ? v->texte : "")) ok = 0;
+    else if (v->type == N_NOMBRE || v->type == N_DATE || v->type == N_HEURE || v->type == N_BOOLEEN) ok = 0;
+    if (!ok) {
+        char *l = lister_permises(valeurs), *x = v->type == N_TEXTE ? grym_formater("« %s »", v->texte ? v->texte : "")
+                                                                     : grym_dupliquer(v->texte ? v->texte : "cette valeur");
+        erreur_a(a, v->ligne, v->colonne, grym_formater("%s n'est pas une valeur permise de « %s » : %s.", x, nom, l));
+        free(l);
+        free(x);
+    }
+    free(nom);
+    return ok;
+}
+
+/* « Un état est « à faire », « en cours » ou « fini ». » (§ 16.16) : un type nommé, au premier niveau. */
+static Noeud *definition_type(Analyse *a, size_t iest) {
+    Jeton *tun = cour(a);
+    Genre g;
+    est_un(tun, &g);
+    if (!premier_niveau(a, tun)) return NULL;
+    const size_t d = a->i + 1;
+    if (iest == d) return erreur(a, &a->j[iest], grym_dupliquer("Nom de type attendu : « Un état est « à faire » ou « fini ». »"));
+    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, iest);
+    if (type_nomme(a->portee, nom)) {
+        Noeud *x = erreur(a, &a->j[d], grym_formater("Le type « %s » existe déjà.", nom));
+        free(nom);
+        return x;
+    }
+    a->i = iest + 1;
+    Chaine c = {0};
+    size_t nb = 0;
+    for (;;) {
+        Jeton *v = cour(a);
+        if (v->type != J_TEXTE || !v->valeur || !*v->valeur) {
+            free(chaine_rendre(&c));
+            free(nom);
+            return erreur(a, v, grym_dupliquer(v->type == J_TEXTE ? "Une valeur permise n'est pas vide."
+                                                                  : "Valeur attendue : « Un état est « à faire », « en cours » ou « fini ». »"));
+        }
+        if (nb && dans_valeurs(c.d, v->valeur)) {
+            free(chaine_rendre(&c));
+            free(nom);
+            return erreur(a, v, grym_formater("« %s » est déjà dans la liste.", v->valeur));
+        }
+        if (nb) chaine_ajouter(&c, "\x1e");
+        chaine_ajouter(&c, v->valeur);
+        nb++;
+        avancer(a);
+        if (cour(a)->type == J_VIRGULE || est_mot(cour(a), "ou")) { avancer(a); continue; }
+        break;
+    }
+    if (nb < 2) {
+        free(chaine_rendre(&c));
+        free(nom);
+        return erreur(a, cour(a), grym_dupliquer("Au moins deux valeurs : « Un état est « ouvert » ou « fermé ». »"));
+    }
+    if (!fin_phrase(a, 0)) { free(chaine_rendre(&c)); free(nom); return NULL; }
+    Portee *pt = a->portee;
+    TypeNomme *nt = grym_allouer((pt->nb_types + 1) * sizeof *nt);
+    if (pt->nb_types) memcpy(nt, pt->types, pt->nb_types * sizeof *nt);
+    free(pt->types);
+    pt->types = nt;
+    char *valeurs = chaine_rendre(&c);
+    pt->types[pt->nb_types++] = (TypeNomme){ grym_dupliquer(nom), grym_dupliquer(valeurs), g == GENRE_FEMININ };
+    Noeud *n = noeud_creer(P_TYPE, tun->ligne, tun->colonne, tun->debut);
+    n->texte = nom;
+    n->texte3 = valeurs;
+    n->forme = g == GENRE_FEMININ ? 2 : 1;
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 /* Une constante, valeur de départ d'un paramètre facultatif (2.98) : un texte, un nombre (négatif compris), une date,
  * une heure, vrai ou faux ; comme celle d'un champ d'entité (« « Suisse » au départ »). */
 static int constante_de_depart(const Noeud *v) {
@@ -5598,6 +5755,7 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
         m->texte = nom;
         m->article = art;
         m->forme = 9;   /* « , qui donne … » : réimprimée ainsi */
+        if (v && v->permises) m->texte2 = grym_dupliquer(v->permises);   /* une variable d'un type nommé (§ 16.16) */
         noeud_ajouter(m, n);
         m->fin = fin_jeton(&a->j[a->i - 1]);
         return m;
@@ -6416,6 +6574,16 @@ static char *lire_type(Analyse *a, const char *soi) {
     }
     size_t d = a->i, k = d;
     while (a->j[k].type == J_MOT || a->j[k].type == J_CROCHETS || a->j[k].type == J_ELISION) k++;
+    if (k > d && a->j[k].type == J_PAR_FERM) {   /* « (état) » : un type nommé, ses valeurs permises (§ 16.16) */
+        char *nt = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+        const TypeNomme *tn = type_nomme(a->portee, nt);
+        free(nt);
+        if (tn) {
+            a->i = k + 1;
+            a->valeurs_lues = grym_dupliquer(tn->valeurs);
+            return grym_dupliquer("texte");
+        }
+    }
     if (k == d || a->j[k].type != J_PAR_FERM) {
         erreur(a, a->j[k].type == J_PAR_FERM ? ouv : &a->j[k], grym_dupliquer(
             "Type attendu entre parenthèses : texte, nombre, nombre entier, vrai ou faux, date, fichier, image, "
@@ -11087,7 +11255,13 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "cas") || est_mot(t, "autrement"))
         return erreur(a, t, grym_formater("« %s » hors d'un « Selon ».", est_mot(t, "cas") ? "Cas" : "Autrement"));
     if (est_mot(t, "pour")) return definition_action(a, colonne);
-    if ((est_mot(t, "un") || est_mot(t, "une")) && !est_nouveau(voir(a, 1))) return definition_classe(a);
+    if ((est_mot(t, "un") || est_mot(t, "une")) && !est_nouveau(voir(a, 1))) {
+        /* « Un état est « à faire » ou « fini ». » : un type nommé (§ 16.16) ; sinon une classe */
+        size_t k = a->i + 1;
+        while (k < a->n && (mot_de_nom(a, k) || a->j[k].type == J_CROCHETS) && !est_mot(&a->j[k], "est")) k++;
+        if (k > a->i + 1 && k + 1 < a->n && est_mot(&a->j[k], "est") && a->j[k + 1].type == J_TEXTE) return definition_type(a, k);
+        return definition_classe(a);
+    }
     if (est_mot(t, "rendre")) {
         if (a->formule != 1 && a->formule != 2)
             return erreur(a, t, grym_dupliquer("« Rendre » ne s'emploie que dans un calcul ou une action."));

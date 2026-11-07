@@ -165,6 +165,11 @@ int main(void) {
          "Pour relancer un c, avec un délai de 30 et une remise de 0 :\n    Afficher délai.\n\nRelancer 1, avec le délai de 2 et la remise de 5.\n");
     COMP("Pour relancer un c, avec un délai de 30 :\n    Afficher délai.\n\nRelancer 1, avec le délai de 2.\nRelancer 1.\n",
          "_action relancer(_un c ; _un délai << 30)\n    _afficher délai\n_fin\n\nrelancer(1 ; délai << 2)\nrelancer(1)\n");
+    FIXE("Une couleur est « rouge », « vert » ou « bleu ».\n\nUne pièce, conservée, a :\n    une teinte (couleur),\n    un état (« neuf » ou « usé »).\n\n"
+         "La c (couleur) vaut « vert ».\nLa c devient « bleu ».\n");
+    LITT("Un état est « a » ou « b ».\n\nUne tâche, conservée, a :\n    un statut (« a » ou « b »).\n",
+         "Un état est « a » ou « b ».\n\nUne tâche, conservée, a :\n    un statut (état).\n");   /* la liste d'un type : son nom */
+    COMP("Un état est « a » ou « b ».\n\nLe p (état) vaut « a ».\n", "_type _un état « a » ; « b »\n\n_le p (état) << « a »\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

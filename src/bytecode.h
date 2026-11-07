@@ -171,11 +171,13 @@ typedef enum {
     I_COURRIEL,         /* dépile le texte, la messagerie, l'objet, puis le destinataire ; envoie le courriel (§ 22.27) */
     I_MATH,             /* opérande : la forme de N_MATH (3 bits) | le nombre d'arguments × 8 ; dépile les arguments, empile le
                            résultat (§ 3.7) */
-    I_TRIER             /* opérande : 1 décroissant | 2 par un champ | 4 par des clés (2.97) ; dépile [le nom du champ ou la liste
+    I_TRIER,            /* opérande : 1 décroissant | 2 par un champ | 4 par des clés (2.97) ; dépile [le nom du champ ou la liste
                            des clés, puis] la liste ; empile la liste triée, nouvelle (§ 13.12) */
+    I_PERMIS            /* opérande : une constante texte « type␝valeurs » ; la valeur au sommet, qui reste, doit être l'une
+                           d'elles (§ 16.16) */
 } CodeInstruction;
 
-#define I_DERNIER I_TRIER
+#define I_DERNIER I_PERMIS
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

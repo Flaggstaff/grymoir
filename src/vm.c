@@ -7123,6 +7123,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, x);
             break;
         }
+        case I_PERMIS: {   /* une variable d'un type nommé : sa valeur, l'une des permises (§ 16.16) */
+            const char *d = b->constantes[op].texte, *sep = strchr(d, '\x1d');
+            const Valeur *v = &pile.v[pile.n - 1];
+            if (!sep) break;
+            if (v->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(v)); break; }
+            if (v->type == V_TEXTE && valeur_permise(sep + 1, v->texte ? v->texte : "")) break;
+            char *l = lister_valeurs(sep + 1), *x = v->type == V_TEXTE ? grym_formater("« %s »", v->texte ? v->texte : "")
+                                                                         : texte_valeur(m, v);
+            ok = echouer(diag, b, debut, grym_formater("%s n'est pas une valeur permise de « %.*s » : %s.", x, (int)(sep - d), d, l));
+            free(l);
+            free(x);
+            break;
+        }
         case I_TRIER: {   /* « les notes triées [par ordre décroissant] », « triés par nom [décroissant] » (§ 13.12) */
             Valeur champ = op & 6 ? depiler(&pile) : vi_absent(NULL), l = depiler(&pile);   /* op & 4 : la liste des clés (2.97) */
             char *mp = NULL;

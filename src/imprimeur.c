@@ -48,6 +48,8 @@ typedef struct {
     int garder_groupe;     /* le membre gauche d'une opération : ses parenthèses restent (« de (… dont …) − … ») */
     int sans_marque;       /* l'objet d'un champ compact (`c.nom`) : pas de « _nu » ni d'article devant lui (2.35) */
     int niveau;            /* le niveau de la phrase en cours : le bloc d'un texte suivant s'écrit un cran plus loin (§ 4.7) */
+    const Noeud **types;   /* les types nommés déjà écrits (§ 16.16) : un champ aux mêmes valeurs s'écrit « (état) » */
+    size_t nb_types;
 
     int sans_marque_objet; /* « o.genres _gagne … » : pas de marque devant l'objet d'un champ en tête de phrase (2.36) */
     char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
@@ -1485,7 +1487,13 @@ static void expression(Impression *im, const Noeud *n) {
 static void type_de_champ(Impression *im, const Noeud *ch) {
     if (!ch->texte2) return;
     aj(im, " (");
-    if (ch->texte3 && ch->forme != 3) {   /* valeurs permises (§ 16.15) : « (« a », « b » ou « c ») » ; « (« a » ; « b » ; « c ») » */
+    const Noeud *nomme = NULL;   /* les valeurs d'un type déclaré : « (état) » (§ 16.16) */
+    for (size_t k = 0; ch->texte3 && !ch->couleurs && ch->forme != 3 && k < im->nb_types && !nomme; k++)
+        if (strcmp(im->types[k]->texte3, ch->texte3) == 0) nomme = im->types[k];
+    if (nomme) {
+        if (im->compact) ecrire_nom(im, nomme->texte, 0);
+        else aj(im, nomme->texte);
+    } else if (ch->texte3 && ch->forme != 3) {   /* valeurs permises (§ 16.15) : « (« a », « b » ou « c ») » ; « (« a » ; « b » ; « c ») » */
         size_t nb = 1;
         for (const char *p = ch->texte3; *p; p++) nb += *p == '\x1e';
         size_t k = 0;
@@ -1916,20 +1924,26 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         }
         Genre g = n->type == P_CREATION ? genre_article(n->article) : genre_de_nom(im, n->texte);
         const Noeud *bloc_init = nouveau_en_bloc(n->enfants[0]);
+        /* « Le prochain (état) vaut … » : le type d'une variable, à sa création (§ 16.16) */
+        char *type_var = n->type == P_CREATION && n->texte2 && strchr(n->texte2, '\x1d')
+                         ? grym_formater("%.*s", (int)(strchr(n->texte2, '\x1d') - n->texte2), n->texte2) : NULL;
         if (c) {
             if (n->type == P_CREATION)
                 aj(im, n->article == ART_LA ? "_la " : n->article == ART_L ? "_l'" : "_le ");
             ecrire_nom(im, n->texte, 0);
+            if (type_var) { aj(im, " ("); ecrire_nom(im, type_var, 0); aj(im, ")"); }
             aj(im, " << ");
             expression(im, n->enfants[0]);
             aj(im, "\n");
         } else {
             aj(im, article_ecrit(n->article, g, n->texte));
             ecrire_nom(im, n->texte, n->crochets);
+            if (type_var) { aj(im, " ("); aj(im, type_var); aj(im, ")"); }
             aj(im, n->type == P_CREATION ? " vaut " : " devient ");
             expression(im, n->enfants[0]);
             aj(im, bloc_init ? " :\n" : ".\n");
         }
+        free(type_var);
         if (bloc_init) initialisation(im, bloc_init, niveau);
         if (n->type == P_CREATION) retenir(im, n->texte, g);
         return;
@@ -2394,6 +2408,29 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         expression(im, n->enfants[0]);
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_TYPE: {   /* « Un état est « a », « b » ou « c ». » ; « _type _un état « a » ; « b » ; « c » » (§ 16.16) */
+        const Noeud **t = grym_allouer((im->nb_types + 1) * sizeof *t);
+        if (im->nb_types) memcpy(t, im->types, im->nb_types * sizeof *t);
+        free(im->types);
+        im->types = t;
+        im->types[im->nb_types++] = n;
+        aj(im, c ? (n->forme == 2 ? "_type _une " : "_type _un ") : (n->forme == 2 ? "Une " : "Un "));
+        ecrire_nom(im, n->texte, 0);
+        aj(im, c ? " " : " est ");
+        size_t nb = 1, k = 0;
+        for (const char *q = n->texte3; *q; q++) nb += *q == '\x1e';
+        for (const char *q = n->texte3;; k++) {
+            const char *s = strchr(q, '\x1e');
+            char *v = s ? grym_formater("%.*s", (int)(s - q), q) : grym_dupliquer(q);
+            if (k) aj(im, c ? " ; " : k + 1 == nb ? " ou " : ", ");
+            ecrire_texte(im, v);
+            free(v);
+            if (!s) break;
+            q = s + 1;
+        }
+        aj(im, c ? "\n" : ".\n");
+        return;
+    }
     case P_COURRIEL: {   /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » ; compacte :
                           * « _envoyer_courriel _à a _objet o _depuis m _texte t » (§ 22.27) */
         const int gabarit = n->enfants[3]->type == N_GABARIT;
@@ -3218,6 +3255,7 @@ static char *imprimer(const Programme *p, int compact) {
     free(im.aptitudes);
     free(im.pluriels);
     free(im.singuliers);
+    free(im.types);
     free(im.parties);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
@@ -3230,7 +3268,7 @@ static void apprendre(Impression *im, Noeud *const *phrases, size_t nb, const No
         const Noeud *ph = phrases[k];
         if (ph == sauf) continue;
         if (ph->type == P_UTILISER) apprendre(im, ph->enfants, ph->nb_enfants, sauf);
-        else if (ph->type == P_CLASSE || ph->type == P_APTITUDE || ph->type == P_CALCUL) phrase(im, ph, 0);
+        else if (ph->type == P_CLASSE || ph->type == P_APTITUDE || ph->type == P_CALCUL || ph->type == P_TYPE) phrase(im, ph, 0);
     }
 }
 
@@ -3247,6 +3285,7 @@ char *imprimer_phrase(const Programme *contexte, const Noeud *n, int compact) {
     free(im.aptitudes);
     free(im.pluriels);
     free(im.singuliers);
+    free(im.types);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
     return sans_marques(chaine_rendre(&im.c));

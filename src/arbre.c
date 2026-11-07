@@ -451,6 +451,16 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_TYPE:   /* (type état «à faire|en cours») (§ 16.16) */
+        chaine_ajouter(c, "(type ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, " «");
+        for (const char *p = n->texte3 ? n->texte3 : ""; *p; p++) {
+            if (*p == '\x1e') chaine_ajouter(c, "|");
+            else { char u[2] = { *p, 0 }; chaine_ajouter(c, u); }
+        }
+        chaine_ajouter(c, "»)");
+        return;
     case P_COURRIEL:   /* (courriel a o m t) (§ 22.27) */
         chaine_ajouter(c, "(courriel");
         for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }

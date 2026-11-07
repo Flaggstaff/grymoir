@@ -206,6 +206,9 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Types nommés (§ 16.16) : un champ « (état) » a les valeurs permises du type */
+    V("Un état est « a » ou « b ».\nUne tâche, conservée, a : un statut (état).\nLe p (état) vaut « a ».\nLe p devient « b ».",
+      "(type état «a|b»)\n(entité [tâche] [statut : texte])\n(créer [p] «a»)\n(modifier [p] «b»)");
     /* Paramètres facultatifs (§ 9.3 bis) : l'appel porte tous les paramètres, la valeur de départ recopiée */
     V("Pour relancer un c, avec un délai de 30 :\n    Afficher délai.\nRelancer 1.\nRelancer 1, avec le délai de 2.",
       "(action [relancer] ([c] [délai]) (bloc (afficher [délai])))\n(action-appel [relancer] 1 30)\n(action-appel [relancer] 1 2)");

@@ -261,6 +261,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_COURRIEL:       return "COURRIEL";
     case I_MATH:           return "MATH";
     case I_TRIER:          return "TRIER";
+    case I_PERMIS:         return "PERMIS";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -282,7 +283,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_ECRAN_FILTRE || code == I_JSON_LISTE || code == I_HISTORIQUE || code == I_WSJTX
         || code == I_LISTE || code == I_RANG || code == I_EXTRAIRE
         || code == I_TABLE || code == I_TABLE_LIRE || code == I_TABLE_ECRIRE || code == I_TABLE_LISTE
-        || code == I_COURRIEL || code == I_MATH || code == I_TRIER;
+        || code == I_COURRIEL || code == I_MATH || code == I_TRIER || code == I_PERMIS;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -346,7 +347,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                  && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("EXPORTER : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
-        else if ((c == I_ECRAN_OUVRIR || c == I_ECRAN_EXIGER || c == I_SIGLES) && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+        else if ((c == I_ECRAN_OUVRIR || c == I_ECRAN_EXIGER || c == I_SIGLES || c == I_PERMIS)
+                 && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("ÉCRAN_OUVRIR : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
         else if ((c == I_CONSTANTE || c == I_CHERCHER) && op >= b->nb_constantes)
@@ -481,6 +483,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_COURRIEL: besoin = 4; effet = -4; break;
             case I_MATH: besoin = (long)(op >> 3); effet = 1 - besoin; break;
             case I_TRIER: besoin = op & 6 ? 2 : 1; effet = 1 - besoin; break;
+            case I_PERMIS: besoin = 1; effet = 0; break;
             case I_REMPLACER: besoin = 3; effet = -2; break;
             case I_MOTS: besoin = 1; effet = 0; break;
             case I_PORTS: besoin = 0; effet = 1; break;

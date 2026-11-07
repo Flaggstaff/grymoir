@@ -133,6 +133,8 @@ typedef enum {
     P_ESSAYER,       /* « Essayer : … En cas d'échec … » (§ 18) : enfants[0] : N_BLOC essayé ; enfants[1…] : les P_CAS_ECHEC, dans
                         l'ordre ; entier : case du motif ; local : case de la sorte (§ 18.2) */
     P_COURRIEL,      /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » (§ 22.27) : enfants : a, o, m, t */
+    P_TYPE,          /* « Un état est « à faire », « en cours » ou « fini ». » (§ 16.16) : texte : le nom ; texte3 : les valeurs,
+                        séparées par U+001E ; forme : 1 masculin, 2 féminin */
     P_CAS_ECHEC,     /* « En cas d'échec de réseau ou de fichier : » (§ 18.2) : texte : les sortes séparées par « | », NULL pour
                         « En cas d'échec » seul ; forme : celle de la branche (1 : forme courte) ; enfants[0] : N_BLOC */
     P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
