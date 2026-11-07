@@ -2443,6 +2443,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "_fermer\n" : "Fermer l'écran.\n");
         return;
     case P_UTILISER:   /* « Utiliser « données ». » ; « _utiliser « données » » (§ 21) : jamais ses déclarations */
+        if (n->forme == 2) {   /* « Ces scénarios éprouvent « Praxis ». » ; « _éprouver « Praxis » » (3.10) */
+            aj(im, c ? "_éprouver " : "Ces scénarios éprouvent ");
+            ecrire_texte(im, n->texte);
+            aj(im, c ? "\n" : ".\n");
+            return;
+        }
         aj(im, c ? "_utiliser " : "Utiliser ");
         if (n->forme == 1) aj(im, c ? "_bibliothèque " : "la bibliothèque ");   /* 2.61, § 21.9 */
         ecrire_texte(im, n->texte);

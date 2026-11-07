@@ -11,6 +11,7 @@
 static int mode_exemples = 0;   /* grym exemples (grammaire, § 9.6) */
 static int mode_scenario = 0;   /* grym scenarios (§ 9.7) : le rang du scénario à jouer, à partir de 1 ; 0 hors de ce mode */
 static int nb_scenarios_vus = 0;
+static int declaration_de_scenario(TypeNoeud t);
 static char *titre_scenario = NULL;   /* le titre du scénario compilé en mode scénario */
 
 typedef struct {
@@ -1921,6 +1922,23 @@ static void phrase(Compilation *c, const Noeud *ph) {
         const char *prec = c->fichier;
         if (ph->entier > 0 && (size_t)ph->entier <= c->programme->nb_fichiers)
             c->fichier = c->programme->fichiers[ph->entier - 1];
+        if (ph->forme == 2 && !mode_scenario) {   /* « Ces scénarios éprouvent … » hors de « grym scenarios » (3.10) */
+            long k = bloc_constante(c->b, C_TEXTE, "Un fichier de scénarios se joue avec « grym scenarios », jamais seul : il ne lance pas le programme qu'il éprouve.");
+            emettre(c, I_CONSTANTE, k, ph->ligne, ph->colonne);
+            emettre(c, I_REFUSER, 1, ph->ligne, ph->colonne);   /* l'opérande : le nombre de morceaux du message */
+            c->fichier = prec;
+            return;
+        }
+        if (ph->forme == 2) {   /* le programme éprouvé : ses déclarations seules (3.10) */
+            Noeud **garde = grym_allouer((ph->nb_enfants ? ph->nb_enfants : 1) * sizeof *garde);
+            size_t n = 0;
+            for (size_t k = 0; k < ph->nb_enfants; k++)
+                if (declaration_de_scenario(ph->enfants[k]->type)) garde[n++] = ph->enfants[k];
+            phrases(c, garde, n);
+            free(garde);
+            c->fichier = prec;
+            return;
+        }
         phrases(c, ph->enfants, ph->nb_enfants);
         c->fichier = prec;
         return;
@@ -1931,6 +1949,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
 }
 
 void compilateur_mode_exemples(int actif) { mode_exemples = actif; }
+
+/* Ce qu'un scénario garde d'un programme : ses déclarations, ses écrans, ses formules (§ 9.7, 3.08). */
+static int declaration_de_scenario(TypeNoeud t) {
+    return t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER || t == P_STYLE
+        || t == P_TYPE || t == P_CONTRAT || t == P_ECRAN || t == P_QUAND || t == P_XML || t == P_BIBLIOTHEQUE || t == P_INTERNE;
+}
 void compilateur_mode_scenario(int rang) {
     mode_scenario = rang;
     if (rang < 0) { free(titre_scenario); titre_scenario = NULL; mode_scenario = 0; }   /* -1 : tout rendre */
@@ -1962,10 +1986,7 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
         int rang = 0;
         for (size_t k = 0; k < p->nb; k++) {
             TypeNoeud t = p->phrases[k]->type;
-            if (t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER
-                || t == P_STYLE || t == P_TYPE || t == P_CONTRAT
-                || t == P_ECRAN || t == P_QUAND || t == P_XML || t == P_BIBLIOTHEQUE || t == P_INTERNE)   /* 3.08 : les écrans */
-                garde[n++] = p->phrases[k];
+            if (declaration_de_scenario(t)) garde[n++] = p->phrases[k];
             if (t == P_SCENARIO && ++rang == mode_scenario) sc = p->phrases[k];
         }
         free(titre_scenario);

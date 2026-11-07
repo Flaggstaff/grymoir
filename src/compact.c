@@ -2870,6 +2870,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "version", &r->e[d + 2]);
             copier(r, &r->e[d + 2]);
             point(r, f);
+        } else if (!strcmp(c, "éprouver")) {   /* _éprouver « Praxis » → Ces scénarios éprouvent « Praxis ». (3.10) */
+            if (d + 2 != f || r->e[d + 1].type != J_TEXTE) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _éprouver « Praxis » »."));
+                return;
+            }
+            mot(r, "ces", t);
+            mot(r, "scénarios", t);
+            mot(r, "éprouvent", t);
+            copier(r, &r->e[d + 1]);
+            point(r, f);
         } else if (!strcmp(c, "utiliser")) {   /* _utiliser « données » → Utiliser « données ». (§ 21) */
             if (f != d + 2 || r->e[d + 1].type != J_TEXTE) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _utiliser « données » »."));

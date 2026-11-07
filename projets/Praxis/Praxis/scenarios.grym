@@ -1,0 +1,116 @@
+Remarque : les scénarios de Praxis (7 novembre 2026), joués par « grym scenarios scenarios.grym » ; chacun sur une base neuve.
+Remarque : ils éprouvent les parcours d'argent : régler, rembourser, refuser ce qui ne se règle pas.
+Ces scénarios éprouvent « Praxis ».
+
+Remarque : le cabinet et un soin ; la quittance immédiate sauf avis contraire, comme Praxis au départ.
+Pour installer, avec une quittance différée de faux :
+    Le cab vaut un nouveau cabinet :
+        Le nom vaut « Cabinet d'essai ».
+        Le pays vaut « Suisse ».
+        La facturation des absences vaut faux.
+        Le choix d'agenda vaut faux.
+        L'agenda vaut « Praxis ».
+        La facturation aux assurances vaut faux.
+        La gestion du personnel vaut faux.
+        La quittance différée vaut quittance différée.
+    Conserver le cab.
+    Le s vaut un nouveau soin :
+        Le nom vaut « Massage ».
+        Le tarif vaut 120.
+        L'ordonnance exigée vaut faux.
+        La facturation vaut « patient ».
+    Conserver le s.
+    Rendre le s.
+
+Remarque : un patient de ce nom et sa séance du jour donné, au statut donné, à payer.
+Pour poser un soin et un nom et une date et un statut :
+    Le p vaut un nouveau patient :
+        Le nom vaut nom.
+        Le pays vaut « Suisse ».
+    Conserver le p.
+    La séance vaut une nouvelle séance :
+        Le patient vaut p.
+        Le soin vaut soin.
+        La date vaut date.
+        Le prix vaut 120.
+        Le statut vaut statut.
+        Le paiement vaut « à payer ».
+    Conserver la séance.
+    Rendre la séance.
+
+Scénario « une séance faite se règle en espèces, avec sa quittance » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Régler la séance et « espèces ».
+    Vérifier que le paiement de la séance = « espèces ».
+    Vérifier que l'encaissement de la séance = aujourd'hui.
+    Vérifier que la quittance de la séance est présente.
+    Les docs valent les documents sortis.
+    Vérifier que le nombre de docs = 1.
+    Vérifier que le premier élément des docs = « Quittance ».
+
+Scénario « une quittance différée ne sort pas au règlement » :
+    Installer, avec la quittance différée de vrai, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Régler la séance et « Twint ».
+    Vérifier que le paiement de la séance = « Twint ».
+    Vérifier que la quittance de la séance est absente.
+
+Scénario « un virement compte au jour où il est arrivé » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui − 3 jours et « faite », qui donne la séance.
+    Régler par virement la séance et aujourd'hui − 1 jour.
+    Vérifier que le paiement de la séance = « virement ».
+    Vérifier que l'encaissement de la séance = aujourd'hui − 1 jour.
+
+Scénario « un virement à venir est refusé » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne la séance.
+    Essayer :
+        Régler par virement la séance et aujourd'hui + 2 jours.
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le paiement de la séance = « à payer ».
+
+Scénario « une séance à venir ne se règle pas » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui + 7 jours et « prévue », qui donne la séance.
+    Essayer :
+        Régler la séance et « espèces ».
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le motif de l'échec = « Une séance à venir se règle le jour venu. ».
+
+Scénario « une séance annulée ne se règle pas » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui et « annulée », qui donne la séance.
+    Essayer :
+        Régler la séance et « espèces ».
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le motif de l'échec = « Une séance annulée ne se règle pas. ».
+
+Scénario « une séance réglée ne se règle pas deux fois » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne la séance.
+    Régler la séance et « espèces ».
+    Essayer :
+        Régler la séance et « Twint ».
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le paiement de la séance = « espèces ».
+
+Scénario « une séance réglée par erreur redevient à payer » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne la séance.
+    Régler la séance et « espèces ».
+    Remettre à payer la séance.
+    Vérifier que le paiement de la séance = « à payer ».
+    Vérifier que l'encaissement de la séance est absent.
+
+Scénario « une absence se constate » :
+    Installer, qui donne le s.
+    Poser le s et « Léa Muller » et aujourd'hui et « prévue », qui donne la séance.
+    Clore la séance et « absence ».
+    Vérifier que le statut de la séance = « absence ».
+    Vérifier que le paiement de la séance = « à payer ».

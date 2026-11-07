@@ -5814,7 +5814,13 @@ static int facultatifs_appel(Analyse *a, const Symbole *s, Noeud *n) {
             const Jeton *de = cour(a);
             avancer(a);
             if (est_mot(de, "du")) { a->article_force = ART_LE; a->jeton_force = de; }
-            Noeud *v = cour(a)->type == J_PAR_OUV && groupe_logique(a) ? element_logique(a) : comparaison(a);
+            Noeud *v;
+            const Jeton *apres_v = voir(a, 1);
+            if ((est_mot(cour(a), "vrai") || est_mot(cour(a), "faux"))   /* « avec la quittance différée de vrai » (3.10) */
+                && (apres_v->type == J_POINT || apres_v->type == J_VIRGULE || est_mot(apres_v, "et"))) {
+                v = feuille(N_BOOLEEN, cour(a));
+                avancer(a);
+            } else v = cour(a)->type == J_PAR_OUV && groupe_logique(a) ? element_logique(a) : comparaison(a);
             a->article_force = ART_AUCUN;
             if (!v) break;
             donnes[q] = v;
@@ -10194,10 +10200,15 @@ static int bibliotheque_courante(const Portee *p) {
  * « Utiliser la bibliothèque « Suisse santé », version 2. » (2.61, § 21.9) : le fichier
  * « bibliothèques/Suisse santé/bibliothèque.grym », à côté du programme principal, de même. */
 static Noeud *utiliser(Analyse *a, const Jeton *t) {
+    /* « Ces scénarios éprouvent « Praxis ». » (3.10, § 9.7) : un programme, lu comme un fichier utilisé, ses phrases qui
+     * s'exécutent comprises ; seules ses déclarations servent, et seulement à « grym scenarios » */
+    const int eprouve = est_mot(t, "ces");
     if (a->niveau > 0 || a->formule || a->phrase_vue)
-        return erreur(a, t, grym_dupliquer("« Utiliser » se place en tête du fichier, avant toute autre phrase."));
+        return erreur(a, t, grym_dupliquer(eprouve ? "« Ces scénarios éprouvent … » se place en tête du fichier, avant toute autre phrase."
+                                                   : "« Utiliser » se place en tête du fichier, avant toute autre phrase."));
+    if (eprouve) a->i += 2;   /* « ces scénarios » ; « éprouvent » ci-dessous */
     avancer(a);
-    int biblio = est_mot(cour(a), "la") && est_mot(voir(a, 1), "bibliothèque");
+    int biblio = !eprouve && est_mot(cour(a), "la") && est_mot(voir(a, 1), "bibliothèque");
     if (biblio) a->i += 2;
     const Jeton *tc = cour(a);
     if (tc->type != J_TEXTE)
@@ -10231,6 +10242,7 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
         n->forme = 1;
         n->texte2 = grym_dupliquer(tv->valeur);
     }
+    if (eprouve) n->forme = 2;   /* éprouvé par des scénarios (3.10) */
     n->fin = fin_jeton(&a->j[a->i - 1]);
     if (a->echec) return n;
 
@@ -10430,7 +10442,7 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
         else if (interne && (ph->type == P_CLASSE || ph->type == P_APTITUDE))
             m = grym_formater("Un fichier interne ne déclare que des calculs et des actions (« %s », ligne %d) : déclare "
                               "la classe ou l'aptitude dans un autre fichier de la bibliothèque.", montre, ph->ligne);
-        else if (!phrase_de_declaration(ph))
+        else if (!eprouve && !phrase_de_declaration(ph))
             m = grym_formater("« %s » contient une phrase qui s'exécute (ligne %d) : seul un fichier de déclarations "
                               "s'utilise.", montre, ph->ligne);
         else if (dans_bib && ph->type == P_CLASSE && (ph->forme & 32))
@@ -11276,6 +11288,8 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "utiliser")) return utiliser(a, t);
+    if (est_mot(t, "ces") && est_mot(voir(a, 1), "scénarios") && est_mot(voir(a, 2), "éprouvent") && voir(a, 3)->type == J_TEXTE)
+        return utiliser(a, t);   /* 3.10 */
     if (est_mot(t, "cette") && est_mot(voir(a, 1), "bibliothèque") && est_mot(voir(a, 2), "est"))
         return declaration_bibliotheque(a, t);   /* 2.61 */
     if (est_mot(t, "ce") && est_mot(voir(a, 1), "fichier") && est_mot(voir(a, 2), "est") && est_mot(voir(a, 3), "interne")) {
