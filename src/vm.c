@@ -1492,7 +1492,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
             }
             h[n] = '\0';
             if (chiffres < 99) {
-                char r[8];
+                char r[sizeof h + 2];   /* h et « 00 » : « 13h » donne « 13:00 » */
                 if (seps && n > 0 && h[n - 1] == ':') snprintf(r, sizeof r, "%s00", h);              /* « 13h » */
                 else if (!seps && (chiffres == 3 || chiffres == 4))                                 /* « 1330 », « 930 » */
                     snprintf(r, sizeof r, "%.*s:%s", (int)(chiffres - 2), h, h + chiffres - 2);
@@ -4115,7 +4115,7 @@ static char *json_de_valeur(Chaine *c, const Valeur *v, int profondeur) {
     case V_NOMBRE: { char *s = dec_canonique(&v->nombre); chaine_ajouter(c, s); free(s); return NULL; }
     case V_TEXTE: json_chaine(c, v->texte ? v->texte : ""); return NULL;
     case V_DATE: { char *s = date_iso(v->jours); json_chaine(c, s); free(s); return NULL; }
-    case V_HEURE: { char h[16]; snprintf(h, sizeof h, "%02ld:%02ld", v->jours / 60, v->jours % 60); json_chaine(c, h); return NULL; }
+    case V_HEURE: { char h[48]; snprintf(h, sizeof h, "%02ld:%02ld", v->jours / 60, v->jours % 60); json_chaine(c, h); return NULL; }
     case V_ENSEMBLE: {
         chaine_ajouter(c, "[");
         for (size_t k = 0; k < v->liste->n; k++) {
