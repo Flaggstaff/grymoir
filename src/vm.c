@@ -277,6 +277,9 @@ struct Machine {
     size_t nb_essais, cap_essais;
     Formule *formules;
     size_t nb_formules;
+    size_t *formules_index;   /* table de hachage des formules par nom : rang + 1, 0 libre (7 novembre 2026) */
+    size_t cap_index;         /* une puissance de 2, au moins deux fois nb_formules */
+    size_t index_pour;        /* le nb_formules pour lequel la table est faite ; (size_t)−1 : à refaire */
     unsigned long epoque;   /* numéro de l'exécution en cours */
     ClasseVM **classes;     /* la dernière déclarée l'emporte à nom égal */
     size_t nb_classes;
@@ -813,6 +816,7 @@ void machine_detruire(Machine *m) {
         free(m->formules[i].liaison);
     }
     free(m->formules);
+    free(m->formules_index);
     while (m->tas) {
         Objet *o = m->tas;
         m->tas = o->suivant;
@@ -1241,11 +1245,37 @@ static int meme_classe(const char *a, const char *b) {
 }
 
 /* Version exacte d'une formule : même nom, même classe (NULL pour une formule sans classe). */
+static size_t hachage_nom(const char *s) {   /* FNV-1a */
+    size_t h = (size_t)2166136261u;
+    for (; *s; s++) { h ^= (unsigned char)*s; h *= (size_t)16777619u; }
+    return h;
+}
+
+/* Chaque appel cherchait sa formule en comparant son nom à toutes les autres : avec les quelque 360 formules de Praxis,
+ * des centaines de strcmp par appel (outils/banc-de-mesure, 7 novembre 2026). Une table de hachage, refaite quand la
+ * liste des formules change, rend la recherche directe ; l'ordre de la liste départage toujours, comme avant. */
 static Formule *formule_de(Machine *m, const char *nom, const char *classe) {
-    for (size_t i = 0; i < m->nb_formules; i++)
-        if (strcmp(m->formules[i].nom, nom) == 0 && meme_classe(m->formules[i].bloc->classe, classe))
-            return &m->formules[i];
-    return NULL;
+    if (!m->formules_index || m->index_pour != m->nb_formules) {
+        size_t cap = 16;
+        while (cap < 2 * m->nb_formules + 1) cap *= 2;
+        free(m->formules_index);
+        m->formules_index = grym_allouer(cap * sizeof *m->formules_index);
+        memset(m->formules_index, 0, cap * sizeof *m->formules_index);
+        m->cap_index = cap;
+        for (size_t i = 0; i < m->nb_formules; i++) {
+            size_t p = hachage_nom(m->formules[i].nom) & (cap - 1);
+            while (m->formules_index[p]) p = (p + 1) & (cap - 1);
+            m->formules_index[p] = i + 1;
+        }
+        m->index_pour = m->nb_formules;
+    }
+    /* les formules d'un même nom se suivent dans la sonde, dans l'ordre de la liste : la première qui convient gagne */
+    Formule *trouvee = NULL;
+    for (size_t p = hachage_nom(nom) & (m->cap_index - 1); m->formules_index[p]; p = (p + 1) & (m->cap_index - 1)) {
+        Formule *f = &m->formules[m->formules_index[p] - 1];
+        if (strcmp(f->nom, nom) == 0 && meme_classe(f->bloc->classe, classe) && (!trouvee || f < trouvee)) trouvee = f;
+    }
+    return trouvee;
 }
 
 /* Remplacements effectués par un module, pour revenir en arrière en cas d'échec. */
@@ -5305,6 +5335,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(m->formules);
             m->formules = t;
             Formule *nf = &m->formules[m->nb_formules++];
+            m->index_pour = (size_t)-1;   /* la table des noms est à refaire */
             nf->nom = grym_dupliquer(f->nom);
             nf->bloc = f;
             nf->liaison = lier(m, f);
@@ -9353,6 +9384,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             f->bloc = remplaces[k - 1].bloc;
             f->liaison = remplaces[k - 1].liaison;
         }
+        if (m->nb_formules > nb_avant) m->index_pour = (size_t)-1;
         while (m->nb_formules > nb_avant) {
             Formule *f = &m->formules[--m->nb_formules];
             free(f->nom);

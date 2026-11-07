@@ -2838,7 +2838,9 @@ int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_c
 /* GRYM_NOMBRE : deux textes canoniques comparés en décimal exact (« 10 » > « 9 », « 3.0 » = « 3 »). */
 static int collation_nombre(void *ctx, int na, const void *a, int nb, const void *b) {
     (void)ctx;
-    char *x = grym_allouer((size_t)na + 1), *y = grym_allouer((size_t)nb + 1);
+    /* sur la pile quand ils sont courts, presque toujours : l'index des nombres uniques compare à chaque recherche */
+    char px[64], py[64];
+    char *x = na < 64 ? px : grym_allouer((size_t)na + 1), *y = nb < 64 ? py : grym_allouer((size_t)nb + 1);
     memcpy(x, a, (size_t)na);
     x[na] = '\0';
     memcpy(y, b, (size_t)nb);
@@ -2847,13 +2849,19 @@ static int collation_nombre(void *ctx, int na, const void *a, int nb, const void
     int c = dec_comparer(&dx, &dy);
     dec_liberer(&dx);
     dec_liberer(&dy);
-    free(x);
-    free(y);
+    if (x != px) free(x);
+    if (y != py) free(y);
     return c;
 }
 
 /* Lettre de base d'une lettre latine accentuée (UTF-8), en minuscule ; 0 si ce n'en est pas une. */
 static int base_lettre(const unsigned char *p, int *longueur) {
+    /* l'ASCII d'abord, sans parcourir la table : un tri de 100'000 textes compare quelque 1,7 million de paires, et
+     * chaque caractère passait par 37 strlen et memcmp (outils/banc-de-mesure, 7 novembre 2026) */
+    if (*p < 0x80) {
+        *longueur = 1;
+        return *p >= 'A' && *p <= 'Z' ? *p - 'A' + 'a' : *p;
+    }
     static const struct { const char *u; char b; } T[] = {
         { "à", 'a' }, { "â", 'a' }, { "ä", 'a' }, { "á", 'a' }, { "À", 'a' }, { "Â", 'a' }, { "Ä", 'a' },
         { "ç", 'c' }, { "Ç", 'c' }, { "é", 'e' }, { "è", 'e' }, { "ê", 'e' }, { "ë", 'e' }, { "É", 'e' },
