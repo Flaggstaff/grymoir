@@ -206,6 +206,9 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Paramètres facultatifs (§ 9.3 bis) : l'appel porte tous les paramètres, la valeur de départ recopiée */
+    V("Pour relancer un c, avec un délai de 30 :\n    Afficher délai.\nRelancer 1.\nRelancer 1, avec le délai de 2.",
+      "(action [relancer] ([c] [délai]) (bloc (afficher [délai])))\n(action-appel [relancer] 1 30)\n(action-appel [relancer] 1 2)");
     /* Trier (§ 13.12) ; le genre écrit ne paraît pas dans l'arbre */
     V("Les n valent la liste 2 et 1.\nAfficher les n triées puis les n triés par ordre décroissant puis les n triés par nom décroissant.\n"
       "Pour chaque x parmi les n triés, afficher x.",

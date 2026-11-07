@@ -2399,6 +2399,23 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Paramètres facultatifs des actions (§ 9.3 bis) */
+    PROG("Un client a : un nom.\nPour relancer un client, avec un délai de 30 et un ton de « poli » :\n    Afficher nom du client puis délai puis ton.\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\nRelancer le c.\nRelancer le c, avec le ton de « ferme ».\nRelancer le c, avec le délai de 10 et le ton de « ferme ».\n"
+         "Relancer le c, avec le ton du nom du c et le délai de 2 + 3.", "Ana 30 poli\nAna 30 ferme\nAna 10 ferme\nAna 5 Ana");
+    PROG("Pour payer un c, avec un délai de 1 et un délai de paiement de 2 :\n    Afficher délai puis délai de paiement.\n"
+         "Payer 0, avec le délai de paiement de 9.\nPayer 0, avec le délai de 7.", "1 9\n7 2");
+    PROG("Pour saluer, avec une formule de « Bonjour » et une date de 01.01.2026 et un rappel de vrai et un écart de −2 :\n"
+         "    Afficher formule puis date puis rappel puis écart.\nSaluer.\nSaluer, avec la formule de « Salut ».",
+         "Bonjour 01.01.2026 vrai −2\nSalut 01.01.2026 vrai −2");
+    PROG("Pour noter un n, avec un facteur de 2 :\n    Rendre n × facteur.\nNoter 5, qui donne le r.\nNoter 5, avec le facteur de 3, qui donne le s.\n"
+         "Afficher r puis s.", "10 15");
+    PROG("Un client a : un nom.\nPour relancer un client, avec un délai de 30 et un ton de « poli » :\n    Afficher nom du client puis délai puis ton.\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\nRelancer le c, avec le style de 2.", "ERREUR 6:24 « relancer » a pour facultatifs « délai » ou « ton », suivis de « de » et de leur valeur : « , avec le délai de … ».");
+    PROG("Un client a : un nom.\nPour relancer un client, avec un délai de 30 et un ton de « poli » :\n    Afficher nom du client puis délai puis ton.\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\nRelancer le c, avec le délai de 2 et le délai de 3.", "ERREUR 6:41 Le facultatif « délai » est déjà donné.");
+    PROG("Un client a : un nom.\nPour relancer un client, avec un délai de 30 et un ton de « poli » :\n    Afficher nom du client puis délai puis ton.\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\nRelancer le c, avec délai de 2.", "ERREUR 6:21 Un facultatif s'écrit avec son article : « , avec le délai de 10 ».");
+    PROG("Un client a : un nom.\nPour relancer un client, avec un délai de 30 et un ton de « poli » :\n    Afficher nom du client puis délai puis ton.\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\nRelancer.", "ERREUR 6:1 « relancer » attend 1 paramètre (et des facultatifs, après « , avec »), 0 donné.");
+    PROG("Le x vaut 3.\nPour relancer un c, avec un délai de x :\n    Afficher c.",
+         "ERREUR 2:40 Valeur de départ attendue : « un délai de 30 », « un ton de « poli » ». C'est une constante : un texte, un nombre, une date, une heure, vrai ou faux.");
+    PROG("Pour relancer un c, avec un c de 3 :\n    Afficher c.", "ERREUR 1:26 Paramètre « c » déjà nommé.");
     /* Trier (§ 13.12) : une nouvelle liste ; les textes dans l'ordre de la base (sans accents ni casse) ; stable */
     PROG("Les notes valent la liste 6, 4,5 et 5.\nAfficher les notes triées.\nAfficher les notes triées par ordre décroissant.\n"
          "Afficher les notes triées par ordre croissant puis les notes.\nLes noms valent la liste « élodie », « Zoé », « Émile » et « eve ».\n"

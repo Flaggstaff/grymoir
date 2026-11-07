@@ -285,6 +285,9 @@ typedef struct Noeud {
 
 Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut);
 void noeud_ajouter(Noeud *parent, Noeud *enfant);
+/* Une copie profonde (les valeurs de départ des paramètres facultatifs, 2.98) : tous les textes et les enfants, rien de
+ * partagé ; ce que noeud_liberer libère, elle le duplique. */
+Noeud *noeud_copier(const Noeud *n);
 void noeud_liberer(Noeud *n);
 
 /* Forme parenthésée, pour les tests et l'outil grym-arbre :

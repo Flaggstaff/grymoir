@@ -1615,9 +1615,20 @@ static void fin_compacte(Impression *im, int niveau) {
 }
 
 static void parametres(Impression *im, const Noeud *liste, int de) {
+    int vu_facultatif = 0;
     for (size_t k = 0; k < liste->nb_enfants; k++) {
         const Noeud *p = liste->enfants[k];
         retenir(im, p->texte, p->forme == 2 ? G_FEMININ : G_MASCULIN);
+        if (p->entier == 1 && p->nb_enfants) {   /* un facultatif : « , avec un délai de 30 » ; « _un délai << 30 » (2.98) */
+            if (im->compact) aj(im, k ? " ; " : "");
+            else aj(im, !vu_facultatif ? ", avec " : " et ");
+            vu_facultatif = 1;
+            aj(im, im->compact ? (p->forme == 2 ? "_une " : "_un ") : (p->forme == 2 ? "une " : "un "));
+            ecrire_nom(im, p->texte, 0);
+            aj(im, im->compact ? " << " : " de ");
+            expression(im, p->enfants[0]);
+            continue;
+        }
         if (im->compact) {
             if (k) aj(im, " ; ");
             aj(im, p->forme == 2 ? "_une " : "_un ");
@@ -2656,12 +2667,33 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, c ? "\n" : ".\n");
             return;
         }
+        /* les facultatifs (2.98) : texte3, « 1délai␟2ton » ; entier, un bit par facultatif écrit ; seuls les écrits
+         * s'impriment, les autres ont été complétés par leur valeur de départ */
+        size_t nb_fac = 0;
+        char *noms_fac[32];
+        if (n->texte3) {
+            char *s = grym_dupliquer(n->texte3);
+            for (char *q = s, *suite; q && nb_fac < 32; q = suite) {
+                suite = strchr(q, '\x1f');
+                if (suite) *suite++ = 0;
+                noms_fac[nb_fac++] = grym_dupliquer(q);
+            }
+            free(s);
+        }
+        const size_t nb_obl = n->nb_enfants - nb_fac;
         if (c) {
             ecrire_nom(im, n->texte, 0);
             aj(im, "(");
-            for (size_t k = 0; k < n->nb_enfants; k++) {
+            for (size_t k = 0; k < nb_obl; k++) {
                 if (k) aj(im, " ; ");
                 expression(im, n->enfants[k]);
+            }
+            for (size_t q = 0; q < nb_fac; q++) {
+                if (!(n->entier & (1 << q))) continue;
+                aj(im, nb_obl || q ? " ; " : "");
+                ecrire_nom(im, noms_fac[q] + 1, 0);
+                aj(im, " << ");
+                expression(im, n->enfants[nb_obl + q]);
             }
             aj(im, ")");
             comme(im, n);
@@ -2674,7 +2706,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             initiale(nom, 1);
             aj(im, nom);
             free(nom);
-            for (size_t k = 0; k < n->nb_enfants; k++) {
+            for (size_t k = 0; k < nb_obl; k++) {
                 if (k == 0 && finit_de) {   /* « Acquitter le solde du relevé. » : le « de » se contracte (§ 5.2) */
                     aj(im, " ");
                     preposition(im, "de", n->enfants[0]);
@@ -2687,9 +2719,25 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 expression(im, x);
                 if (paren) aj(im, ")");
             }
+            int premier = 1;
+            for (size_t q = 0; q < nb_fac; q++) {   /* « , avec le délai de 10 et la remise de 5 » (2.98) */
+                if (!(n->entier & (1 << q))) continue;
+                aj(im, premier ? ", avec " : " et ");
+                premier = 0;
+                const char *nm = noms_fac[q] + 1;
+                const unsigned char v0 = (unsigned char)nm[0];
+                const int voyelle = strchr("aeiouhy", v0) != NULL || v0 == 0xC3;
+                aj(im, voyelle ? "l'" : noms_fac[q][0] == '2' ? "la " : "le ");
+                ecrire_nom(im, nm, 0);
+                aj(im, " ");
+                const Noeud *x = n->enfants[nb_obl + q];
+                if (x->type == N_LOGIQUE) { aj(im, "de ("); expression(im, x); aj(im, ")"); }
+                else preposition(im, "de", x);
+            }
             comme(im, n);
             aj(im, ".\n");
         }
+        for (size_t q = 0; q < nb_fac; q++) free(noms_fac[q]);
         return;
     case P_TANT_QUE:
         aj(im, c ? "_tant_que " : "Tant que ");

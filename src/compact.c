@@ -35,6 +35,7 @@ typedef struct {
     Diagnostic *diag;
     int echec;
     int envoi_ouvrant;     /* la phrase finit par « _avec », « _de » ou « _du_tableau » d'un envoi (2.43) : 1, 2, 3 */
+    int vu_facultatif;   /* parametres() : un facultatif déjà écrit (2.98) */
 } Reecriture;
 
 /* ---------------------------------------------------------------- */
@@ -131,7 +132,7 @@ static size_t fermante(const Reecriture *r, size_t d, size_t f) {
 /* Arguments « a ; b » entre d et f : chaque argument, séparé par « et » et précédé de « de ». */
 static void arguments(Reecriture *r, size_t d, size_t f, int de, const Jeton *o) {
     size_t debut = d;
-    int p = 0, premier = 1;
+    int p = 0, premier = 1, facultatifs = 0;
     for (size_t k = d; k <= f; k++) {
         if (k < f) {
             if (r->e[k].type == J_PAR_OUV) p++;
@@ -140,6 +141,28 @@ static void arguments(Reecriture *r, size_t d, size_t f, int de, const Jeton *o)
         }
         if (k == debut) {
             if (k < f || !premier) echouer(r, k < f ? &r->e[k] : o, grym_dupliquer("Argument vide entre « ; »."));
+            return;
+        }
+        if (!de && k > debut + 2 && r->e[debut].type == J_CROCHETS && r->e[debut + 1].type == J_AFFECTE) {
+            /* « relancer(c ; délai << 10) » → Relancer c, avec le délai de (10). (2.98) : l'article, l'analyseur le prend
+             * tel quel ; la forme littéraire reprend celui du paramètre */
+            if (!facultatifs) {
+                emettre(r, J_VIRGULE, NULL, &r->e[debut], 1);
+                mot(r, "avec", &r->e[debut]);
+            } else mot(r, "et", &r->e[debut]);
+            facultatifs = 1;
+            emettre(r, J_ARTICLE_IMPLICITE, NULL, &r->e[debut], 1);
+            copier(r, &r->e[debut]);
+            mot(r, "de", &r->e[debut + 1]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[debut + 2], 1);
+            expression(r, debut + 2, k);
+            emettre(r, J_PAR_FERM, NULL, &r->e[k < f ? k : f - 1], 1);
+            premier = 0;
+            debut = k + 1;
+            continue;
+        }
+        if (facultatifs) {
+            echouer(r, &r->e[debut], grym_dupliquer("Les facultatifs viennent après les arguments : « relancer(c ; délai << 10) »."));
             return;
         }
         if (!premier) mot(r, "et", &r->e[debut]);
@@ -1265,6 +1288,7 @@ static void point(Reecriture *r, size_t f) {
 static void parametres(Reecriture *r, size_t d, size_t f, int de) {
     size_t k = d;
     int premier = 1;
+    r->vu_facultatif = 0;
     while (k < f && !r->echec) {
         const Jeton *t = &r->e[k];
         if (!est_cle(t, "un") && !est_cle(t, "une")) {
@@ -1275,6 +1299,26 @@ static void parametres(Reecriture *r, size_t d, size_t f, int de) {
             echouer(r, t, grym_dupliquer("Nom de paramètre attendu après « _un »."));
             return;
         }
+        if (k + 2 < f && r->e[k + 2].type == J_AFFECTE) {
+            /* « _un délai << 30 » → , avec un délai de 30 (2.98) : la valeur va jusqu'au « ; » suivant */
+            size_t v = k + 3;
+            while (v < f && r->e[v].type != J_POINT_VIRGULE) v++;
+            if (v == k + 3) { echouer(r, &r->e[k + 2], grym_dupliquer("Valeur de départ attendue après « << »."));  return; }
+            if (!r->vu_facultatif) {
+                emettre(r, J_VIRGULE, NULL, t, 1);
+                mot(r, "avec", t);
+            } else mot(r, "et", t);
+            r->vu_facultatif = 1;
+            mot(r, t->valeur, t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "de", &r->e[k + 2]);
+            expression(r, k + 3, v);
+            premier = 0;
+            k = v;
+            if (k < f) k++;
+            continue;
+        }
+        if (r->vu_facultatif) { echouer(r, t, grym_dupliquer("Les facultatifs viennent après les paramètres : « _un client ; _un délai << 30 »."));  return; }
         if (!premier) mot(r, "et", t);
         if (de) emettre(r, J_ELISION, "d", t, 1);
         mot(r, t->valeur, t);

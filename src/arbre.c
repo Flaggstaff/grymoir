@@ -61,6 +61,31 @@ void noeud_ajouter(Noeud *parent, Noeud *enfant) {
     parent->enfants[parent->nb_enfants++] = enfant;
 }
 
+static char *dup_ou_nul(const char *s) { return s ? grym_dupliquer(s) : NULL; }
+
+Noeud *noeud_copier(const Noeud *n) {
+    if (!n) return NULL;
+    Noeud *c = grym_allouer(sizeof *c);
+    memcpy(c, n, sizeof *c);
+    c->texte = dup_ou_nul(n->texte);
+    c->texte2 = dup_ou_nul(n->texte2);
+    c->texte3 = dup_ou_nul(n->texte3);
+    c->indication = dup_ou_nul(n->indication);
+    c->unite = dup_ou_nul(n->unite);
+    c->confirmation = dup_ou_nul(n->confirmation);
+    c->confirmation_mot = dup_ou_nul(n->confirmation_mot);
+    c->couleurs = dup_ou_nul(n->couleurs);
+    c->transcrit_de = dup_ou_nul(n->transcrit_de);
+    c->ancien = dup_ou_nul(n->ancien);
+    c->borne_min = dup_ou_nul(n->borne_min);
+    c->borne_max = dup_ou_nul(n->borne_max);
+    c->titre_calcule = noeud_copier(n->titre_calcule);
+    c->enfants = NULL;
+    c->nb_enfants = 0;
+    for (size_t k = 0; k < n->nb_enfants; k++) noeud_ajouter(c, noeud_copier(n->enfants[k]));
+    return c;
+}
+
 void noeud_liberer(Noeud *n) {
     if (!n) return;
     for (size_t i = 0; i < n->nb_enfants; i++) noeud_liberer(n->enfants[i]);

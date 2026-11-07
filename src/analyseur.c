@@ -40,6 +40,8 @@ typedef struct {
     int ensemble;      /* variable qui contient un ensemble, nommée au pluriel avec « les » (§ 13.9) */
     int liste;         /* cet ensemble est une liste, qui garde ses doublons (§ 13.10) */
     int table;         /* variable qui contient une table, nommée au pluriel avec « les » (§ 13.11) */
+    Noeud *facultatifs;   /* action : ses paramètres facultatifs (N_BLOC de N_NOM, chacun avec sa valeur de départ en
+                             enfant), dans l'ordre ; NULL sans facultatif (2.98). Possédé, comme nom et classe. */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
     int rend;          /* une action qui rend une valeur (2.57) : « , qui donne … » à l'appel */
 } Symbole;
@@ -215,7 +217,7 @@ static void classe_liberer(Classe *c) {
 }
 
 static void portee_vider(Portee *p) {
-    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); }
+    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); }
     free(p->s);
     p->s = NULL;
     p->n = p->cap = 0;
@@ -276,6 +278,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->s[i] = src->s[i];
         dst->s[i].nom = grym_dupliquer(src->s[i].nom);
         dst->s[i].classe = src->s[i].classe ? grym_dupliquer(src->s[i].classe) : NULL;
+        dst->s[i].facultatifs = noeud_copier(src->s[i].facultatifs);   /* 2.98 */
     }
     dst->fichier = src->fichier ? grym_dupliquer(src->fichier) : NULL;
     dst->fichier_index = src->fichier_index;
@@ -508,6 +511,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->lecture_seule = 0;
     s->ensemble = 0;
     s->liste = 0;   /* oubli de la 2.89 : un ensemble pouvait se croire liste, selon la mémoire */
+    s->facultatifs = NULL;   /* 2.98 */
     s->table = 0;   /* § 13.11 */
     s->classe = NULL;
     s->rend = 0;
@@ -521,6 +525,7 @@ static void portee_tronquer(Portee *p, size_t n) {
         --p->n;
         free(p->s[p->n].nom);
         free(p->s[p->n].classe);
+        noeud_liberer(p->s[p->n].facultatifs);
     }
 }
 
@@ -5171,6 +5176,84 @@ static int zones_dans_ecrans(Analyse *a, const Noeud *n, const char *const *ecra
 }
 
 /* Action : « Pour relancer un client : » suivi d'un bloc. */
+/* Une constante, valeur de départ d'un paramètre facultatif (2.98) : un texte, un nombre (négatif compris), une date,
+ * une heure, vrai ou faux ; comme celle d'un champ d'entité (« « Suisse » au départ »). */
+static int constante_de_depart(const Noeud *v) {
+    if (!v) return 0;
+    if (v->type == N_NEGATION) return v->nb_enfants == 1 && v->enfants[0]->type == N_NOMBRE;
+    return v->type == N_TEXTE || v->type == N_NOMBRE || v->type == N_DATE || v->type == N_HEURE || v->type == N_BOOLEEN;
+}
+
+/* Le début d'une constante : ce qui peut suivre le « de » qui sépare le nom d'un facultatif de sa valeur. */
+static int debut_de_constante(const Jeton *j) {
+    return j->type == J_TEXTE || j->type == J_NOMBRE || j->type == J_DATE || j->type == J_HEURE || j->type == J_MOINS
+           || est_mot(j, "vrai") || est_mot(j, "faux");
+}
+
+/* « un délai de 30 et un ton de « poli » », à partir de l'index k (après « avec ») ; *fin : le jeton qui suit (« : » ou
+ * la virgule de « , dans l'écran »). Rend un N_BLOC de N_NOM (texte : le nom ; forme : 1 masculin, 2 féminin ; entier :
+ * 1, facultatif ; enfants[0] : la valeur de départ), ou NULL sur une erreur (2.98). */
+static Noeud *facultatifs_action(Analyse *a, size_t k, size_t *fin) {
+    Noeud *liste = noeud_creer(N_BLOC, a->j[k].ligne, a->j[k].colonne, a->j[k].debut);
+    for (;;) {
+        Genre g;
+        if (k >= a->n || !est_un(&a->j[k], &g)) {
+            noeud_liberer(liste);
+            return erreur(a, &a->j[k < a->n ? k : a->n - 1], grym_dupliquer("Un paramètre facultatif s'écrit « un délai de 30 » : un article, son nom, « de » et sa valeur de départ."));
+        }
+        const Jeton *tun = &a->j[k++];
+        const size_t debut = k;
+        size_t de = k;
+        if (de < a->n && a->j[de].type == J_CROCHETS) de++;   /* « [délai] », de la forme compacte */
+        /* le nom va jusqu'au « de » qui précède une constante : « un délai de paiement de 30 » */
+        else while (de < a->n && !((est_mot(&a->j[de], "de") || (a->j[de].type == J_ELISION && strcmp(a->j[de].valeur, "d") == 0))
+                              && de > debut && de + 1 < a->n && debut_de_constante(&a->j[de + 1]))
+               && (mot_de_nom(a, de) || est_mot(&a->j[de], "de") || a->j[de].type == J_ELISION))
+            de++;
+        if (de == debut || de >= a->n || !(est_mot(&a->j[de], "de") || a->j[de].type == J_ELISION)) {
+            noeud_liberer(liste);
+            return erreur(a, &a->j[de < a->n ? de : a->n - 1], grym_dupliquer("Valeur de départ attendue : « un délai de 30 », « un ton de « poli » ». C'est une constante : un texte, un nombre, une date, une heure, vrai ou faux."));
+        }
+        char *nom = a->j[debut].type == J_CROCHETS ? grym_dupliquer(a->j[debut].valeur) : cle(a, debut, de);
+        for (size_t q = 0; q < liste->nb_enfants; q++)
+            if (strcmp(liste->enfants[q]->texte, nom) == 0) {
+                Noeud *x = erreur(a, &a->j[debut], grym_formater("Paramètre « %s » déjà nommé.", nom));
+                free(nom);
+                noeud_liberer(liste);
+                return x;
+            }
+        a->i = de + 1;
+        Noeud *v;
+        if (est_mot(cour(a), "vrai") || est_mot(cour(a), "faux")) {   /* vrai, faux : une constante, que unaire() ne lit pas ici */
+            v = feuille(N_BOOLEEN, cour(a));
+            avancer(a);
+        } else v = unaire(a);
+        if (!v) { free(nom); noeud_liberer(liste); return NULL; }
+        if (!constante_de_depart(v)) {
+            Noeud *x = erreur_a(a, v->ligne, v->colonne, grym_formater("La valeur de départ de « %s » est une constante : un texte, un nombre, une date, une heure, vrai ou faux.", nom));
+            noeud_liberer(v);
+            free(nom);
+            noeud_liberer(liste);
+            return x;
+        }
+        Noeud *p = noeud_creer(N_NOM, tun->ligne, tun->colonne, tun->debut);
+        p->texte = nom;
+        p->forme = g == GENRE_FEMININ ? 2 : 1;
+        p->entier = 1;   /* facultatif */
+        noeud_ajouter(p, v);
+        noeud_ajouter(liste, p);
+        k = a->i;
+        if (k < a->n && est_mot(&a->j[k], "et")) { k++; continue; }
+        break;
+    }
+    *fin = k;
+    if (k >= a->n || (a->j[k].type != J_DEUX_POINTS && !(a->j[k].type == J_VIRGULE && est_mot(&a->j[k + 1], "dans")))) {
+        noeud_liberer(liste);
+        return erreur(a, &a->j[k < a->n ? k : a->n - 1], grym_dupliquer("« : » attendu après les paramètres facultatifs : « Pour relancer un client, avec un délai de 30 : »."));
+    }
+    return liste;
+}
+
 static Noeud *definition_action(Analyse *a, int colonne) {
     Jeton *tpour = cour(a);
     if (!premier_niveau(a, tpour)) return NULL;
@@ -5200,6 +5283,13 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     char *autres_ecrans[8];   /* « … ou l'écran du patient » (2.58) : les écrans suivants, vérifiés eux aussi */
     int nb_autres = 0;
     const size_t fin_params = fin;
+    /* « , avec un délai de 30 et un ton de « poli » » (2.98) : les paramètres facultatifs, chacun avec sa valeur de départ,
+     * une constante ; lus ici, ajoutés aux paramètres plus bas */
+    Noeud *facultatifs = NULL;
+    if (a->j[fin].type == J_VIRGULE && est_mot(&a->j[fin + 1], "avec")) {
+        facultatifs = facultatifs_action(a, fin + 2, &fin);
+        if (!facultatifs) return NULL;
+    }
     if (a->j[fin].type == J_VIRGULE && est_mot(&a->j[fin + 1], "dans") && a->j[fin + 2].type == J_ELISION
         && est_mot(&a->j[fin + 3], "écran")) {
         size_t debut_nom = fin + 4;
@@ -5249,7 +5339,21 @@ static Noeud *definition_action(Analyse *a, int colonne) {
         free(debut);
     }
     Noeud *params = parametres(a, k, fin_params, 0);
-    if (!params) { free(nom); free(dans_ecran); return NULL; }
+    if (!params) { free(nom); free(dans_ecran); noeud_liberer(facultatifs); return NULL; }
+    for (size_t q = 0; facultatifs && q < facultatifs->nb_enfants; q++) {   /* un nom pour deux paramètres : refusé */
+        const Noeud *f = facultatifs->enfants[q];
+        for (size_t r = 0; r < params->nb_enfants; r++)
+            if (strcmp(params->enfants[r]->texte, f->texte) == 0) {
+                Noeud *x = erreur_a(a, f->ligne, f->colonne, grym_formater("Paramètre « %s » déjà nommé.", f->texte));
+                noeud_liberer(params);
+                noeud_liberer(facultatifs);
+                free(nom);
+                free(dans_ecran);
+                return x;
+            }
+    }
+    const int nb_obligatoires = (int)params->nb_enfants;
+    for (size_t q = 0; facultatifs && q < facultatifs->nb_enfants; q++) noeud_ajouter(params, noeud_copier(facultatifs->enfants[q]));
     int refus;
     char *classe = version_de_formule(a, nom, S_ACTION, params, &a->j[d], &refus);
     if (refus) { noeud_liberer(params); free(nom); free(dans_ecran); return NULL; }
@@ -5259,6 +5363,8 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     s->sorte = S_ACTION;
     s->nb_parametres = (int)params->nb_enfants;
     s->classe = classe;
+    s->facultatifs = facultatifs;   /* le symbole les possède (2.98) */
+    (void)nb_obligatoires;
 
     const size_t indice_symbole = a->portee->n - 1;
     const int rend_avant = a->action_rend;
@@ -5339,6 +5445,86 @@ static int comme_classe(Analyse *a, const Symbole *s, Noeud *n) {
     return 1;
 }
 
+/* À l'appel, « , avec le délai de 10 et le ton de « ferme » » (2.98) : chaque facultatif écrit prend sa valeur ; les autres,
+ * une copie de leur valeur de départ. n->entier : un bit par facultatif écrit ; n->texte3 : leurs noms et genres, pour
+ * l'imprimeur (« 1délai␟2ton »). Rend 0 sur une erreur. */
+static int facultatifs_appel(Analyse *a, const Symbole *s, Noeud *n) {
+    const Noeud *fac = s->facultatifs;
+    Noeud *donnes[32] = { 0 };
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {
+        a->i += 2;
+        for (;;) {
+            const Jeton *tart = cour(a);
+            const Article art = article_de(tart);
+            if (art != ART_LE && art != ART_LA && art != ART_L && art != ART_IMPLICITE) {   /* implicite : la forme compacte */
+                erreur(a, tart, grym_dupliquer("Un facultatif s'écrit avec son article : « , avec le délai de 10 »."));
+                break;
+            }
+            avancer(a);
+            /* le nom le plus long parmi les facultatifs de l'action, suivi de « de », « d' » ou « du » */
+            int q = -1;
+            size_t fin_nom = 0;
+            if (cour(a)->type == J_CROCHETS)   /* « [délai] », de la forme compacte */
+                for (size_t r = 0; r < fac->nb_enfants && r < 32 && q < 0; r++)
+                    if (strcmp(cour(a)->valeur, fac->enfants[r]->texte) == 0 && a->i + 1 < a->n
+                        && (de_ou_d(&a->j[a->i + 1]) || est_mot(&a->j[a->i + 1], "du"))) { q = (int)r; fin_nom = a->i + 1; }
+            for (size_t r = 0; cour(a)->type != J_CROCHETS && r < fac->nb_enfants && r < 32; r++) {   /* le plus long */
+                size_t f = a->i;
+                while (f < a->n && mot_de_nom(a, f)) {
+                    f++;
+                    char *c = cle(a, a->i, f);
+                    const int pareil = strcmp(c, fac->enfants[r]->texte) == 0;
+                    free(c);
+                    if (pareil && f > fin_nom && f < a->n && (de_ou_d(&a->j[f]) || est_mot(&a->j[f], "du"))) { q = (int)r; fin_nom = f; }
+                }
+            }
+            if (q < 0) {
+                Chaine noms = {0};
+                for (size_t r = 0; r < fac->nb_enfants; r++) {
+                    if (r) chaine_ajouter(&noms, r + 1 == fac->nb_enfants ? " ou " : ", ");
+                    chaine_ajouter(&noms, "« ");
+                    chaine_ajouter(&noms, fac->enfants[r]->texte);
+                    chaine_ajouter(&noms, " »");
+                }
+                char *l = chaine_rendre(&noms);
+                erreur(a, cour(a), grym_formater("« %s » a pour facultatifs %s, suivis de « de » et de leur valeur : « , avec le %s de … ».",
+                                                 s->nom, l, fac->enfants[0]->texte));
+                free(l);
+                break;
+            }
+            if (donnes[q]) {
+                erreur(a, cour(a), grym_formater("Le facultatif « %s » est déjà donné.", fac->enfants[q]->texte));
+                break;
+            }
+            a->i = fin_nom;
+            const Jeton *de = cour(a);
+            avancer(a);
+            if (est_mot(de, "du")) { a->article_force = ART_LE; a->jeton_force = de; }
+            Noeud *v = cour(a)->type == J_PAR_OUV && groupe_logique(a) ? element_logique(a) : comparaison(a);
+            a->article_force = ART_AUCUN;
+            if (!v) break;
+            donnes[q] = v;
+            if (!est_mot(cour(a), "et")) break;
+            avancer(a);
+        }
+        if (a->echec) {
+            for (int r = 0; r < 32; r++) noeud_liberer(donnes[r]);
+            return 0;
+        }
+    }
+    Chaine noms = {0};
+    for (size_t r = 0; r < fac->nb_enfants && r < 32; r++) {
+        if (donnes[r]) n->entier |= 1 << r;
+        noeud_ajouter(n, donnes[r] ? donnes[r] : noeud_copier(fac->enfants[r]->enfants[0]));
+        if (r) chaine_ajouter(&noms, "\x1f");
+        chaine_ajouter(&noms, fac->enfants[r]->forme == 2 ? "2" : "1");
+        chaine_ajouter(&noms, fac->enfants[r]->texte);
+    }
+    n->texte3 = chaine_rendre(&noms);
+    if (n->nb_enfants) n->fin = n->enfants[n->nb_enfants - 1]->fin;
+    return 1;
+}
+
 static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     Jeton *t = cour(a);
     if (a->formule == 1)
@@ -5349,6 +5535,7 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     int nb = 0;
     if (cour(a)->type != J_POINT && cour(a)->type != J_FIN
         && !(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "qui") && est_mot(voir(a, 2), "donne"))   /* sans argument (2.57) */
+        && !(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec") && s->facultatifs)   /* « Saluer, avec … » (2.98) */
         && !(est_mot(cour(a), "comme") && (est_mot(voir(a, 1), "un") || est_mot(voir(a, 1), "une")))) {
         for (;;) {
             /* un argument logique entre parenthèses, « (le reste > 0 et le dé ≤ 15) » (§ 9.2) : un groupe logique,
@@ -5362,13 +5549,16 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
             avancer(a);
         }
     }
-    if (nb != s->nb_parametres) {
-        char *att = pluriel(s->nb_parametres, "paramètre");
-        erreur(a, t, grym_formater("« %s » attend %s, %d donné%s.", s->nom, att, nb, nb > 1 ? "s" : ""));
+    const int nb_fac = s->facultatifs ? (int)s->facultatifs->nb_enfants : 0;
+    if (nb != s->nb_parametres - nb_fac) {
+        char *att = pluriel(s->nb_parametres - nb_fac, "paramètre");
+        erreur(a, t, grym_formater("« %s » attend %s%s, %d donné%s.", s->nom, att, nb_fac ? " (et des facultatifs, après « , avec »)" : "",
+                                   nb, nb > 1 ? "s" : ""));
         free(att);
         noeud_liberer(n);
         return NULL;
     }
+    if (nb_fac && !facultatifs_appel(a, s, n)) { noeud_liberer(n); return NULL; }
     if (!comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }
     if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "qui") && est_mot(voir(a, 2), "donne")) {
         /* « Faire une quittance pour le p et 120, qui donne la q. » (2.57) : ce que l'action rend, dans une variable */

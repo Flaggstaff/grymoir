@@ -159,6 +159,12 @@ int main(void) {
     COMP("Les notes valent la liste 2 et 1.\nAfficher les notes triées puis les notes triées par nom décroissant.\n",
          "_les notes << _liste 2 ; 1\n_afficher _trier(notes) ; _trier(notes ; nom ; _décroissant)\n");
     FIXE("Le poids d'un m vaut m.\nLes n valent la liste 2 et 1.\nAfficher les n triées par le calcul poids puis les n triés par le calcul poids décroissant.\n");
+    FIXE("Pour relancer un c, avec un délai de 30 et une remise de 0 :\n    Afficher délai.\n\nPour saluer, avec une formule de « Bonjour » :\n"
+         "    Afficher formule.\n\nRelancer 1.\nRelancer 1, avec la remise de 5.\nRelancer 1, avec le délai de 2 et la remise de 3.\nSaluer.\n");
+    LITT("Pour relancer un c, avec un délai de 30 et une remise de 0 :\n    Afficher délai.\n\nRelancer 1, avec la remise de 5 et le délai de 2.\n",
+         "Pour relancer un c, avec un délai de 30 et une remise de 0 :\n    Afficher délai.\n\nRelancer 1, avec le délai de 2 et la remise de 5.\n");
+    COMP("Pour relancer un c, avec un délai de 30 :\n    Afficher délai.\n\nRelancer 1, avec le délai de 2.\nRelancer 1.\n",
+         "_action relancer(_un c ; _un délai << 30)\n    _afficher délai\n_fin\n\nrelancer(1 ; délai << 2)\nrelancer(1)\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

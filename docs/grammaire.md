@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.97 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.98 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -697,6 +697,26 @@ Relancer le client.
 - L'article indéfini déclare un paramètre et fixe son genre : `d'un nombre` (calcul), `un client` (action), `une remise` (féminin).
 - Plusieurs paramètres : `d'un premier nombre et d'un second nombre`, `un montant et une remise`.
 - Dans le corps, un paramètre se nomme comme tout autre nom : `nombre`, `le nombre`. Deux paramètres d'une même formule portent des noms distincts.
+
+### 9.3 bis Paramètres facultatifs *(2.98)*
+
+```
+Pour relancer un client, avec un délai de 30 et un ton de « poli » :
+    Afficher nom du client puis délai puis ton.
+
+Relancer le client.                                           →  Ana 30 poli
+Relancer le client, avec le ton de « ferme ».                 →  Ana 30 ferme
+Relancer le client, avec le délai de 10 et le ton de « ferme ».
+```
+
+- Une **action** peut avoir des paramètres facultatifs : après ses paramètres, `, avec` puis `un délai de 30`, `une remise de 0`, séparés par `et` ; et avant `, dans l'écran …` (§ 22.2) s'il y en a un. Dans le corps, ils se nomment comme les autres paramètres.
+- **La valeur de départ est une constante** : un texte, un nombre (négatif compris), une date, une heure, vrai ou faux, comme celle d'un champ d'entité (« « Suisse » au départ », § 16.7). Une durée n'en est pas une, puisqu'elle ne vit pas seule (§ 14) : un délai en jours s'écrit `un délai de 30`. Le nom va jusqu'au `de` qui précède la constante : `un délai de paiement de 30` nomme « délai de paiement ».
+- **À l'appel**, après les arguments : `, avec le délai de 10`, plusieurs séparés par `et`, dans l'ordre qu'on veut, chacun avec son article (`le`, `la`, `l'`) ; `de` se contracte (`avec le ton du message`). Un facultatif omis prend sa valeur de départ. Quand deux noms commencent pareil (`délai`, `délai de paiement`), le plus long l'emporte.
+- **Les refus** : un nom inconnu (« « relancer » a pour facultatifs « délai » ou « ton », suivis de « de » et de leur valeur : « , avec le délai de … ». »), un facultatif donné deux fois, sans article, une valeur de départ qui n'est pas une constante, un facultatif qui porte le nom d'un paramètre. Le compte des arguments ne compte que les paramètres obligatoires : « « relancer » attend 1 paramètre (et des facultatifs, après « , avec »), 0 donné. »
+- **La machine ne change pas** : l'appel lui passe tous les paramètres, la valeur de départ d'un facultatif omis étant recopiée à la compilation. Une action à facultatifs se compile et s'exécute comme une action ordinaire.
+- La forme canonique n'écrit que les facultatifs écrits, dans l'ordre de la déclaration.
+- Les **calculs** n'en ont pas : leur appel (`le carré de 7`) n'a pas de virgule où loger `, avec`.
+- En forme compacte : `_action relancer(_un client ; _un délai << 30 ; _un ton << « poli »)`, et à l'appel `relancer(c ; ton << « ferme »)`. La forme compacte n'écrit pas le genre du facultatif à l'appel : la forme littéraire reprend celui de la déclaration.
 
 ### 9.4 Pureté et visibilité
 
@@ -2923,3 +2943,4 @@ Pour rappeler un patient :
 | 2.95 | 2026-11-06 | Nouveau § 3.7 : `la racine carrée de x` (exacte si finie, sinon 28 chiffres, comparée à Python) ; `le plus grand de a et de b`, `le plus petit de …` ; sur une liste ou un ensemble, `la somme des notes`, `la moyenne des notes`, `le plus grand élément des notes`, `le plus petit élément des notes` (instruction `MATH`). Formes compactes `_racine`, `_plus_grand`, `_plus_petit`, `_somme`, `_moyenne`, `_plus_grand_élément`, `_plus_petit_élément` |
 | 2.96 | 2026-11-06 | Nouveau § 13.12 : trier une liste ou un ensemble, `les notes triées`, `par ordre décroissant`, `les inscrits triés par nom [décroissant]` ; une nouvelle liste, tri stable ; les textes dans l'ordre de la base (collation `GRYM_TEXTE`, même fonction). Instruction `TRIER`. Forme compacte `_trier(l ; champ ; _décroissant)` |
 | 2.97 | 2026-11-06 | § 13.12 : trier par un calcul, `les mots triés par le calcul longueur [décroissant]` ; le compilateur écrit une boucle qui appelle le calcul une fois par élément, puis `TRIER` range la liste selon ces clés (forme 4). Forme compacte `_trier(l ; _calcul c)` |
+| 2.98 | 2026-11-06 | Nouveau § 9.3 bis : les paramètres facultatifs des actions, `Pour relancer un client, avec un délai de 30 :`, `Relancer le client, avec le délai de 10.` ; valeur de départ constante, recopiée à la compilation dans l'appel : la machine ne change pas. Formes compactes `_un délai << 30`, `relancer(c ; délai << 10)` |
