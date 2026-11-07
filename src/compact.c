@@ -3355,6 +3355,48 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 1], 1);
             fixer_retrait(r, premier, prof);
             ouvrir(r, O_FORMULE, prof, t);
+        } else if (!strcmp(c, "on_créneau") || !strcmp(c, "on_déplace")) {
+            /* _on_créneau D ; H _écran E → On choisit le créneau de (D) à (H) dans l'écran E. ; _on_déplace X ; D ; H _écran E (3.12) */
+            const int dep = !strcmp(c, "on_déplace");
+            const size_t ke = chercher(r, d + 1, f, "écran");
+            size_t pv[2], np = 0;
+            int p = 0;
+            for (size_t q = d + 1; q < ke && np < 2; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE) pv[np++] = q;
+            }
+            if (ke + 2 != f || r->e[ke + 1].type != J_CROCHETS || (int)np != (dep ? 2 : 1)) {
+                echouer(r, t, grym_dupliquer(dep ? "Forme attendue : « _on_déplace séance ; 05.11.2026 ; 14:15 _écran agenda »."
+                                                 : "Forme attendue : « _on_créneau 05.11.2026 ; 10:30 _écran agenda »."));
+                return;
+            }
+            mot(r, "on", t);
+            const size_t dd = dep ? pv[0] + 1 : d + 1, fd = dep ? pv[1] : pv[0];
+            if (dep) {
+                mot(r, "déplace", t);
+                emettre(r, J_PAR_OUV, NULL, &r->e[d + 1], 1);
+                expression(r, d + 1, pv[0]);
+                emettre(r, J_PAR_FERM, NULL, &r->e[pv[0]], 1);
+                mot(r, "à", &r->e[pv[0]]);
+            } else {
+                mot(r, "choisit", t);
+                mot(r, "le", t);
+                mot(r, "créneau", t);
+                mot(r, "de", t);
+            }
+            emettre(r, J_PAR_OUV, NULL, &r->e[dd], 1);
+            expression(r, dd, fd);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fd], 1);
+            mot(r, "à", &r->e[fd]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[fd + 1], 1);
+            expression(r, fd + 1, ke);
+            emettre(r, J_PAR_FERM, NULL, &r->e[ke], 1);
+            mot(r, "dans", &r->e[ke]);
+            emettre(r, J_ELISION, "l", &r->e[ke], 1);
+            mot(r, "écran", &r->e[ke]);
+            copier(r, &r->e[ke + 1]);
+            point(r, f);
         } else if (!strcmp(c, "on_confirme") || !strcmp(c, "on_renonce")) {   /* → On confirme. On renonce. (3.09) */
             mot(r, "on", t);
             mot(r, !strcmp(c, "on_confirme") ? "confirme" : "renonce", t);

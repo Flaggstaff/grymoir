@@ -11048,11 +11048,49 @@ static Noeud *scenario(Analyse *a, const Jeton *t, int colonne) {
 static Noeud *geste(Analyse *a, const Jeton *t) {
     if (!a->scenario) return erreur(a, t, grym_dupliquer("Un geste (« On clique sur … ») s'écrit dans un scénario (§ 9.7)."));
     const Jeton *verbe = voir(a, 1);
-    const int forme = est_mot(verbe, "écrit") ? 1 : est_mot(verbe, "choisit") ? 2 : est_mot(verbe, "clique") ? 3
-                    : est_mot(verbe, "ferme") ? 4 : est_mot(verbe, "confirme") ? 5 : 6;
+    const int creneau = est_mot(verbe, "choisit") && est_mot(voir(a, 2), "le") && est_mot(voir(a, 3), "créneau");
+    const int forme = creneau ? 7 : est_mot(verbe, "déplace") ? 8 : est_mot(verbe, "écrit") ? 1 : est_mot(verbe, "choisit") ? 2
+                    : est_mot(verbe, "clique") ? 3 : est_mot(verbe, "ferme") ? 4 : est_mot(verbe, "confirme") ? 5 : 6;
     Noeud *n = noeud_creer(P_GESTE, t->ligne, t->colonne, t->debut);
     n->forme = forme;
     a->i += 2;
+    if (forme == 7 || forme == 8) {   /* « le créneau du D à H », « X au D à H », puis « dans l'écran E » (3.12) */
+        if (forme == 8) {
+            Noeud *x = expression_avant(a, "au", "à");
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            if (!est_mot(cour(a), "au") && !est_mot(cour(a), "à")) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("« au 05.11.2026 à 14:15 » attendu : où l'on dépose l'objet."));
+            }
+        } else {
+            a->i += 2;   /* « le créneau » */
+            if (!est_mot(cour(a), "du") && !de_ou_d(cour(a))) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("« du 05.11.2026 à 10:30 » attendu : le jour et l'heure du créneau."));
+            }
+        }
+        avancer(a);   /* « au », « à », « du », « de » */
+        Noeud *d = expression_avant(a, "à", NULL);
+        if (!d) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, d);
+        if (!est_mot(cour(a), "à")) { noeud_liberer(n); return erreur(a, cour(a), grym_dupliquer("« à 10:30 » attendu : l'heure.")); }
+        avancer(a);
+        Noeud *h = expression_avant(a, "dans", NULL);
+        if (!h) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, h);
+        if (!est_mot(cour(a), "dans")) { noeud_liberer(n); return erreur(a, cour(a), grym_dupliquer("« dans l'écran … » attendu.")); }
+        avancer(a);
+        size_t f;
+        char *nom = NULL;
+        EcranConnu *e = ecran_nomme(a, a->i, &f, &nom);
+        if (!e) { free(nom); noeud_liberer(n); return NULL; }
+        n->texte3 = nom;
+        a->i = f;
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     if (forme >= 5) {   /* « On confirme. », « On renonce. » : la réponse à la question du clic qui précède (3.09) */
         if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
         n->fin = fin_jeton(&a->j[a->i - 1]);
@@ -11357,7 +11395,8 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
     if (est_mot(t, "scénario") && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_DEUX_POINTS) return scenario(a, t, colonne);   /* § 9.7 */
     if (est_mot(t, "on") && (est_mot(voir(a, 1), "écrit") || est_mot(voir(a, 1), "choisit") || est_mot(voir(a, 1), "clique")
-                             || est_mot(voir(a, 1), "ferme") || est_mot(voir(a, 1), "confirme") || est_mot(voir(a, 1), "renonce")))
+                             || est_mot(voir(a, 1), "ferme") || est_mot(voir(a, 1), "confirme") || est_mot(voir(a, 1), "renonce")
+                             || est_mot(voir(a, 1), "déplace")))
         return geste(a, t);   /* 3.08 */
     if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "que") && !visible(a, "vérifier que")) {   /* § 9.7 */
         if (!a->scenario) return erreur(a, t, grym_dupliquer("« Vérifier que … » s'écrit dans un scénario (§ 9.7)."));

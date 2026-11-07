@@ -186,3 +186,15 @@ Scénario « une séance à venir ne se facture pas » :
     En cas d'échec de refus :
         Vérifier que le motif de l'échec = « Une séance à venir se facture le jour venu. ».
         Vérifier que le nombre de factures conservées = 0.
+
+Remarque : l'agenda (7 novembre 2026) : un rendez-vous prévu se déplace, son heure suit.
+Scénario « une séance prévue se déplace dans le calendrier » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « prévue », qui donne la séance.
+    L'heure de la séance devient 10:00.
+    La durée de la séance devient 60.
+    On déplace la séance à aujourd'hui à 15:30 dans l'écran du calendrier.
+    Ouvrir l'écran du calendrier.
+    Vérifier que l'heure de la séance = 15:30.
+    Vérifier que la date de la séance = aujourd'hui.
+    Vérifier que le statut de la séance = « prévue ».

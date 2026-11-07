@@ -1174,7 +1174,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         long k = bloc_constante(c->b, C_TEXTE, d);
         free(d);
         if (k < 0) { trop_grand(c, ph); return; }
-        if (ph->nb_enfants) expression(c, ph->enfants[0]);
+        for (size_t q = 0; q < ph->nb_enfants; q++) expression(c, ph->enfants[q]);   /* déplacer : l'objet, la date, l'heure */
         emettre(c, I_GESTE, k, ph->ligne, ph->colonne);
         return;
     }
@@ -1950,9 +1950,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
 
 void compilateur_mode_exemples(int actif) { mode_exemples = actif; }
 
-/* Ce qu'un scénario garde d'un programme : ses déclarations, ses écrans, ses formules (§ 9.7, 3.08). */
+/* Ce qu'un scénario garde d'un programme : ses déclarations, ses écrans, ses formules (§ 9.7, 3.08), et ses créations de
+ * premier niveau (« La grille de l'agenda vaut … », 3.12), son état de départ, dans l'ordre écrit. */
 static int declaration_de_scenario(TypeNoeud t) {
-    return t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER || t == P_STYLE
+    return t == P_CREATION || t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER || t == P_STYLE
         || t == P_TYPE || t == P_CONTRAT || t == P_ECRAN || t == P_QUAND || t == P_XML || t == P_BIBLIOTHEQUE || t == P_INTERNE;
 }
 void compilateur_mode_scenario(int rang) {

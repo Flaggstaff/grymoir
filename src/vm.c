@@ -520,7 +520,8 @@ static char *texte_valeur(const Machine *m, const Valeur *v);
 /* ---------- Les gestes d'un scénario (§ 9.7, 3.08) ---------- */
 
 typedef struct Geste {
-    int sorte;      /* 1 écrire, 2 choisir, 3 cliquer, 4 fermer */
+    int sorte;      /* 1 écrire, 2 choisir, 3 cliquer, 4 fermer, 5 confirmer, 6 renoncer, 7 un créneau, 8 déplacer (3.12) */
+    char *quand;    /* un créneau, un déplacement : « JJ.MM.AAAA|HH:MM » (3.12) */
     char *ecran;    /* le nom déclaré de l'écran */
     char *element;  /* la zone (écrire, choisir une valeur), le bouton (cliquer), ou NULL (choisir un objet, fermer) */
     Valeur v;       /* ce qu'on écrit ou choisit ; absent sinon */
@@ -625,6 +626,31 @@ static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
         e->sorte = EVENEMENT_CLIC;
         e->element = k;
         return ISSUE_REPONDU;
+    }
+    if (g->sorte == 7 || g->sorte == 8) {   /* l'agenda (3.12) : un créneau, ou un objet déplacé */
+        for (k = 0; k < ec->n; k++) {
+            if (ec->elements[k].sorte != ELEMENT_LISTE || !ec->elements[k].agenda) continue;
+            if (ec->etats[k] & 3)
+                return sim_refuser_l(m, g->ligne, grym_formater("L'agenda est %s dans l'écran %s.", ec->etats[k] & 2 ? "caché" : "inactif", ec->nom));
+            snprintf(texte, sizeof texte, "%s", g->quand ? g->quand : "");
+            e->texte = texte;
+            e->element = k;
+            if (g->sorte == 7) { e->sorte = EVENEMENT_CRENEAU; return ISSUE_REPONDU; }
+            if (g->v.type != V_OBJET || !g->v.objet->id || ec->listes[k].type != V_LISTE)
+                return sim_refuser_l(m, g->ligne, grym_dupliquer("On déplace un objet conservé que l'agenda montre."));
+            const Liste *l = ec->listes[k].liste;
+            for (size_t r = 0; r < l->n; r++)
+                if (l->ids[r] == g->v.objet->id && strcmp(l->classes[r], g->v.objet->classe->nom) == 0) {
+                    e->sorte = EVENEMENT_DEPLACEMENT;
+                    e->ligne = r;
+                    return ISSUE_REPONDU;
+                }
+            char *n = texte_valeur(m, &g->v);
+            Issue i = sim_refuser_l(m, g->ligne, grym_formater("« %s » n'est pas dans l'agenda de l'écran %s.", n, ec->nom));
+            free(n);
+            return i;
+        }
+        return sim_refuser_l(m, g->ligne, grym_formater("L'écran %s n'a pas d'agenda.", ec->nom));
     }
     if (g->sorte == 2 && !g->element) {   /* choisir un objet : la liste qui le montre */
         if (g->v.type != V_OBJET || !g->v.objet->id)
@@ -733,7 +759,12 @@ size_t machine_gestes_restants(const Machine *m, char **texte) {
 static void ecran_detruire(EcranVM *e);
 
 void machine_detruire(Machine *m) {
-    for (size_t k = 0; k < m->nb_gestes; k++) { free(m->gestes[k].ecran); free(m->gestes[k].element); valeur_liberer(&m->gestes[k].v); }
+    for (size_t k = 0; k < m->nb_gestes; k++) {
+        free(m->gestes[k].ecran);
+        free(m->gestes[k].element);
+        free(m->gestes[k].quand);
+        valeur_liberer(&m->gestes[k].v);
+    }
     free(m->gestes);
     free(m->geste_erreur);
     for (size_t k = 0; k < m->nb_documents; k++) free(m->documents[k]);
@@ -7517,8 +7548,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             const char *d = b->constantes[op].texte;
             const int forme = atoi(d);
             const char *s1 = strchr(d, '\x1f'), *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL, *s3 = s2 ? strchr(s2 + 1, '\x1f') : NULL;
-            Valeur val = forme == 1 || forme == 2 ? depiler(&pile) : vi_absent(NULL);
-            if (!s3) { valeur_liberer(&val); break; }
+            /* un créneau (7) : la date, l'heure ; un déplacement (8) : l'objet, la date, l'heure (3.12) */
+            Valeur vh = forme == 7 || forme == 8 ? depiler(&pile) : vi_absent(NULL);
+            Valeur vd = forme == 7 || forme == 8 ? depiler(&pile) : vi_absent(NULL);
+            Valeur val = forme == 1 || forme == 2 || forme == 8 ? depiler(&pile) : vi_absent(NULL);
+            char *quand = NULL;
+            if ((forme == 7 || forme == 8) && (vd.type != V_DATE || vh.type != V_HEURE)) {
+                valeur_liberer(&vh); valeur_liberer(&vd); valeur_liberer(&val);
+                ok = echouer(diag, b, debut, grym_dupliquer("Un créneau d'agenda est une date et une heure : « du 05.11.2026 à 10:30 »."));
+                break;
+            }
+            if (forme == 7 || forme == 8) {
+                char *td = texte_valeur(m, &vd), *th = texte_valeur(m, &vh);
+                quand = grym_formater("%s|%s", td, th);
+                free(td);
+                free(th);
+            }
+            valeur_liberer(&vh);
+            valeur_liberer(&vd);
+            if (!s3) { valeur_liberer(&val); free(quand); break; }
             if (m->nb_gestes == m->cap_gestes) {
                 m->cap_gestes = m->cap_gestes ? 2 * m->cap_gestes : 8;
                 Geste *ng = grym_allouer(m->cap_gestes * sizeof *ng);
@@ -7532,6 +7580,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             g->ecran = grym_formater("%.*s", (int)(s3 - s2 - 1), s2 + 1);
             g->element = s3[1] ? grym_dupliquer(s3 + 1) : NULL;
             g->v = val;
+            g->quand = quand;
             break;
         }
         case I_VERIFIER: {   /* « Vérifier que … » (§ 9.7) : fausse, le scénario échoue, avec la ligne et la condition */

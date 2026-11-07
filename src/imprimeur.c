@@ -2491,6 +2491,29 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_GESTE: {   /* « On clique sur « OK » dans l'écran de saisie. » ; « _on_clique « OK » _écran de_saisie » (3.08) */
         static const char *const LIT[] = { "", "On écrit ", "On choisit ", "On clique sur ", "On ferme ", "On confirme", "On renonce" };
         static const char *const COMP[] = { "", "_on_écrit ", "_on_choisit ", "_on_clique ", "_on_ferme ", "_on_confirme", "_on_renonce" };
+        if (n->forme == 7 || n->forme == 8) {   /* « On choisit le créneau du D à H dans l'écran E. », « On déplace X au D à H … » (3.12) */
+            const Noeud *d = n->enfants[n->forme == 8 ? 1 : 0], *h = n->enfants[n->forme == 8 ? 2 : 1];
+            if (c) {
+                aj(im, n->forme == 7 ? "_on_créneau " : "_on_déplace ");
+                if (n->forme == 8) { expression(im, n->enfants[0]); aj(im, " ; "); }
+                expression(im, d);
+                aj(im, " ; ");
+                expression(im, h);
+                aj(im, " _écran ");
+                ecrire_nom(im, n->texte3, 0);
+                aj(im, "\n");
+                return;
+            }
+            if (n->forme == 7) aj(im, d->type == N_DATE ? "On choisit le créneau du " : "On choisit le créneau de ");
+            else { aj(im, "On déplace "); expression(im, n->enfants[0]); aj(im, d->type == N_DATE ? " au " : " à "); }
+            expression(im, d);
+            aj(im, " à ");
+            expression(im, h);
+            aj(im, " dans l'écran ");
+            aj_sigles(im, n->texte3);
+            aj(im, ".\n");
+            return;
+        }
         if (n->forme >= 5) { aj(im, c ? COMP[n->forme] : LIT[n->forme]); aj(im, c ? "\n" : ".\n"); return; }   /* 3.09 */
         aj(im, c ? COMP[n->forme] : LIT[n->forme]);
         if (n->nb_enfants) { expression(im, n->enfants[0]); aj(im, " "); }

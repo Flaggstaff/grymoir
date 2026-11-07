@@ -501,7 +501,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_DOCUMENTS_SORTIS: besoin = 0; effet = 1; break;
             case I_GESTE: {   /* écrire (1) et choisir (2) dépilent leur valeur */
                 const char *dg = op < b->nb_constantes && b->constantes[op].type == C_TEXTE ? b->constantes[op].texte : "";
-                besoin = dg[0] == '1' || dg[0] == '2' ? 1 : 0;
+                besoin = dg[0] == '1' || dg[0] == '2' ? 1 : dg[0] == '7' ? 2 : dg[0] == '8' ? 3 : 0;
                 effet = -besoin;
                 break;
             }
