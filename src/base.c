@@ -1981,6 +1981,115 @@ static int indexer_liens(Base *b, const ClasseVM *c, char **erreur) {
         ok = executer(b, texte, erreur);
         free(texte);
     }
+    /* Un champ nombre unique est une clé qu'on cherche (« le compte conservé dont le numéro est 70 »). La recherche
+     * compare en GRYM_NOMBRE (2 = 2,0), que la contrainte UNIQUE de la colonne, binaire, ne sert pas : chaque recherche
+     * relisait la table (outils/banc-de-mesure, 7 novembre 2026 : 2,3 ms par recherche dans 10'000 comptes). Et cette
+     * contrainte laissait passer 1 et 1,0, deux textes différents, puis « le compte conservé dont le numéro est 1 »
+     * en trouvait deux. Un index unique dans la collation des nombres, « n entité.champ », fait les deux : la recherche
+     * est directe, et 1,0 est refusé comme un doublon de 1. Une base qui porte déjà de tels doublons reçoit un index
+     * ordinaire, et l'aperçu des migrations (grym migration) le dit : rien n'est refusé ni effacé au lancement ; cet
+     * index reste ordinaire, même une fois les doublons corrigés. Les index « n » se
+     * retirent avant une migration de la table (retirer_index_nombres) et se refont ici. */
+    Chaine voulus = {0};   /* les noms attendus, séparés par ␟ */
+    for (size_t k = 0; ok && k < c->nb_champs; k++) {
+        if (c->proprietaires[k] != c || multiple(c, k) || !c->types[k] || strcmp(c->types[k], "nombre") != 0
+            || !(c->uniques[k] & 1)) continue;
+        char *nom = grym_formater("%s.%s", c->nom, c->champs[k]);
+        chaine_ajouter(&voulus, "\x1fn ");
+        chaine_ajouter(&voulus, nom);
+        for (int unique = 1; unique >= 0; unique--) {
+            Chaine sql = {0};
+            chaine_ajouter(&sql, unique ? "CREATE UNIQUE INDEX IF NOT EXISTS " : "CREATE INDEX IF NOT EXISTS ");
+            ajouter_nom(&sql, "n ", nom);
+            chaine_ajouter(&sql, " ON ");
+            ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " (");
+            ajouter_nom(&sql, "c ", c->champs[k]);
+            chaine_ajouter(&sql, " COLLATE GRYM_NOMBRE);");
+            char *texte = chaine_rendre(&sql);
+            const int rc = sqlite3_exec(b->db, texte, NULL, NULL, NULL);
+            free(texte);
+            if (rc == SQLITE_OK) break;
+            if (!unique || (rc & 0xff) != SQLITE_CONSTRAINT) {
+                *erreur = grym_formater("L'index de « %s » ne se crée pas : %s", nom, sqlite3_errmsg(b->db));
+                ok = 0;
+                break;
+            }
+            if (b->rapport) {
+                char *l = grym_formater("« %s » : « %s » est unique, mais des objets conservés portent des valeurs égales "
+                                        "écrites autrement (1 et 1,0) ; l'unicité de ces valeurs n'est pas vérifiée tant "
+                                        "qu'elles restent.\n", c->nom, c->champs[k]);
+                chaine_ajouter(b->rapport, l);
+                free(l);
+            }
+        }
+        free(nom);
+    }
+    chaine_ajouter(&voulus, "\x1f");
+    char *v = chaine_rendre(&voulus);
+    if (ok) {   /* un index « n » qui n'est plus voulu (champ plus unique, entité renommée) part */
+        char *table = grym_formater("e %s", c->nom);
+        sqlite3_stmt *st = NULL;
+        preparer(b, "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND substr(name, 1, 2) = 'n '", &st);
+        sqlite3_bind_text(st, 1, table, -1, SQLITE_TRANSIENT);
+        char **noms = NULL;
+        size_t n = 0;
+        while (sqlite3_step(st) == SQLITE_ROW) {
+            const char *x = (const char *)sqlite3_column_text(st, 0);
+            char *cherche = grym_formater("\x1f%s\x1f", x);
+            if (!strstr(v, cherche)) {
+                noms = realloc(noms, (n + 1) * sizeof *noms);
+                if (!noms) { fprintf(stderr, "grym : mémoire épuisée\n"); exit(1); }
+                noms[n++] = grym_dupliquer(x);
+            }
+            free(cherche);
+        }
+        rendre(b, st);
+        for (size_t k = 0; k < n; k++) {
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "DROP INDEX ");
+            ajouter_nom(&sql, "", noms[k]);
+            if (ok) ok = executer_chaine(b, &sql, erreur);
+            else free(chaine_rendre(&sql));
+            free(noms[k]);
+        }
+        free(noms);
+        free(table);
+    }
+    free(v);
+    return ok;
+}
+
+/* Avant une migration, les index « n » de la table partent (sous son nom actuel ou ancien) : SQLite refuse de retirer
+ * ou de remplacer une colonne indexée. indexer_liens les refait sur la table migrée. */
+static int retirer_index_nombres(Base *b, const ClasseVM *c, char **erreur) {
+    int ok = 1;
+    for (int q = 0; ok && q < 2; q++) {
+        const char *entite = q ? c->ancien : c->nom;
+        if (!entite) continue;
+        char *table = grym_formater("e %s", entite);
+        sqlite3_stmt *st = NULL;
+        preparer(b, "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND substr(name, 1, 2) = 'n '", &st);
+        sqlite3_bind_text(st, 1, table, -1, SQLITE_TRANSIENT);
+        char **noms = NULL;
+        size_t n = 0;
+        while (sqlite3_step(st) == SQLITE_ROW) {
+            noms = realloc(noms, (n + 1) * sizeof *noms);
+            if (!noms) { fprintf(stderr, "grym : mémoire épuisée\n"); exit(1); }
+            noms[n++] = grym_dupliquer((const char *)sqlite3_column_text(st, 0));
+        }
+        rendre(b, st);
+        for (size_t k = 0; k < n; k++) {
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "DROP INDEX ");
+            ajouter_nom(&sql, "", noms[k]);
+            if (ok) ok = executer_chaine(b, &sql, erreur);
+            else free(chaine_rendre(&sql));
+            free(noms[k]);
+        }
+        free(noms);
+        free(table);
+    }
     return ok;
 }
 
@@ -2047,7 +2156,7 @@ static int base_preparer_table(Base *b, const ClasseVM *c, char **erreur) {
     if (rc == SQLITE_ROW) {
         char *ancienne = grym_dupliquer((const char *)sqlite3_column_text(st, 0));
         rendre(b, st);
-        int ok = strcmp(ancienne, def) == 0 || migrer(b, c, ancienne, def, erreur);
+        int ok = strcmp(ancienne, def) == 0 || (retirer_index_nombres(b, c, erreur) && migrer(b, c, ancienne, def, erreur));
         free(ancienne);
         free(def);
         return ok && indexer_liens(b, c, erreur);
@@ -3224,13 +3333,18 @@ static int lire_condition(Recherche *r) {
             size_t i = (size_t)strtoul(r->p + 1, (char **)&fin, 10);
             r->p = fin;
             if (i < 1 || i > r->nb_params || r->nb_liens == 64) { free(expr); r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
-            if (entier) { chaine_ajouter(&r->sql, "CAST("); chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, " AS TEXT)"); }
+            /* Un nombre entier égal à une valeur : la colonne, entière, compare directement au texte canonique, que
+             * SQLite convertit (« 2 », « 2.0 » valent 2 ; « 2.5 » ne vaut aucun entier). L'index du champ sert alors
+             * (« le membre conservé dont le numéro est 12 ») ; le détour par le texte et GRYM_NOMBRE l'interdisait
+             * et relisait toute la table (7 novembre 2026). Les autres comparaisons gardent ce détour. */
+            const int entier_egal = entier && op == '=';
+            if (entier && !entier_egal) { chaine_ajouter(&r->sql, "CAST("); chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, " AS TEXT)"); }
             else chaine_ajouter(&r->sql, expr);
             chaine_ajouter(&r->sql, sqlop);
             char tampon[24];
             snprintf(tampon, sizeof tampon, "?%lu", (unsigned long)(r->nb_liens + 1));
             chaine_ajouter(&r->sql, tampon);
-            if (nombre || entier) chaine_ajouter(&r->sql, " COLLATE GRYM_NOMBRE");
+            if (nombre || (entier && !entier_egal)) chaine_ajouter(&r->sql, " COLLATE GRYM_NOMBRE");
             else if (type_textuel(t) && op != '=' && op != '!') chaine_ajouter(&r->sql, " COLLATE GRYM_TEXTE");
             r->liens[r->nb_liens] = i - 1;
             r->types[r->nb_liens] = t;

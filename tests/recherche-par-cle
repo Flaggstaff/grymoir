@@ -1,0 +1,88 @@
+#!/bin/sh
+# La recherche par clé (7 novembre 2026) : « le compte conservé dont le numéro est 70 » passe par l'index du champ. Un
+# nombre entier compare sa colonne au texte canonique, sans détour ; un nombre unique reçoit un index unique en
+# collation des nombres (« n entité.champ »), qui refuse aussi 1,0 à côté de 1. Les index « n » suivent les migrations.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); case "$1" in *"$2"*) ;; *) echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans « $1 »)";; esac; }
+lancer() { printf '%s\n' "$1" > p.grym; "$grym" lancer p.grym 2>&1 < /dev/null; }
+
+verifier "$(lancer 'Un compte, conservé, a :
+    un numéro (nombre), unique,
+    un rang (nombre entier), unique,
+    un solde (nombre).
+Le c vaut un nouveau compte :
+    Le numéro vaut 1.
+    Le rang vaut 4.
+    Le solde vaut 5.
+Conserver le c.
+Afficher le solde du compte conservé dont le numéro est 1,0 puis le solde du compte conservé dont le rang est 4,00.
+Afficher le nombre de comptes conservés dont le rang est 4,5.')" "5 5
+0" "1,0 trouve 1 ; 4,00 trouve l'entier 4 ; 4,5 aucun"
+contient "$(lancer 'Un compte, conservé, a :
+    un numéro (nombre), unique,
+    un rang (nombre entier), unique,
+    un solde (nombre).
+Le c vaut un nouveau compte :
+    Le numéro vaut 1,0.
+    Le rang vaut 5.
+    Le solde vaut 6.
+Conserver le c.')" "« numéro » est unique" "1,0 est un doublon de 1"
+contient "$(lancer 'Un compte, conservé, a :
+    un numéro (nombre), unique,
+    un rang (nombre entier), unique,
+    un solde (nombre).
+Le c vaut un nouveau compte :
+    Le numéro vaut 2.
+    Le rang vaut 4.
+    Le solde vaut 6.
+Conserver le c.')" "« rang » est unique" "un entier en double"
+verifier "$(lancer 'Un dossier, conservé, anciennement « compte », a :
+    un code (nombre), unique, anciennement « numéro »,
+    un rang (nombre entier), unique,
+    un solde (nombre).
+Afficher le solde du dossier conservé dont le code est 1.')" "5" "entité et champ renommés"
+contient "$(lancer 'Un dossier, conservé, a :
+    un code (nombre),
+    un rang (nombre entier), unique,
+    un solde (nombre).
+Afficher le solde du dossier conservé dont le code est 1.')" "ne peut pas cesser d'être unique" "unique d'origine retiré : refusé, comme avant"
+# 20 000 objets, 2 000 recherches de chaque sorte : quelques dixièmes de seconde par l'index ; en relisant la table,
+# une dizaine de secondes par sorte. 20 s laissent de la marge aux machines lentes et aux sanitizers.
+rm -f p.grymd
+cat > k.grym <<'EOF'
+Un compte, conservé, a :
+    un numéro (nombre), unique,
+    un rang (nombre entier), unique.
+Pour chaque i de 1 à 20000 :
+    Le c vaut un nouveau compte :
+        Le numéro vaut i.
+        Le rang vaut i.
+    Conserver le c.
+Le d vaut le compte conservé dont le numéro est 1.
+Pour chaque i de 1 à 2000 :
+    Le d devient le compte conservé dont le numéro est i × 9.
+    Le d devient le compte conservé dont le rang est i × 9.
+Afficher le rang de d.
+EOF
+"$grym" lancer k.grym > sortie.txt 2>&1 &
+pid=$!
+s=0
+while kill -0 "$pid" 2> /dev/null && [ "$s" -lt 20 ]; do sleep 1; s=$((s + 1)); done
+if kill -0 "$pid" 2> /dev/null; then kill "$pid"; echo "ÉCHEC : 4 000 recherches par clé en plus de 20 s"; echecs=$((echecs + 1)); total=$((total + 1))
+else wait "$pid"; verifier "$(cat sortie.txt)" "18'000" "4 000 recherches par clé"; fi
+python3 -c 1 2> /dev/null && contient "$(python3 -c "
+import sqlite3; b = sqlite3.connect('k.grymd')
+print(' '.join(r[0] for r in b.execute(\"select name from sqlite_master where type = 'index' and name like 'n %' order by name\")))
+print(b.execute(\"explain query plan select id from \\\"e compte\\\" where \\\"c rang\\\" = '18'\").fetchone()[3])")" "n compte.numéro
+SEARCH e compte USING " "les index, et le plan de la recherche d'un entier"
+python3 -c 1 2> /dev/null && contient "$(python3 -c "
+import sqlite3; b = sqlite3.connect('k.grymd')
+print(b.execute(\"explain query plan select id from \\\"e compte\\\" where \\\"c rang\\\" = '18'\").fetchone()[3])")" "(c rang=?)" "l'entier cherché par son index"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

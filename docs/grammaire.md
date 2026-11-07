@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.14 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.15 de la spécification, révisée le 7 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1637,6 +1637,7 @@ Supprimer le client.
 - Conserver, modifier et supprimer sont des effets de bord : réservés aux actions. `conserver` et `supprimer` ne commencent pas le nom d'une action.
 - Un lien d'un objet conservé désigne un objet conservé : « Le champ « parrain » désigne un client qui n'est pas conservé : conserve-le d'abord. » Un objet peut se désigner lui-même (`Le parrain du a devient a.`, puis `Conserver a.`). Deux objets neufs qui se désignent l'un l'autre ne se conservent pas encore : il faudrait un champ facultatif (§ 13.8).
 - `, unique` est vérifié à la conservation et à chaque modification : « « licence » est unique : un autre client conservé a déjà « A-1 ». »
+- *(3.15)* Un nombre unique se compare comme partout ailleurs, par sa valeur : `1,0` est un doublon de `1`. Jusqu'à la 3.14, la base comparait les textes et laissait passer les deux, puis `le compte conservé dont le numéro est 1` en trouvait deux. Une base qui porte déjà de tels doublons s'ouvre comme avant ; l'aperçu des migrations (`grym migration`) les signale, et l'unicité de ces valeurs n'est pas vérifiée tant qu'elles restent.
 - Un objet supprimé puis conservé à nouveau reçoit un nouvel identifiant : un identifiant n'est jamais réattribué.
 - Une saisie ratée rend aussi à un objet son état : conservé ou non.
 
@@ -3153,3 +3154,4 @@ Pour rappeler un patient :
 | 3.12 | 2026-11-07 | § 9.7 : les gestes de l'agenda, `On choisit le créneau du … à …` et `On déplace X au … à …` ; les créations de premier niveau du programme s'exécutent avant chaque scénario, son état de départ. La suite de Praxis passe à quinze scénarios : une séance prévue se déplace dans le calendrier. Formes compactes `_on_créneau`, `_on_déplace` |
 | 3.13 | 2026-11-07 | § 3.1 : limites d'une expression ; plus de 1000 opérations enchaînées sont refusées (« Expression trop longue »), au lieu d'épuiser la pile du compilateur et de l'imprimeur. `grym traduire` signale que les deux formes sont désormais côte à côte |
 | 3.14 | 2026-11-07 | § 21.10 : les fonctions C. Un calcul de bibliothèque s'écrit `… vaut la fonction C « f ».` ; le code natif, `natif.dylib`, `.so` ou `.dll` dans le dossier de la bibliothèque, est chargé par le système au premier appel. Contrat dans `src/grym_natif.h` (version 1) : valeurs en texte, décimaux exacts, un seul rappel. § 18.2 : nouvelle sorte d'échec `natif`. Forme compacte `_fonction_c(« f »)` |
+| 3.15 | 2026-11-07 | § 16.3 : un nombre unique se compare par sa valeur, `1,0` est un doublon de `1` (la base comparait les textes). La recherche par clé passe par l'index : un nombre entier comparé à une valeur sans détour par le texte, un nombre unique avec un index unique en collation des nombres (`docs/vm.md`, § 8) ; 1 000 recherches dans 10 000 objets, de 3,7 s à 0,05 s (nombre entier) et de 2,4 s à 0,08 s (nombre) |

@@ -34,7 +34,7 @@ printf '%-10s %10s %10s %8s   %s\n' "programme" "GrymoiR" "Python" "rapport" "ce
 for p in boucle appels tri base; do
     case "$p" in
         boucle) quoi="1 000 000 additions et multiplications en décimal exact (Python : module decimal)";;
-        appels) quoi="fib(27) récursif : 300 000 appels de calcul environ";;
+        appels) quoi="fib(27) récursif : 635 621 appels de calcul";;
         tri) quoi="100 000 textes construits puis triés dans l'ordre du dictionnaire";;
         base) quoi="10 000 objets conservés, un compte filtré, 1 000 recherches par champ unique (Python : sqlite3)";;
     esac

@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 2.07 de la spécification, révisée le 7 novembre 2026.
+Version 2.08 de la spécification, révisée le 7 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -278,6 +278,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - `src/base.c` parle à SQLite ; la machine l'ouvre au premier besoin, quand une classe enregistrée est une entité, sur le fichier donné par `machine_base` (celui du programme : `factures.grymd`), ou en mémoire.
 - Schéma : une table `"e <entité>"` par entité, avec ses champs propres et ceux de ses aptitudes, en colonnes `"c <champ>"` (plus `"n <champ>"`, le nom d'origine, pour un fichier ou une image). Sa colonne `id` désigne la ligne de la classe parente, ou de `grym_objet` pour une entité sans parent, avec `ON DELETE CASCADE`. Un objet conservé a donc une ligne dans chaque table de sa lignée.
 - Chaque colonne de lien a son index, `"l <entité>.<champ>"` : relations inverses, sommes et règles (grammaire, § 16.10, § 16.14) y trouvent leurs objets sans parcourir la table ; une base plus ancienne le reçoit à la préparation de l'entité.
+- *(2.08)* Chaque champ nombre unique a un index unique dans la collation des nombres, `"n <entité>.<champ>"` : une recherche `dont le numéro est …`, qui compare en `GRYM_NOMBRE`, y trouve son objet sans parcourir la table, et `1.0` y est un doublon de `1`, ce que la contrainte `UNIQUE` binaire de la colonne laissait passer. Si la base porte déjà de tels doublons, l'index est ordinaire, et l'aperçu des migrations le dit. Ces index partent avant une migration de leur table (SQLite ne retire pas une colonne indexée) et se refont à la préparation ; un index `n` qui n'est plus voulu (champ plus unique, entité renommée) part. Un nombre entier comparé à une valeur (`=`) compare la colonne au texte canonique, que SQLite convertit (« 2.0 » vaut 2, « 2.5 » aucun entier) : l'index de la colonne sert. Conséquence : une base qui a ces index ne s'écrit plus sans la collation `GRYM_NOMBRE`, que seul `grym` déclare ; un outil SQLite extérieur la lit, mais ne la modifie pas.
 - Types SQL : texte, nombre (forme canonique, exacte), date (ISO 8601) en `TEXT` ; nombre entier en `INTEGER` ; vrai ou faux en `INTEGER` 0 ou 1 ; fichier et image : le numéro d'une ligne de `grym_fichier` en `INTEGER` (colonne déclarée `BLOB`, comme avant le format 2), le nom d'origine dans `"n <champ>"` ; lien en `INTEGER` qui référence la table de l'entité liée. Tous `NOT NULL` ; `, unique` en `UNIQUE`.
 - `grym_objet` distribue les identifiants (`AUTOINCREMENT` : jamais réattribués) et note la classe réelle ; `grym_schema` garde la définition de chaque entité.
 - Format de la base (charte, art. 13) : `PRAGMA user_version`, lu à l'ouverture avant toute écriture. `BASE_FORMAT` (`src/base.h`) vaut 2. Plus grand : la base est refusée, intacte. 0 (base neuve, ou d'avant ce numéro) ou 1 : elle reçoit ses colonnes manquantes, puis le format courant. Tout changement de la forme des tables communes (`grym_objet`, `grym_schema`, `grym_fichier`) augmente `BASE_FORMAT` et ajoute sa migration.
@@ -505,3 +506,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 2.05 | 2026-11-06 | Instruction `COMMANDE` (142) ; fonction d'interface `commande` |
 | 2.06 | 2026-11-06 | Instruction `VÉRIFIER` (143) ; le mode scénario du compilateur |
 | 2.07 | 2026-11-07 | Instruction `NATIF` (146) ; les bibliothèques natives chargées par le système (`src/natif.c`) |
+| 2.08 | 2026-11-07 | Index `"n <entité>.<champ>"` des nombres uniques, en collation des nombres ; un nombre entier cherché par égalité passe par l'index de sa colonne |
