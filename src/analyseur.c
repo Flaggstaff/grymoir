@@ -10916,7 +10916,13 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
         valeur_n = noeud_creer(N_ENSEMBLE, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
         valeur_n->forme = ecrit_liste || (changer && s->liste);
         for (;;) {
-            Noeud *x = expression(a);
+            Noeud *x;
+            const Jeton *apres = voir(a, 1);
+            if ((est_mot(cour(a), "vrai") || est_mot(cour(a), "faux"))   /* « Les réponses valent vrai, faux et vrai. » */
+                && (apres->type == J_VIRGULE || apres->type == J_POINT || est_mot(apres, "et"))) {
+                x = feuille(N_BOOLEEN, cour(a));
+                avancer(a);
+            } else x = expression(a);
             if (!x) { noeud_liberer(valeur_n); free(nom); return NULL; }
             noeud_ajouter(valeur_n, x);
             valeur_n->fin = x->fin;

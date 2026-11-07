@@ -2158,6 +2158,7 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
                             pv->valeur = NULL;
                             pv->nom_fichier = NULL;
                         }
+                        free(ch->ligne);   /* un nouvel envoi, après un refus : l'ancienne ligne fuyait */
                         ch->ligne = grym_dupliquer(ch->vider || est_fichier(ch) ? "" : q->saisi[k]);
                         char *message = NULL;
                         int res = q->valider(q->vcontexte, k, &message);

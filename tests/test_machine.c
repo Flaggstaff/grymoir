@@ -2464,6 +2464,9 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* vrai et faux comme éléments d'un ensemble ou d'une liste (3.06 : « vrai » y était refusé) */
+    PROG("Les v valent vrai et faux.\nAfficher les v.\nLes l valent la liste vrai, faux et vrai.\nAfficher les l puis le nombre de l.",
+         "vrai, faux\nvrai, faux, vrai 3");
     /* Scénarios (§ 9.7) : en mode scénario, les déclarations et le scénario demandé, seul ; hors de ce mode, rien */
     compilateur_mode_scenario(1);
     PROG("Un client, conservé, a : un nom (texte).\nUne relance, conservée, a : un motif (texte).\nPour relancer un client :\n    La r vaut une nouvelle relance :\n        Le motif vaut nom du client.\n    Conserver la r.\nAfficher « le programme ne s'exécute pas ».\nScénario « une relance se crée » :\n    Le c vaut un nouveau client :\n        Le nom vaut « Ana ».\n    Conserver le c.\n    Relancer le c.\n    Afficher le nombre de relances conservées.\n    Vérifier que le nombre de relances conservées = 1.\nScénario « une base neuve » :\n    Vérifier que le nombre de relances conservées = 0.\nScénario « un échec se voit » :\n    Vérifier que 1 + 1 = 3.\n", "1");

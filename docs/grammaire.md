@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.05 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.06 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1114,6 +1114,8 @@ Afficher le nombre d'invités puis les couleurs jointes par « , ».
 - Aucun mot réservé : `les` suivi d'un ensemble connu, `valent`, `deviennent`, `gagnent`, `perdent` ne valent qu'ainsi placés.
 - Les listes ordonnées, avec doublons, sont faites depuis la 2.89 (§ 13.10) : Écoutille les demandait pour les mots d'une transcription, les décodages WSJT et les réponses des services. Les rangs (`le 3e élément de …`) valent aussi pour un ensemble.
 - En forme compacte : `_les couleurs << « a » ; « b »`, `_les invités << _ensemble_vide`, `_les invités _gagnent m`, `_perdent`, `_deviennent`, `invités _contient m`, `_pour_chaque invité _parmi invités`, `_nombre_de invités`, `couleurs _jointes « , »`.
+
+- *(3.06)* `vrai` et `faux` s'écrivent comme éléments : `Les réponses valent vrai, faux et vrai.` Avant la 3.06, ils étaient refusés là (« « vrai » inattendu »), faute d'y être attendus.
 
 ### 13.10 Listes *(2.89)*
 
@@ -3061,3 +3063,4 @@ Pour rappeler un patient :
 | 3.03 | 2026-11-06 | § 22.2 : la minuterie (point 18 de l'audit), `Toutes les 10 secondes dans l'écran X :` ; instruction `MINUTERIE` avant `ÉCRAN_ATTENDRE`, fonction d'interface `ecran_minuterie`, événement `EVENEMENT_MINUTERIE` ; l'atelier attend à échéance, le navigateur renvoie son formulaire par `grym.js`. Forme compacte `_toutes_les 10 _secondes _dans X` |
 | 3.04 | 2026-11-06 | Nouveau § 15.10 (point 17 de l'audit) : `la sortie de la commande « p » avec les arguments`, sans shell, 30 secondes au plus ; nouvelle sorte d'échec `commande` (§ 18.2). Console (Mac, Linux : fork et exec), atelier (QProcess) ; le navigateur et la console sous Windows refusent. Instruction `COMMANDE`. Forme compacte `_commande(« p » ; arguments)` |
 | 3.05 | 2026-11-06 | Nouveau § 9.7 (point 20 de l'audit) : les scénarios, `Scénario « titre » :`, `Vérifier que condition.`, joués par `grym scenarios`, chacun seul sur une base neuve en mémoire, sans exécuter le programme ; sans écran pour l'instant. Instruction `VÉRIFIER`. Forme compacte `_scénario`, `_vérifier` |
+| 3.06 | 2026-11-07 | Ménage (points 21 à 23 de l'audit, première part) : `vrai` et `faux` comme éléments d'un ensemble ou d'une liste (§ 13.9) ; sept fuites de mémoire préexistantes corrigées dans la machine et le serveur, que l'audit avait relevées (25 et 49 octets) : les dix programmes d'essai tournent désormais sans aucune fuite |

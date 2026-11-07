@@ -3525,7 +3525,7 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
             const int present = x && q >= 0 && (size_t)q < x->classe->nb_champs && x->definis[q] && x->champs[q].type != V_ABSENT;
             const Valeur *v = present ? &x->champs[q] : NULL;
             if (v && totalise[k] && v->type == V_NOMBRE) {
-                Decimal s2 = dec_zero();
+                Decimal s2;   /* dec_addition l'écrit : un zéro de départ fuyait */
                 dec_addition(&sommes[k], &v->nombre, &s2);
                 dec_liberer(&sommes[k]);
                 sommes[k] = s2;
@@ -4108,7 +4108,7 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
             size_t g = 0;
             while (g < ng && strcmp(cles[g], cle) != 0) g++;
             if (g == ng) { cles[ng] = grym_dupliquer(cle); totaux[ng] = dec_zero(); ng++; }
-            Decimal un = graphe & 4 ? dec_copier(&valeurs[r]) : dec_depuis_canonique("1"), s = dec_zero();
+            Decimal un = graphe & 4 ? dec_copier(&valeurs[r]) : dec_depuis_canonique("1"), s;   /* l'addition l'écrit */
             dec_addition(&totaux[g], &un, &s);
             dec_liberer(&totaux[g]);
             dec_liberer(&un);
@@ -4309,7 +4309,7 @@ static char *tableau_montrer(Machine *m, Objet *o, TableauFiche *t) {
             else if (v->type == V_OBJET) s = nom_objet(m, v->objet);
             else s = texte_valeur(m, v);
             if (v && v->type == V_NOMBRE) {
-                Decimal somme = dec_zero();
+                Decimal somme;   /* dec_addition l'écrit : un zéro de départ fuyait */
                 dec_addition(&sommes[k], &v->nombre, &somme);
                 dec_liberer(&sommes[k]);
                 sommes[k] = somme;
@@ -5407,8 +5407,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_SAUVEGARDER:
         case I_SAUVEGARDER_JOUR:
         case I_SAUVEGARDER_COFFRE: {   /* « Sauvegarder la base dans « Cabinet.grymd » [avec le mot de passe m]. » (2.29, 2.30) */
-            Valeur mdp = vi_absent(NULL);
-            if (code == I_SAUVEGARDER_COFFRE) mdp = depiler(&pile);
+            Valeur mdp = code == I_SAUVEGARDER_COFFRE ? depiler(&pile) : vi_absent(NULL);   /* une absente écrasée fuyait */
             Valeur c = depiler(&pile);
             char *probleme = NULL;
             if (code == I_SAUVEGARDER_COFFRE && (mdp.type != V_TEXTE || !mdp.texte || !*mdp.texte))
@@ -5504,8 +5503,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_RESTAURER: {   /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) ; « Vérifier la sauvegarde f » (2.85) */
             const int verifier = (op & 2) != 0;
             op &= 1;
-            Valeur mdp = vi_absent(NULL);
-            if (op) mdp = depiler(&pile);
+            Valeur mdp = op ? depiler(&pile) : vi_absent(NULL);   /* une absente écrasée fuyait */
             Valeur src = depiler(&pile);
             char *probleme = NULL;
             const unsigned char *o = NULL;
@@ -6863,6 +6861,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 l.tm_isdst = -1;   /* l'heure d'été, s'il le faut */
                 const time_t tt = mktime(&l);
                 const struct tm u = *gmtime(&tt);
+                valeur_liberer(&vt);   /* la date lue : libérée aussi quand tout va bien (elle fuyait) */
                 empiler(&pile, vi_texte_pris(grym_formater("%04d-%02d-%02dT%02d:%02d:00Z", u.tm_year + 1900, u.tm_mon + 1,
                                                            u.tm_mday, u.tm_hour, u.tm_min)));
                 break;
@@ -7041,7 +7040,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const long d1 = w1.jours < w2.jours ? w1.jours : w2.jours, d2 = w1.jours < w2.jours ? w2.jours : w1.jours;
                 long n = 0;
                 for (long d = d1 + 1; d <= d2; d++) n += jour_semaine(d) < 5;
-                empiler(&pile, valeur_nombre(dec_depuis_long(w1.jours <= w2.jours ? n : -n)));
+                const int rebours = w1.jours > w2.jours;
+                valeur_liberer(&w1);   /* les dates lues : libérées aussi quand tout va bien (elles fuyaient) */
+                valeur_liberer(&w2);
+                empiler(&pile, valeur_nombre(dec_depuis_long(rebours ? -n : n)));
                 break;
             }
             Valeur v2 = depiler(&pile), v1 = depiler(&pile);
