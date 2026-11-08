@@ -22,8 +22,11 @@ s'il tourne sur un Mac Intel.
 
 Rien n'est signé par un certificat payant. macOS (Gatekeeper) et Windows (SmartScreen) le disent :
 
-- **macOS** : clic droit (ou Contrôle-clic) sur GrymoiR dans Applications, puis « Ouvrir », puis « Ouvrir » encore. Une
-  fois suffit.
+- **macOS** : glisser GrymoiR dans Applications, puis, une fois, dans le Terminal :
+  `xattr -dr com.apple.quarantine /Applications/GrymoiR.app`. Sans cela, macOS dit que GrymoiR « est endommagé » et
+  propose de le mettre à la corbeille : c'est le refus d'une application téléchargée sans signature d'Apple, pas un
+  fichier abîmé. La commande retire la marque « téléchargé d'internet » ; Contrôle-clic puis « Ouvrir » ne suffit pas
+  ici (constaté le 8 novembre 2026).
 - **Windows** : « Informations complémentaires », puis « Exécuter quand même ».
 - **Linux** : `chmod +x GrymoiR-3.0.0-linux-x86_64.AppImage`, puis le lancer.
 

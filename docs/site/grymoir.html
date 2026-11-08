@@ -62,7 +62,7 @@ Afficher le solde du client conservé dont le nom est « Atelier Dubois ».</pre
 <h2>Au premier lancement</h2>
 <p>Les paquets ne sont pas signés par un certificat payant, et le système le dit une fois :</p>
 <ul>
-  <li><strong>macOS</strong> : Contrôle-clic sur GrymoiR dans Applications, « Ouvrir », puis « Ouvrir » encore.</li>
+  <li><strong>macOS</strong> : glisser GrymoiR dans Applications, puis, une fois, dans le Terminal :<br><code>xattr -dr com.apple.quarantine /Applications/GrymoiR.app</code><br><span class="doux">Sans cette commande, macOS dit que GrymoiR « est endommagé » : c’est sa façon de refuser une application téléchargée qui n’est pas signée par Apple. Elle n’est pas abîmée ; la commande retire la marque « téléchargé d’internet », et GrymoiR s’ouvre normalement.</span></li>
   <li><strong>Windows</strong> : « Informations complémentaires », puis « Exécuter quand même ».</li>
   <li><strong>Linux</strong> : <code>chmod +x GrymoiR-3.0.0-linux-x86_64.AppImage</code>, puis le lancer.</li>
 </ul>
