@@ -830,9 +830,9 @@ Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
 L'écran de comptabilité, « Comptabilité », montre :
     une année (exercice), avec l'indication « L'année des comptes, du journal, de l'export et des listes »,
-    le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
-    le texte "Frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
-    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
+    le texte "Recettes encaissées : CHF " suivi de l'arrondi de l'encaissé du début d'exercice et de la fin d'exercice à 0,01,
+    le texte "Frais : CHF " suivi de l'arrondi du dépensé du début d'exercice et de la fin d'exercice à 0,01,
+    le texte "Résultat : CHF " suivi de l'arrondi de (l'encaissé du début d'exercice et de la fin d'exercice) − (le dépensé du début d'exercice et de la fin d'exercice) à 0,01,
     le texte « Le cabinet », en petites capitales,
     un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
     un bouton « Rappels », en tuile, avec la description « Factures échues, séances à facturer »,
@@ -925,11 +925,11 @@ Le document de journal, « Journal des recettes et des frais », montre :
     le texte "Année " suivi de l'année des comptes suivi de ", état au " suivi d'aujourd'hui,
     le texte « Recettes », en petites capitales,
     la liste des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement,
-    le texte "Total des recettes : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
+    le texte "Total des recettes : CHF " suivi de l'arrondi de l'encaissé du début d'exercice et de la fin d'exercice à 0,01,
     le texte « Frais », en petites capitales,
     la liste des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
-    le texte "Total des frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
-    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
+    le texte "Total des frais : CHF " suivi de l'arrondi du dépensé du début d'exercice et de la fin d'exercice à 0,01,
+    le texte "Résultat : CHF " suivi de l'arrondi de (l'encaissé du début d'exercice et de la fin d'exercice) − (le dépensé du début d'exercice et de la fin d'exercice) à 0,01.
 
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
 L'écran des quittances, (le titre des quittances de l'année des comptes et de la recherche des quittances), montre :

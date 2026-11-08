@@ -198,3 +198,140 @@ Scénario « une séance prévue se déplace dans le calendrier » :
     Vérifier que l'heure de la séance = 15:30.
     Vérifier que la date de la séance = aujourd'hui.
     Vérifier que le statut de la séance = « prévue ».
+
+Remarque : la comptabilité en recettes-dépenses (8 novembre 2026) : l'encaissé et le dépensé d'une période, que l'écran de
+Remarque : comptabilité, le journal et l'export montrent. Une recette compte au jour où l'argent est arrivé.
+Scénario « une recette compte au jour de son encaissement, pas à celui de la séance » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui − 10 jours et « faite », qui donne la séance.
+    Régler la séance et « espèces ».
+    Le jour vaut aujourd'hui.
+    Le lendemain vaut aujourd'hui + 1 jour.
+    Vérifier que l'encaissé du jour et du lendemain = 120.
+    L'avant vaut aujourd'hui − 10 jours.
+    L'après vaut aujourd'hui − 9 jours.
+    Vérifier que l'encaissé de l'avant et de l'après = 0.
+
+Scénario « ni une séance à payer ni une séance offerte n'entrent dans les recettes » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne l'impayée.
+    Poser le s et « Ben Weber » et aujourd'hui et « faite », qui donne l'offerte.
+    Poser le s et « Chloé Favre » et aujourd'hui et « faite », qui donne la payée.
+    Régler l'offerte et « offert ».
+    Régler la payée et « Twint ».
+    Le jour vaut aujourd'hui.
+    Le lendemain vaut aujourd'hui + 1 jour.
+    Vérifier que l'encaissé du jour et du lendemain = 120.
+
+Scénario « une séance remise à payer sort des recettes » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Régler la séance et « espèces ».
+    Remettre à payer la séance.
+    Le jour vaut aujourd'hui.
+    Le lendemain vaut aujourd'hui + 1 jour.
+    Vérifier que l'encaissé du jour et du lendemain = 0.
+
+Scénario « les frais d'une période, et le résultat » :
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Régler la séance et « espèces ».
+    La r vaut une nouvelle rubrique :
+        Le nom vaut « Loyer ».
+    Conserver la r.
+    Le f vaut un nouveau frais :
+        La date vaut aujourd'hui.
+        Le libellé vaut « Loyer du cabinet ».
+        Le montant vaut 50,40.
+        La rubrique vaut r.
+        Le moyen vaut « virement ».
+    Conserver le f.
+    Le vieux vaut un nouveau frais :
+        La date vaut aujourd'hui − 400 jours.
+        Le libellé vaut « Loyer d'avant ».
+        Le montant vaut 30.
+        La rubrique vaut r.
+        Le moyen vaut « virement ».
+    Conserver le vieux.
+    Le jour vaut aujourd'hui.
+    Le lendemain vaut aujourd'hui + 1 jour.
+    Vérifier que le dépensé du jour et du lendemain = 50,40.
+    Le reçu vaut l'encaissé du jour et du lendemain.
+    Le payé vaut le dépensé du jour et du lendemain.
+    Vérifier que reçu − payé = 69,60.
+
+Remarque : les salaires (8 novembre 2026) : la feuille d'un mois, au barème de l'année ; le treizième en décembre ; l'AC
+Remarque : prélevée seulement sous son plafond annuel ; une feuille par mois ; rien sans barème. Le barème 2026 est celui
+Remarque : de Praxis au départ (OFAS) ; un objet neuf reçoit tous ses champs, les valeurs « au départ » ne servant qu'aux bases d'avant.
+Pour engager un salaire mensuel et un taux d'occupation :
+    Le b vaut un nouveau barème :
+        L'année vaut 2026.
+        Le taux AVS vaut 5,3.
+        Le taux AC vaut 1,1.
+        Le plafond AC vaut 148200.
+        Le taux AVS employeur vaut 5,3.
+        Le taux AC employeur vaut 1,1.
+        Le taux allocations familiales vaut 0.
+        Le taux LAA employeur vaut 0.
+    Conserver le b.
+    Le e vaut un nouveau salarié :
+        Le nom vaut « Muller ».
+        Le prénom vaut « Léa ».
+        Le pays vaut « Suisse ».
+        Le salaire mensuel vaut salaire mensuel.
+        Le taux d'occupation vaut taux d'occupation.
+        Le treizième vaut faux.
+        Le taux LAA vaut 1.
+        La retenue LPP vaut 150.
+        La retenue d'impôt vaut 0.
+    Conserver le e.
+    Rendre le e.
+
+Scénario « la feuille d'un mois : le brut au taux d'occupation, les retenues, le net » :
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    Établir la feuille de l'employée et l'ouverture de 3 et de 2026, qui donne la f.
+    Vérifier que le brut de la f = 4000.
+    Vérifier que la retenue AVS de la f = 212.
+    Vérifier que la retenue AC de la f = 44.
+    Vérifier que la retenue LAA de la f = 40.
+    Vérifier que la retenue LPP de la f = 150.
+    Vérifier que le net de la f = 3554.
+
+Scénario « le treizième double le brut de décembre » :
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    Le treizième de l'employée devient vrai.
+    Établir la feuille de l'employée et l'ouverture de 12 et de 2026, qui donne la f.
+    Vérifier que le brut de la f = 8000.
+
+Scénario « l'AC ne se prélève que sous son plafond annuel » :
+    Installer, qui donne le s.
+    Engager 20000 et 100, qui donne l'employée.
+    Pour chaque m de 1 à 7 :
+        Établir la feuille de l'employée et l'ouverture de m et de 2026.
+    Établir la feuille de l'employée et l'ouverture de 8 et de 2026, qui donne l'août.
+    Remarque : sept mois à 20000 font 140000 ; reste 8200 sous le plafond de 148200, à 1,1 % : 90,20.
+    Vérifier que la retenue AC de l'août = 90,20.
+    Établir la feuille de l'employée et l'ouverture de 9 et de 2026, qui donne le septembre.
+    Vérifier que la retenue AC du septembre = 0.
+    Vérifier que la retenue AVS du septembre = 1060.
+
+Scénario « une feuille par mois » :
+    Installer, qui donne le s.
+    Engager 5000 et 100, qui donne l'employée.
+    Établir la feuille de l'employée et l'ouverture de 3 et de 2026.
+    Essayer :
+        Établir la feuille de l'employée et l'ouverture de 3 et de 2026.
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le motif de l'échec = « La feuille de Muller existe déjà pour ce mois : efface-la d'abord si elle est fausse. ».
+
+Scénario « pas de feuille sans le barème de l'année » :
+    Installer, qui donne le s.
+    Engager 5000 et 100, qui donne l'employée.
+    Essayer :
+        Établir la feuille de l'employée et l'ouverture de 3 et de 2025.
+        Vérifier que faux.
+    En cas d'échec de refus :
+        Vérifier que le motif de l'échec = « Pas de barème pour 2025 : ajoute-le dans Personnel, Barèmes. ».

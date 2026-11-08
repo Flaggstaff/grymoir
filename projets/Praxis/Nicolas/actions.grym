@@ -928,6 +928,12 @@ Le mois en lettres d'un numéro de mois :
     Si numéro de mois = 11, rendre « novembre ».
     Rendre « décembre ».
 
+Remarque : la comptabilité en recettes-dépenses (8 novembre 2026), une fois pour l'écran, le journal, l'export et les
+Remarque : scénarios : l'encaissé, ce qui est payé entre deux jours (le premier compris, le second non), à sa date
+Remarque : d'encaissement et jamais à celle de la séance, ni « à payer » ni « offert » ; le dépensé, les frais datés entre les deux.
+L'encaissé d'un début et d'une fin vaut la somme des prix des séances conservées dont l'encaissement ≥ début et l'encaissement < fin et le paiement ≠ « à payer » et le paiement ≠ « offert ».
+Le dépensé d'un début et d'une fin vaut la somme des montants des frais conservés dont la date ≥ début et la date < fin.
+
 Remarque : l'ouverture d'un mois, son premier jour : un numéro de 1 à 12 et une année.
 L'ouverture d'un numéro de mois et d'un millésime :
     Rendre le premier jour du millésime + (numéro de mois − 1) mois.
