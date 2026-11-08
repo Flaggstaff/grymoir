@@ -51,6 +51,8 @@ void serie_liberer(char **noms, size_t n) {
 }
 
 #ifdef _WIN32
+#include <winsock2.h>   /* avant windows.h, que winsock2.h exige (WSJT-X, plus bas) */
+#include <ws2tcpip.h>
 #include <windows.h>
 
 size_t serie_ports(char ***noms) {
@@ -262,8 +264,6 @@ char *serie_echanger(const char *port, long bauds, const char *question, char **
  * hors antenne. */
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
 typedef SOCKET Prise;
 #define PRISE_INVALIDE INVALID_SOCKET
 #else

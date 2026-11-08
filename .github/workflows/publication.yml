@@ -37,7 +37,11 @@ jobs:
           key: modele-large-v3-turbo-q5_0-e050f797
       - name: Qt 6
         run: brew install qt
+      # Les essais sont joués avant le tag, sur un Mac, par ./appliquer ; les Mac de GitHub n'ont pas d'écran pour ceux
+      # de l'atelier. Ici, la fabrication seulement.
       - name: GrymoiR.dmg
+        env:
+          GRYM_SANS_ESSAIS: '1'
         run: |
           ./paquet-mac
           mkdir -p sortie
@@ -82,10 +86,11 @@ jobs:
           install: >-
             make diffutils git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-multimedia mingw-w64-ucrt-x86_64-qt6-tools
+      # Les essais Windows sont ceux de tests.yml ; ici, la fabrication seulement.
       - name: GrymoiR-installation.exe
         shell: msys2 {0}
         run: |
-          GRYM_VERSION="${VERSION#v}" ./paquet-windows
+          GRYM_SANS_ESSAIS=1 GRYM_VERSION="${VERSION#v}" ./paquet-windows
           mkdir -p sortie
           mv paquet/GrymoiR-installation.exe "sortie/GrymoiR-${VERSION#v}-windows.exe"
       - uses: actions/upload-artifact@v4

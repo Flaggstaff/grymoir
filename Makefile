@@ -59,7 +59,7 @@ grym-suites: src/grym-suites.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym-suites.c $(ANALYSEUR)
 
 test_serie: tests/test_serie.c src/serie.c src/texte.c src/serie.h $(RESSOURCES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serie.c src/serie.c src/texte.c $(RESSOURCES)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serie.c src/serie.c src/texte.c $(RESSOURCES) $(RESEAU)
 
 test_lexeur: tests/test_lexeur.c $(LEXEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lexeur.c $(LEXEUR)
@@ -68,13 +68,13 @@ test_analyseur: tests/test_analyseur.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_analyseur.c $(ANALYSEUR)
 
 test_machine: tests/test_machine.c $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_machine.c $(EXECUTION) -lm $(DL)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_machine.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 test_imprimeur: tests/test_imprimeur.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_imprimeur.c $(ANALYSEUR)
 
 test_compact: tests/test_compact.c $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_compact.c $(EXECUTION) -lm $(DL)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_compact.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 test_base: tests/test_base.c $(SQLITE_O)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_base.c $(SQLITE_O)
@@ -86,7 +86,7 @@ test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/ser
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION) -lm $(DL)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide test_serie
 	./test_lexeur

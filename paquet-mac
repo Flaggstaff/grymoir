@@ -16,8 +16,14 @@ qt="$(brew --prefix qt)"
 
 echo "1. Construction (cœur, atelier) et essais…"
 ./atelier --construire
-make -s test > /dev/null
-ctest --test-dir construction --output-on-failure > /dev/null
+# GRYM_SANS_ESSAIS=1 : sans les essais (la publication, où ./appliquer les a déjà joués sur un Mac avant le tag)
+if [ "${GRYM_SANS_ESSAIS:-}" = "1" ]; then
+    echo "   essais sautés (GRYM_SANS_ESSAIS=1)"
+else
+    make -s test > /tmp/grymoir-paquet-essais.txt 2>&1 || { tail -n 40 /tmp/grymoir-paquet-essais.txt >&2; exit 1; }
+    ctest --test-dir construction --output-on-failure > /tmp/grymoir-paquet-ctest.txt 2>&1 \
+        || { tail -n 40 /tmp/grymoir-paquet-ctest.txt >&2; exit 1; }
+fi
 
 echo "2. L'application : outil grym et exemple embarqués…"
 paquet="$depot/paquet"
