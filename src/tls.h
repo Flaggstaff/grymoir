@@ -12,6 +12,9 @@ typedef struct TlsConnexion TlsConnexion;
  * l'autorité. Les clés ne sont lisibles que par leur propriétaire. 0 et *erreur (à libérer) en cas d'échec. */
 int tls_preparer_certificats(const char *dossier, const char *nom, const char *const *noms, size_t nb, char **erreur);
 
+/* Les noms et adresses du certificat du serveur (ses noms alternatifs), dans l'ordre : *noms à libérer. */
+int tls_noms(const char *dossier, char ***noms, size_t *nb, char **erreur);
+
 /* Le serveur, avec serveur.crt et serveur.cle du dossier ; NULL et *erreur. */
 TlsServeur *tls_serveur_creer(const char *dossier, char **erreur);
 void tls_serveur_detruire(TlsServeur *s);

@@ -39,6 +39,7 @@
 #else
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <direct.h>
 #endif
 
 struct TlsServeur {
@@ -176,6 +177,11 @@ static char *nom_distinctif(const char *cn) {
 
 int tls_preparer_certificats(const char *dossier, const char *nom, const char *const *noms, size_t nb, char **erreur) {
     *erreur = NULL;
+#ifdef _WIN32
+    _mkdir(dossier);   /* le dossier, s'il manque (pas ses parents) */
+#else
+    mkdir(dossier, 0700);
+#endif
     mbedtls_entropy_context e;
     mbedtls_ctr_drbg_context h;
     if (!preparer_hasard(&e, &h, erreur)) return 0;
@@ -197,8 +203,9 @@ int tls_preparer_certificats(const char *dossier, const char *nom, const char *c
         int r = mbedtls_pk_parse_keyfile(&kca, ca_cle, NULL, mbedtls_ctr_drbg_random, &h);
         if (r != 0) { *erreur = message_mbedtls("La clé de l'autorité ne se lit pas", r); ok = 0; }
     }
-    /* le serveur : ses noms (DNS) et ses adresses (IPv4, IPv6), dans l'ordre donné */
-    for (size_t k = nb; ok && k > 0; k--) {
+    /* le serveur : ses noms (DNS) et ses adresses (IPv4, IPv6). Mbed TLS écrit la liste à l'envers : elle se construit
+     * donc dans l'ordre donné, pour que le certificat la porte dans cet ordre, le premier nom en tête */
+    for (size_t k = 1; ok && k <= nb; k++) {
         mbedtls_x509_san_list *n = grym_allouer(sizeof *n);
         memset(n, 0, sizeof *n);
         const char *x = noms[k - 1];
@@ -227,6 +234,36 @@ int tls_preparer_certificats(const char *dossier, const char *nom, const char *c
     mbedtls_ctr_drbg_free(&h);
     mbedtls_entropy_free(&e);
     free(ca_crt); free(ca_cle); free(sv_crt); free(sv_cle); free(cn_ca); free(dn_ca); free(dn_sv);
+    return ok;
+}
+
+int tls_noms(const char *dossier, char ***noms, size_t *nb, char **erreur) {
+    *noms = NULL;
+    *nb = 0;
+    char *crt = grym_formater("%s/serveur.crt", dossier);
+    mbedtls_x509_crt c;
+    mbedtls_x509_crt_init(&c);
+    int ok = mbedtls_x509_crt_parse_file(&c, crt) == 0;
+    if (!ok) *erreur = grym_formater("Le certificat « %s » ne se lit pas : crée-le avec « grym certificat ».", crt);
+    for (const mbedtls_x509_sequence *s = ok ? &c.subject_alt_names : NULL; s && s->buf.p; s = s->next) {
+        mbedtls_x509_subject_alternative_name n;
+        if (mbedtls_x509_parse_subject_alt_name(&s->buf, &n) != 0) continue;
+        char t[256];
+        t[0] = 0;
+        const unsigned char *p = n.san.unstructured_name.p;
+        const size_t l = n.san.unstructured_name.len;
+        if (n.type == MBEDTLS_X509_SAN_DNS_NAME && l < sizeof t) { memcpy(t, p, l); t[l] = 0; }
+        else if (n.type == MBEDTLS_X509_SAN_IP_ADDRESS && (l == 4 || l == 16))
+            inet_ntop(l == 4 ? AF_INET : AF_INET6, p, t, sizeof t);
+        mbedtls_x509_free_subject_alt_name(&n);
+        if (!t[0]) continue;
+        *noms = realloc(*noms, (*nb + 1) * sizeof **noms);
+        if (!*noms) { fprintf(stderr, "grym : mémoire épuisée\n"); exit(1); }
+        (*noms)[(*nb)++] = grym_dupliquer(t);
+    }
+    if (ok && !*nb) { *erreur = grym_formater("Le certificat « %s » ne porte aucun nom.", crt); ok = 0; }
+    mbedtls_x509_crt_free(&c);
+    free(crt);
     return ok;
 }
 

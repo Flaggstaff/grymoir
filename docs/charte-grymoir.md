@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.67, révisée le 7 novembre 2026.
+Version 1.68, révisée le 8 novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -156,7 +156,7 @@ L'architecture de la VM prévoit la recompilation à chaud d'une formule dans un
 
 Interface graphique, réseau, concurrence, optimisation.
 
-Depuis la v2.0 : interface graphique par le navigateur, servie par `grym` ; écoute limitée à la machine locale (127.0.0.1), pendant l'exécution d'un programme (`docs/v2.md`, § 5). Concurrence et optimisation restent hors périmètre.
+Depuis la v2.0 : interface graphique par le navigateur, servie par `grym` ; écoute limitée à la machine locale (127.0.0.1), pendant l'exécution d'un programme (`docs/v2.md`, § 5). Depuis le 8 novembre 2026, plusieurs navigateurs à la fois, une session chacune, sur une même base (`grym servir --sessions`) ; et le réseau local, en TLS seulement, avec le certificat du cabinet (`--reseau`, `docs/v2.md`, § 12) : jamais en clair, jamais directement depuis internet. Le langage lui-même reste sans concurrence : chaque session exécute son programme seule, la base arbitre (grammaire, § 16.6).
 
 Depuis, le réseau sortant existe, à l'initiative du programme seulement : les envois web en HTTPS (grammaire 2.42, § 22.18), les courriels (2.94, § 22.27). Un programme lance aussi d'autres programmes, sans shell (3.04, § 15.10). Une bibliothèque écrit un calcul en C, chargé par le système, jamais compilé par GrymoiR (3.14, § 21.10). Une minuterie d'écran (3.03) n'est pas de la concurrence : ses échéances passent une à une, entre les événements.
 
@@ -302,3 +302,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.65 | 2026-11-07 | Art. 11 : les fonctions C des bibliothèques (grammaire 3.14). Art. 13 : la sorte `natif` s'ajoute (point 4) ; le contrat `src/grym_natif.h` est promis, seule exception à « l'interface des fichiers de `src/` » hors promesse (point 5) |
 | 1.66 | 2026-11-07 | Art. 14 : la licence, EUPL v. 1.2 seulement, et l'exception pour les applications écrites en GrymoiR |
 | 1.67 | 2026-11-07 | Art. 13 : la sorte `conflit` s'ajoute (grammaire 3.16) |
+| 1.68 | 2026-11-08 | Art. 11 : plusieurs sessions sur une base, et le réseau local en TLS seulement (`docs/v2.md`, § 11, § 12) ; le langage reste sans concurrence |

@@ -1,0 +1,31 @@
+#!/bin/sh
+# « grym servir --reseau dossier » (docs/v2.md, § 12, 8 novembre 2026) : l'aiguilleur sur le réseau local, en TLS, avec
+# les certificats de « grym certificat ». Le client Python vérifie le certificat par l'autorité du cabinet, comme un
+# navigateur qui l'a installée. Sans python3, ou sous Windows, sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "sessions-reseau : sauté (Windows)"; exit 0;; esac
+command -v python3 > /dev/null || { echo "sessions-reseau : sauté (python3 absent)"; exit 0; }
+d=$(mktemp -d)
+cp "$racine/tests/sessions/p.grym" "$d/"
+cd "$d" || exit 1
+"$grym" certificat cert "Cabinet d'essai" praxis.local 127.0.0.1 > /dev/null 2>&1
+port=$((40000 + $$ % 20000))
+"$grym" servir p.grym --reseau cert --port "$port" --sans-navigateur > ag.txt 2>&1 < /dev/null &
+pid=$!
+trap 'kill $pid 2> /dev/null; wait $pid 2> /dev/null; rm -rf "$d"' EXIT
+n=0
+while ! grep -q 'jeton=' ag.txt 2> /dev/null && [ "$n" -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3"; echo "attendu :"; echo "$2"; echo "obtenu :"; echo "$1"; cat ag.txt; fi; }
+verifier "$(grep -o 'https://[^/]*' ag.txt | head -1)" "https://praxis.local:$port" "l'adresse affichée, le premier nom du certificat"
+verifier "$(python3 "$racine/tests/sessions/reseau.py" "$d" "$port" 2>&1)" "entrée : 303 True True
+page : 200 True
+hôte 127.0.0.1 : 200
+hôte inconnu : 403
+en clair : fermé
+sans autorité : refusé
+toujours debout : 200" "le réseau, en TLS"
+verifier "$("$grym" servir p.grym --reseau /pas/de/certificats --sans-navigateur 2>&1)" "Le certificat « /pas/de/certificats/serveur.crt » ne se lit pas : crée-le avec « grym certificat »." "sans certificat"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

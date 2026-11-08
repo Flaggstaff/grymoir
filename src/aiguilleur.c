@@ -22,6 +22,7 @@
 #include "aiguilleur.h"
 #include "empreinte.h"
 #include "texte.h"
+#include "tls.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +30,8 @@
 
 #ifdef _WIN32
 int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
-                      void (*ouvrir)(const char *adresse)) {
-    (void)grym; (void)programme; (void)port; (void)navigateur; (void)inactivite; (void)ouvrir;
+                      const char *reseau, void (*ouvrir)(const char *adresse)) {
+    (void)grym; (void)programme; (void)port; (void)navigateur; (void)inactivite; (void)reseau; (void)ouvrir;
     fputs("« grym servir --sessions » ne tourne pas encore sous Windows : lance-le sur un Mac ou sous Linux.\n", stderr);
     return EXIT_FAILURE;
 }
@@ -59,11 +60,35 @@ typedef struct {
     time_t derniere;     /* sa dernière requête */
 } Session;
 
+/* Une connexion d'un navigateur : en clair sur 127.0.0.1, en TLS sur le réseau (§ 12). */
+typedef struct {
+    int fd;
+    TlsConnexion *tls;
+} Flux;
+
+static long flux_lire(Flux *f, void *b, size_t n) {
+    if (f->tls) return tls_lire(f->tls, b, n);
+    for (;;) {
+        ssize_t r = read(f->fd, b, n);
+        if (r < 0 && errno == EINTR) continue;
+        return (long)r;
+    }
+}
+
+static int tout_ecrire(int f, const char *d, size_t n);
+
+static int flux_ecrire(Flux *f, const char *d, size_t n) {
+    return f->tls ? tls_ecrire(f->tls, d, n) : tout_ecrire(f->fd, d, n);
+}
+
 typedef struct {
     const char *grym, *programme;
     int ecoute, port;
     char jeton[33];          /* celui de l'adresse affichée */
     char hote[32], origine[48];
+    TlsServeur *tls;         /* --reseau : le chiffrement ; NULL sur 127.0.0.1 */
+    char **hotes, **origines;   /* --reseau : les noms du certificat, avec le port ; « https://… » */
+    size_t nb_hotes;
     Session s[MAX_SESSIONS];
     int inactivite;          /* en secondes */
 } Aiguilleur;
@@ -97,16 +122,16 @@ static int tout_ecrire(int f, const char *d, size_t n) {
     return 1;
 }
 
-static void repondre_simple(int f, const char *statut, const char *entetes, const char *texte) {
+static void repondre_simple(Flux *f, const char *statut, const char *entetes, const char *texte) {
     char *r = grym_formater("HTTP/1.1 %s\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\n"
                             "X-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: same-origin\r\n"
                             "%sContent-Length: %lu\r\nConnection: close\r\n\r\n%s", statut, entetes ? entetes : "",
                             (unsigned long)strlen(texte), texte);
-    tout_ecrire(f, r, strlen(r));
+    flux_ecrire(f, r, strlen(r));
     free(r);
 }
 
-static void refuser(int f, const char *pourquoi) {
+static void refuser(Flux *f, const char *pourquoi) {
     char *p = grym_formater("<!doctype html><meta charset=\"utf-8\"><title>GrymoiR</title><p>%s</p>", pourquoi);
     repondre_simple(f, "403 Forbidden", NULL, p);
     free(p);
@@ -148,14 +173,11 @@ static const char *cookie_visiteur(const char *e, size_t *n) {
 
 /* Lit les en-têtes (jusqu'à la ligne vide), cinq secondes au plus ; NULL si la requête ne vient pas. Le surplus
  * (le début du corps) reste dans *lu, après *taille_entetes octets. */
-static char *lire_entetes(int f, size_t *lu, size_t *taille_entetes) {
-    struct timeval t = { 5, 0 };
-    setsockopt(f, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof t);
+static char *lire_entetes(Flux *f, size_t *lu, size_t *taille_entetes) {
     char *b = grym_allouer(MAX_ENTETES + 1);
     size_t n = 0;
     while (n < MAX_ENTETES) {
-        ssize_t r = read(f, b + n, MAX_ENTETES - n);
-        if (r < 0 && errno == EINTR) continue;
+        long r = flux_lire(f, b + n, MAX_ENTETES - n);
         if (r <= 0) break;
         n += (size_t)r;
         b[n] = 0;
@@ -230,7 +252,7 @@ static void arreter_session(Session *s) {
 }
 
 /* Fils : lit le reste du corps, transmet la requête récrite à la session, rend sa réponse au navigateur. */
-static void transmettre(const Session *s, int f, char *e, size_t lu, size_t te) {
+static void transmettre(const Session *s, Flux *f, char *e, size_t lu, size_t te) {
     size_t lcl = 0;
     const char *cl = entete(e, "content-length", &lcl);
     const unsigned long corps = cl ? strtoul(cl, NULL, 10) : 0;
@@ -291,11 +313,10 @@ static void transmettre(const Session *s, int f, char *e, size_t lu, size_t te) 
     free(r.d);
     /* le reste du corps, puis la réponse */
     struct timeval t = { 30, 0 };
-    setsockopt(f, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof t);
+    setsockopt(f->fd, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof t);
     char tampon[65536];
     for (unsigned long reste = corps > lu - te ? corps - (lu - te) : 0; ok && reste;) {
-        ssize_t n = read(f, tampon, reste < sizeof tampon ? reste : sizeof tampon);
-        if (n < 0 && errno == EINTR) continue;
+        long n = flux_lire(f, tampon, reste < sizeof tampon ? reste : sizeof tampon);
         if (n <= 0) { ok = 0; break; }
         ok = tout_ecrire(c, tampon, (size_t)n);
         reste -= (unsigned long)n;
@@ -304,7 +325,7 @@ static void transmettre(const Session *s, int f, char *e, size_t lu, size_t te) 
         ssize_t n = read(c, tampon, sizeof tampon);
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) break;
-        if (!tout_ecrire(f, tampon, (size_t)n)) break;
+        if (!flux_ecrire(f, tampon, (size_t)n)) break;
     }
     close(c);
 }
@@ -344,17 +365,34 @@ static void veiller(Aiguilleur *a) {
         }
 }
 
-static void accueillir(Aiguilleur *a, int f) {
+static int parmi(const char *x, size_t n, char *const *liste, size_t nb, const char *seul) {
+    if (!x) return 0;
+    if (!liste) return n == strlen(seul) && strncmp(x, seul, n) == 0;
+    for (size_t k = 0; k < nb; k++)
+        if (n == strlen(liste[k]) && strncmp(x, liste[k], n) == 0) return 1;
+    return 0;
+}
+
+static void accueillir(Aiguilleur *a, int fd) {
+    Flux flux = { fd, NULL }, *f = &flux;
+    struct timeval t5 = { 5, 0 };
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &t5, sizeof t5);   /* la poignée de main et les en-têtes : 5 s au plus */
+    if (a->tls) {
+        char *pb = NULL;
+        flux.tls = tls_accepter(a->tls, fd, &pb);
+        if (!flux.tls) { free(pb); close(fd); return; }   /* un navigateur en clair, un balayage du réseau */
+    }
     size_t lu = 0, te = 0;
     char *e = lire_entetes(f, &lu, &te);
-    if (!e) { close(f); return; }
+    if (!e) { tls_fermer(flux.tls, 0); close(fd); return; }
     size_t lh = 0, lo = 0, lv = 0;
     const char *h = entete(e, "host", &lh), *o = entete(e, "origin", &lo);
     const char *v = cookie_visiteur(e, &lv);
     const int post = strncmp(e, "POST ", 5) == 0;
-    /* les mêmes gardes que serveur.c : l'hôte attendu (pas de DNS rebinding), l'origine d'un envoi */
-    if (!h || lh != strlen(a->hote) || strncmp(h, a->hote, lh) != 0) { refuser(f, "Nom d'hôte inattendu."); goto fin; }
-    if (post && (!o || lo != strlen(a->origine) || strncmp(o, a->origine, lo) != 0)) { refuser(f, "Origine inattendue."); goto fin; }
+    /* les mêmes gardes que serveur.c : l'hôte attendu (pas de DNS rebinding), l'origine d'un envoi ; sur le réseau,
+     * les noms du certificat seulement (§ 12) */
+    if (!parmi(h, lh, a->hotes, a->nb_hotes, a->hote)) { refuser(f, "Nom d'hôte inattendu."); goto fin; }
+    if (post && !parmi(o, lo, a->origines, a->nb_hotes, a->origine)) { refuser(f, "Origine inattendue."); goto fin; }
     Session *s = session_de(a, v, lv);
     if (!s && strncmp(e, "GET /?jeton=", 12) == 0) {
         /* un nouveau visiteur, avec le jeton de l'adresse affichée : sa session, son cookie */
@@ -366,7 +404,8 @@ static void accueillir(Aiguilleur *a, int f) {
         if (!hex_aleatoire(s->visiteur)) { s->visiteur[0] = 0; refuser(f, "Aucun générateur aléatoire."); goto fin; }
         s->pid = 0;
         s->sortie = -1;
-        char *c = grym_formater("Set-Cookie: grym_aiguilleur=%s; HttpOnly; SameSite=Strict; Path=/\r\nLocation: /\r\n", s->visiteur);
+        char *c = grym_formater("Set-Cookie: grym_aiguilleur=%s; HttpOnly; SameSite=Strict; Path=/%s\r\nLocation: /\r\n",
+                                s->visiteur, a->tls ? "; Secure" : "");
         repondre_simple(f, "303 See Other", c, "");
         free(c);
         printf("Nouveau visiteur %.6s….\n", s->visiteur);
@@ -389,18 +428,33 @@ static void accueillir(Aiguilleur *a, int f) {
         signal(SIGINT, SIG_DFL);
         signal(SIGTERM, SIG_DFL);
         transmettre(s, f, e, lu, te);
+        tls_fermer(flux.tls, 1);
         _exit(0);
     }
     if (p < 0) repondre_simple(f, "503 Service Unavailable", NULL, "Plus de processus disponible.");
+    else {   /* le fils a sa copie de la connexion chiffrée : le père oublie la sienne, sans rien envoyer */
+        tls_fermer(flux.tls, 0);
+        flux.tls = NULL;
+    }
 fin:
     free(e);
-    close(f);
+    if (flux.tls) tls_fermer(flux.tls, 1);
+    close(fd);
 }
 
 int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
-                      void (*ouvrir)(const char *adresse)) {
+                      const char *reseau, void (*ouvrir)(const char *adresse)) {
     Aiguilleur a;
     memset(&a, 0, sizeof a);
+    char **noms = NULL;
+    size_t nb_noms = 0;
+    if (reseau) {   /* § 12 : le certificat du serveur, ses noms ; écoute sur toutes les adresses, en TLS seulement */
+        char *pb = NULL;
+        a.tls = tls_serveur_creer(reseau, &pb);
+        if (a.tls && !tls_noms(reseau, &noms, &nb_noms, &pb)) { tls_serveur_detruire(a.tls); a.tls = NULL; }
+        if (!a.tls) { fprintf(stderr, "%s\n", pb); free(pb); return EXIT_FAILURE; }
+        if (!port) port = 8443;
+    }
     a.grym = grym;
     a.programme = programme;
     a.inactivite = inactivite > 0 ? inactivite * 60 : 30 * 60;
@@ -412,7 +466,8 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     struct sockaddr_in ad;
     memset(&ad, 0, sizeof ad);
     ad.sin_family = AF_INET;
-    ad.sin_addr.s_addr = htonl(0x7F000001);   /* 127.0.0.1, jamais le réseau (docs/v2.md, § 5, règle 1 ; S2) */
+    /* 127.0.0.1, sauf --reseau : alors toutes les adresses, en TLS seulement (docs/v2.md, § 5, règle 1 ; § 12) */
+    ad.sin_addr.s_addr = htonl(reseau ? INADDR_ANY : 0x7F000001);
     ad.sin_port = htons((unsigned short)port);
     if (a.ecoute < 0 || bind(a.ecoute, (struct sockaddr *)&ad, sizeof ad) != 0 || listen(a.ecoute, 64) != 0) {
         if (port) fprintf(stderr, "Le port %d est déjà pris : choisis-en un autre avec --port.\n", port);
@@ -425,9 +480,21 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     a.port = ntohs(ad.sin_port);
     snprintf(a.hote, sizeof a.hote, "127.0.0.1:%d", a.port);
     snprintf(a.origine, sizeof a.origine, "http://127.0.0.1:%d", a.port);
-    char adresse[96];
+    char adresse[300];
     snprintf(adresse, sizeof adresse, "http://127.0.0.1:%d/?jeton=%s", a.port, a.jeton);
-    printf("« %s » est servi, une session par navigateur, à l'adresse :\n  %s\nCtrl+C pour arrêter.\n", programme, adresse);
+    if (a.tls) {
+        a.hotes = grym_allouer(nb_noms * sizeof *a.hotes);
+        a.origines = grym_allouer(nb_noms * sizeof *a.origines);
+        for (size_t k = 0; k < nb_noms; k++) {
+            const int v6 = strchr(noms[k], ':') != NULL;   /* une adresse IPv6 s'écrit entre crochets */
+            a.hotes[k] = grym_formater(v6 ? "[%s]:%d" : "%s:%d", noms[k], a.port);
+            a.origines[k] = grym_formater(v6 ? "https://[%s]:%d" : "https://%s:%d", noms[k], a.port);
+        }
+        a.nb_hotes = nb_noms;
+        snprintf(adresse, sizeof adresse, "%s/?jeton=%s", a.origines[0], a.jeton);
+    }
+    printf("« %s » est servi, une session par navigateur, à l'adresse :\n  %s\n%sCtrl+C pour arrêter.\n", programme, adresse,
+           a.tls ? "Sur le réseau local, en TLS : chaque poste a installé l'autorité du cabinet (docs/v2.md, § 12).\n" : "");
     fflush(stdout);
     signal(SIGPIPE, SIG_IGN);
     struct sigaction sa;
@@ -449,6 +516,12 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     for (int k = 0; k < MAX_SESSIONS; k++) arreter_session(&a.s[k]);
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
     close(a.ecoute);
+    for (size_t k = 0; k < a.nb_hotes; k++) { free(a.hotes[k]); free(a.origines[k]); }
+    free(a.hotes);
+    free(a.origines);
+    for (size_t k = 0; k < nb_noms; k++) free(noms[k]);
+    free(noms);
+    tls_serveur_detruire(a.tls);
     return EXIT_SUCCESS;
 }
 #endif

@@ -110,6 +110,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/connexion
 	sh tests/sessions-concurrentes
 	sh tests/certificats
+	sh tests/sessions-reseau
 	sh tests/praxis-justificatif
 	sh tests/praxis-electronique
 	sh tests/praxis-twint
