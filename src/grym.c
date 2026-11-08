@@ -18,6 +18,7 @@
 #include "imprimeur.h"
 #include "vm.h"
 #include "serveur.h"
+#include "aiguilleur.h"
 #include "lsp.h"
 #include "texte.h"
 
@@ -652,15 +653,29 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "exemples") == 0) return exemples(argv[2]);
     if (argc == 3 && strcmp(argv[1], "scenarios") == 0) return scenarios(argv[2]);   /* § 9.7 */
     if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
-        int port = 0, navigateur = 1, bon = 1;
+        int port = 0, navigateur = 1, bon = 1, sessions = 0, inactivite = 30;
         for (int k = 3; k < argc && bon; k++) {
             if (strcmp(argv[k], "--sans-navigateur") == 0) navigateur = 0;
+            else if (strcmp(argv[k], "--sessions") == 0) sessions = 1;   /* 3.18 : une session par navigateur */
+            else if (strcmp(argv[k], "--inactivite") == 0 && k + 1 < argc) {
+                char *e = NULL;
+                long n = strtol(argv[++k], &e, 10);
+                bon = *e == '\0' && n > 0 && n <= 24 * 60;
+                inactivite = (int)n;
+            }
             else if (strcmp(argv[k], "--port") == 0 && k + 1 < argc) {
                 char *e = NULL;
                 long p = strtol(argv[++k], &e, 10);
                 bon = *e == '\0' && p > 0 && p < 65536;
                 port = (int)p;
             } else bon = 0;
+        }
+        if (bon && sessions) {
+            /* le programme doit se compiler avant qu'aucune session ne parte : l'erreur se voit ici, une fois */
+            Module *b = charger(argv[2]);
+            if (!b) return EXIT_FAILURE;
+            module_detruire(b);
+            return aiguilleur_servir(argv[0], argv[2], port, navigateur, inactivite, ouvrir_navigateur);
         }
         if (bon) return servir(argv[2], port, navigateur);
     }
@@ -677,6 +692,7 @@ int main(int argc, char **argv) {
             "  grym lancer fichier.grym            compile puis exécute\n"
             "  grym lancer fichier.grymb           exécute un bytecode compilé\n"
             "  grym servir fichier.grym            l'application dans le navigateur\n"
+            "    [--sessions] [--inactivite M]     une session par navigateur (docs/v2.md, § 11)\n"
             "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym migration fichier.grym         ce que le prochain lancement fera à la base, sans rien changer\n"

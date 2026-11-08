@@ -1,0 +1,33 @@
+#!/bin/sh
+# « grym servir --sessions » (grammaire 3.18, docs/v2.md, § 11, 8 novembre 2026) : deux navigateurs, deux sessions du même
+# programme sur la même base ; chacun se connecte et répond pour lui. Les gardes de l'aiguilleur : sans le jeton de
+# l'adresse, sans cookie, un autre hôte, une autre origine. Une session terminée renaît à la visite suivante.
+# Sans python3, ou sous Windows (pas encore pris en charge), sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "sessions-concurrentes : sauté (Windows)"; exit 0;; esac
+command -v python3 > /dev/null || { echo "sessions-concurrentes : sauté (python3 absent)"; exit 0; }
+d=$(mktemp -d)
+cp "$racine/tests/sessions/p.grym" "$d/"
+cd "$d" || exit 1
+"$grym" servir p.grym --sessions --sans-navigateur > ag.txt 2>&1 < /dev/null &
+pid=$!
+trap 'kill $pid 2> /dev/null; wait $pid 2> /dev/null; rm -rf "$d"' EXIT
+n=0
+while ! grep -q 'jeton=' ag.txt 2> /dev/null && [ "$n" -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+port=$(grep -o '127.0.0.1:[0-9]*' ag.txt | head -1 | cut -d: -f2)
+jeton=$(grep -o 'jeton=[0-9a-f]*' ag.txt | head -1 | cut -d= -f2)
+echo "$port $jeton" > adr.txt
+obtenu=$(python3 "$racine/tests/sessions/deux.py" "$d" 2>&1)
+attendu="A crée : p.grym Bonjour ana Ta couleur ? Envoyer Annuler
+B page : p.grym Nom d&#39;utilisateur ? Mot de passe ? Envoyer Annuler
+B se connecte : p.grym Bonjour ana Ta couleur ? Envoyer Annuler
+A répond : p.grym Bonjour ana Couleur de ana : rouge Application terminée. Tu peux fermer cet onglet.
+B répond : p.grym Bonjour ana Couleur de ana : vert Application terminée. Tu peux fermer cet onglet.
+sans cookie : 403  mauvais jeton : 403
+A revient : p.grym Nom d&#39;utilisateur ? Mot de passe ? Envoyer Annuler
+autre hôte : 403
+autre origine : 403"
+if [ "$obtenu" = "$attendu" ]; then echo "1/1 tests réussis"; exit 0; fi
+echo "ÉCHEC : deux navigateurs"; echo "attendu :"; echo "$attendu"; echo "obtenu :"; echo "$obtenu"; echo "aiguilleur :"; cat ag.txt
+exit 1

@@ -1,0 +1,8 @@
+Remarque : tests/sessions-concurrentes (3.18) : un programme servi par « grym servir --sessions ».
+Les utilisateurs se connectent.
+Un utilisateur, conservé, a :
+    un nom (texte), unique,
+    un mot de passe (mot de passe).
+Afficher « Bonjour » puis le nom de l'utilisateur connecté.
+La r vaut la réponse à « Ta couleur ? ».
+Afficher « Couleur de » puis le nom de l'utilisateur connecté puis « : » puis r.

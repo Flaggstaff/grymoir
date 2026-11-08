@@ -32,8 +32,8 @@ all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_mac
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(RESEAU) -lm $(DL)
+grym: src/grym.c src/lsp.c src/serveur.c src/aiguilleur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h src/aiguilleur.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/serveur.c src/aiguilleur.c $(EXECUTION) $(RESEAU) -lm $(DL)
 
 outils/windows/grym-ressources.o: outils/windows/grym.rc outils/windows/grymoir.manifest
 	$(WINDRES) -I outils/windows -i outils/windows/grym.rc -o $@
@@ -97,6 +97,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/recherche-par-cle
 	sh tests/conflits
 	sh tests/connexion
+	sh tests/sessions-concurrentes
 	sh tests/praxis-justificatif
 	sh tests/praxis-electronique
 	sh tests/praxis-twint
