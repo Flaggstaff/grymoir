@@ -411,6 +411,14 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "sortis", t);
             continue;
         }
+        if (est_cle(t, "plusieurs_postes")) {   /* _plusieurs_postes → le service à plusieurs postes (3.18) */
+            mot(r, "le", t);
+            mot(r, "service", t);
+            mot(r, "à", t);
+            mot(r, "plusieurs", t);
+            mot(r, "postes", t);
+            continue;
+        }
         if (est_cle(t, "utilisateur_connecté")) {   /* _utilisateur_connecté → l'utilisateur connecté (3.17) */
             emettre(r, J_ELISION, "l", t, 1);
             mot(r, "utilisateur", t);

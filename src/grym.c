@@ -694,7 +694,25 @@ int main(int argc, char **argv) {
             /* le programme doit se compiler avant qu'aucune session ne parte : l'erreur se voit ici, une fois */
             Module *b = charger(argv[2]);
             if (!b) return EXIT_FAILURE;
+            const int chiffree = b->base_chiffree;
             module_detruire(b);
+#ifndef _WIN32
+            if (chiffree && !getenv("GRYM_MOT_DE_PASSE_BASE")) {
+                /* 3.18 : une base chiffrée, son mot de passe une fois ici, pour toutes les sessions ; les postes
+                 * n'ont pas à le connaître (chacun se connecte comme le programme le demande) */
+                char *mdp = lire_masque("Mot de passe de la base, pour toutes les sessions : ");
+                if (!mdp || !*mdp) {
+                    fputs("Sans le mot de passe de la base, rien ne s'ouvre.\n", stderr);
+                    free(mdp);
+                    return EXIT_FAILURE;
+                }
+                setenv("GRYM_MOT_DE_PASSE_BASE", mdp, 1);
+                memset(mdp, 0, strlen(mdp));
+                free(mdp);
+            }
+#else
+            (void)chiffree;
+#endif
             return aiguilleur_servir(argv[0], argv[2], port, navigateur, inactivite, reseau, ouvrir_navigateur);
         }
         if (bon) return servir(argv[2], port, navigateur);

@@ -272,6 +272,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_NATIF:          return "NATIF";
     case I_CONNEXION:      return "CONNEXION";
     case I_CONNECTE:       return "CONNECTÉ";
+    case I_POSTES:         return "POSTES";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -505,6 +506,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_DOCUMENTS_SORTIS: besoin = 0; effet = 1; break;
             case I_CONNEXION: besoin = 0; effet = 0; break;
             case I_CONNECTE: besoin = 0; effet = 1; break;
+            case I_POSTES: besoin = 0; effet = 1; break;
             case I_NATIF: {   /* « n␟bibliothèque␟fonction » : dépile n, empile 1 (3.14) */
                 const char *dn = op < b->nb_constantes && b->constantes[op].type == C_TEXTE ? b->constantes[op].texte : "";
                 besoin = strtol(dn, NULL, 10);

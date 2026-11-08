@@ -203,6 +203,7 @@ static int lancer_session(Aiguilleur *a, Session *s) {
         close(t[0]);
         close(t[1]);
         close(a->ecoute);
+        setenv("GRYM_SESSION", "1", 1);   /* « le service à plusieurs postes » (3.18) */
         execlp(a->grym, a->grym, "servir", a->programme, "--sans-navigateur", (char *)NULL);
         _exit(127);
     }

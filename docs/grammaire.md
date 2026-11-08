@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.17 de la spécification, révisée le 8 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.18 de la spécification, révisée le 8 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2021,6 +2021,7 @@ Si le rôle de l'utilisateur connecté ≠ « direction », refuser « Réservé
 - **Le journal** (§ 16.19) porte le nom de l'utilisateur connecté, comme après `Signer le journal avec …` ; une signature écrite ensuite le remplace.
 - **Sans question** : les variables d'environnement `GRYM_UTILISATEUR` et `GRYM_MOT_DE_PASSE_UTILISATEUR` connectent directement, ou échouent sans relance ; pour les essais, et pour le serveur à venir. Comme `GRYM_MOT_DE_PASSE_BASE`, elles ne s'écrivent pas dans un programme.
 - **Dans un scénario** (§ 9.7), personne n'est connecté : la connexion est sautée.
+- *(3.18)* **`le service à plusieurs postes`** vaut vrai quand le programme tourne dans une session de `grym servir --sessions` ou `--reseau` (`docs/v2.md`, § 11), faux sinon : un programme fait pour un seul poste peut refuser d'être servi à plusieurs (`Si le service à plusieurs postes et …, refuser « … ».`), ou exiger un mot de passe sur le réseau. L'aiguilleur le dit à ses sessions par la variable `GRYM_SESSION`. Forme compacte : `_plusieurs_postes`.
 - **Pas encore** : changer son mot de passe par une phrase dédiée, les droits déclarés (un programme les vérifie lui-même par `Refuser`, § 18.1), plusieurs sessions à la fois (le serveur, docs/v2.md).
 - **Forme compacte** : `_connexion`, `_utilisateur_connecté`.
 - **Bytecode** : `CONNEXION` à la place de la phrase, `CONNECTÉ` pour l'expression, et la marque du module (`docs/vm.md`).
@@ -3192,3 +3193,4 @@ Pour rappeler un patient :
 | 3.15 | 2026-11-07 | § 16.3 : un nombre unique se compare par sa valeur, `1,0` est un doublon de `1` (la base comparait les textes). La recherche par clé passe par l'index : un nombre entier comparé à une valeur sans détour par le texte, un nombre unique avec un index unique en collation des nombres (`docs/vm.md`, § 8) ; 1 000 recherches dans 10 000 objets, de 3,7 s à 0,05 s (nombre entier) et de 2,4 s à 0,08 s (nombre) |
 | 3.16 | 2026-11-07 | § 16.6 : plusieurs programmes sur une base. Un champ écrit après une question, alors qu'un autre programme l'a changé pendant l'attente, est refusé (sorte `conflit`, § 18.2), champ par champ, au lieu d'écraser l'autre écriture. Première étape du client-serveur (S1) |
 | 3.17 | 2026-11-08 | § 16.20 : les utilisateurs. `Les utilisateurs se connectent.` demande un nom et un mot de passe à la place de la phrase, vérifiés contre l'entité `utilisateur` du programme ; le premier compte se crée s'il n'y en a aucun ; `l'utilisateur connecté` ; le journal porte son nom ; `GRYM_UTILISATEUR` et `GRYM_MOT_DE_PASSE_UTILISATEUR` pour connecter sans question. La console et l'atelier masquent un champ « mot de passe ». Forme compacte `_connexion`, `_utilisateur_connecté` |
+| 3.18 | 2026-11-08 | § 16.20 : `le service à plusieurs postes`, vrai dans une session de l'aiguilleur. Praxis s'en sert : monoposte par défaut, le multiposte se choisit dans la fiche du cabinet |

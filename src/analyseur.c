@@ -921,6 +921,7 @@ static const char *type_statique(const Noeud *n) {
     case N_EXTRAIRE: return n->forme == 9 ? "nombre entier" : n->forme == 10 ? NULL : "texte";   /* § 4.6 */
     case N_REPONSE: return n->texte2;
     case N_MOTIF: case N_SORTE: case N_GABARIT: case N_JSON_ECRIT: case N_COMMANDE: return "texte";
+    case N_POSTES: return "vrai ou faux";   /* 3.18 */
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
@@ -3163,6 +3164,14 @@ static Noeud *base(Analyse *a) {
             Noeud *n = noeud_creer(N_DOCUMENTS_SORTIS, t->ligne, t->colonne, t->debut);
             a->article_force = ART_AUCUN;
             for (int q = 0; q < saut; q++) avancer(a);
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+            return n;
+        }
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "service") && est_mot(voir(a, 2), "à") && est_mot(voir(a, 3), "plusieurs")
+            && est_mot(voir(a, 4), "postes") && !visible(a, "service")) {
+            /* « le service à plusieurs postes » (3.18, § 16.20) : le programme tourne dans une session de l'aiguilleur */
+            Noeud *n = noeud_creer(N_POSTES, t->ligne, t->colonne, t->debut);
+            a->i += 5;
             n->fin = fin_jeton(&a->j[a->i - 1]);
             return n;
         }

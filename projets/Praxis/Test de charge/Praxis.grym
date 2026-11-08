@@ -39,7 +39,7 @@ Remarque : où en est l'ordonnance ouverte, calculé avant d'ouvrir son écran (
 L'usage ouvert vaut « ».
 Remarque : ce que le service SMS a répondu au dernier essai, tel quel.
 L'état SMS vaut « Aucun essai encore. ».
-Remarque : qui a ouvert Praxis (3 novembre 2026) : « Direction » ou « Équipe » ; sans gestion du personnel, toujours la Direction.
+Remarque : qui a ouvert Praxis (3 novembre 2026) : « Direction » ou « Équipe » ; en monoposte, toujours la Direction.
 Le rôle ouvert vaut « Direction ».
 L'état calendly vaut « Les réservations du site, relues à l'ouverture ».
 Remarque : l'agenda (1er novembre 2026) : les jours montrés, leur titre, la grille (jours et plages), le jour proposé à une
@@ -214,7 +214,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Facturation », en tuile, avec la description « À encaisser, factures, quittances »,
     un bouton « Comptabilité », en tuile, avec la description « Recettes, frais, rappels, journal »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
-    un bouton « Personnel », en tuile, avec la description « Salariés, salaires, feuilles de salaire », visible si la gestion du personnel du cabinet conservé et le rôle ouvert = « Direction »,
+    un bouton « Personnel », en tuile, avec la description « Salariés, salaires, feuilles de salaire », visible si le multiposte du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
     un bouton « Relire les rendez-vous », en tuile, avec la description « Les réservations du site Calendly », visible si l'agenda du cabinet conservé = « Calendly »,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
@@ -223,7 +223,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     le texte l'inachevé du cabinet conservé,
     côte à côte :
         un bouton « Fermer l'application »,
-        un bouton « Verrouiller », visible si la gestion du personnel du cabinet conservé.
+        un bouton « Verrouiller », visible si le multiposte du cabinet conservé.
 
 Remarque : la page de garde (3 novembre 2026) : un seul mot de passe, qui dit qui est là ; pas de bouton pour passer outre.
 L'écran de garde, (le nom du cabinet conservé) en grand, montre :
@@ -1186,7 +1186,7 @@ L'écran du cabinet, « Le cabinet », montre :
             une facturation des absences (vrai ou faux), en interrupteur, avec l'indication « Seulement si les patients en sont avertis, par écrit »,
             un choix d'agenda (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Configuration propose Rendez-vous (Praxis, OneDoc ou Calendly) et SMS »,
             une facturation aux assurances (vrai ou faux), en interrupteur, avec l'indication « Allumé : les assureurs, l'assurance des patients, leurs ordonnances »,
-            une gestion du personnel (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Direction et l'Équipe ont chacune leur mot de passe (Configuration, Accès), et l'accueil propose Personnel »,
+            un multiposte (vrai ou faux), en interrupteur, avec l'indication « Allumé : plusieurs postes du cabinet ouvrent Praxis par le réseau ; la Direction et l'Équipe ont chacune leur mot de passe (Configuration, Accès) ; l'accueil propose Personnel (les salaires) »,
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
             un canton (texte), facultatif, avec l'indication « En deux lettres : FR »,
@@ -1294,7 +1294,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
     un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis, OneDoc ou Calendly », visible si le choix d'agenda du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « SMS », en tuile, avec la description « Le compte ASPSMS, un essai », visible si le choix d'agenda du cabinet conservé et le rôle ouvert = « Direction »,
-    un bouton « Accès », en tuile, avec la description « Les mots de passe de la Direction et de l'Équipe », visible si la gestion du personnel du cabinet conservé et le rôle ouvert = « Direction »,
+    un bouton « Accès », en tuile, avec la description « Les mots de passe de la Direction et de l'Équipe », visible si le multiposte du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN »,
     un bouton « Journal », en tuile, avec la description « Les derniers changements : patients, séances, factures, virements », visible si le rôle ouvert = « Direction »,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
@@ -3254,7 +3254,7 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     La facturation des absences du c devient la facturation des absences de l'écran.
     Le choix d'agenda du c devient le choix d'agenda de l'écran.
     La facturation aux assurances du c devient la facturation aux assurances de l'écran.
-    La gestion du personnel du c devient la gestion du personnel de l'écran.
+    Le multiposte du c devient le multiposte de l'écran.
     Si le choix d'agenda du c est faux, l'agenda du c devient « Praxis ».
     Si le logo de l'écran est présent, le logo du c devient le logo de l'écran.
     Si la signature de l'écran est présente, la signature du c devient la signature de l'écran.
@@ -3276,6 +3276,14 @@ Quand on clique sur « Retirer la signature » dans l'écran du cabinet :
 Quand on clique sur « Fermer » dans l'écran des soins :
     Fermer l'écran.
 
+Remarque : monoposte ou multiposte (8 novembre 2026) : Praxis s'ouvre sur un seul poste, sauf si le cabinet allume le
+Remarque : multiposte dans sa fiche. Servie à plusieurs postes (« grym servir Praxis.grym --reseau … », docs/v2.md, § 12),
+Remarque : elle l'exige, ainsi que le mot de passe de la Direction : sur le réseau, personne n'entre sans mot de passe ; et
+Remarque : elle se fonde sur le poste principal, jamais par le réseau.
+Si le service à plusieurs postes :
+    Si le premier lancement, refuser « Praxis se fonde sur le poste principal, pas par le réseau : ouvre-la d'abord là. ».
+    Si le multiposte du cabinet conservé est faux, refuser « Praxis est en monoposte : allume le multiposte dans la fiche du cabinet, sur le poste principal, puis relance le service. ».
+    Si le mot de passe de direction du cabinet conservé est absent, refuser « Pose d'abord le mot de passe de la Direction (Configuration, Accès), sur le poste principal : sur le réseau, personne n'entre sans mot de passe. ».
 Remarque : les années du menu : celles des séances et des frais, et l'année en cours.
 Recenser les exercices d'aujourd'hui.
 Remarque : le mot de passe, l'application l'a déjà demandé ; au premier lancement, le dossier des sauvegardes ; puis l'accueil.
@@ -3285,8 +3293,8 @@ Remarque : les réservations du site, relues avant l'accueil (25 octobre 2026) ;
 Relire les réservations, qui donne l'état calendly.
 Remarque : les rappels SMS qui n'ont pas pu partir, réessayés (28 octobre 2026).
 Rattraper les rappels.
-Remarque : la page de garde (3 novembre 2026) : quand le cabinet gère son personnel et que la Direction a un mot de passe.
-Si la gestion du personnel du cabinet conservé :
+Remarque : la page de garde (3 novembre 2026) : en multiposte, quand la Direction a un mot de passe.
+Si le multiposte du cabinet conservé :
     Si le mot de passe de direction du cabinet conservé est présent :
         Le rôle ouvert devient « ».
         Ouvrir l'écran de garde.

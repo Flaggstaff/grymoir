@@ -52,6 +52,9 @@ Conserver la n.
 Afficher l'historique de la base.
 FIN
 contient "$(GRYM_UTILISATEUR=léa GRYM_MOT_DE_PASSE_UTILISATEUR=secret123 "$grym" lancer j.grym 2>&1)" "(léa)" "le journal porte le nom de l'utilisateur connecté"
+printf 'Si le service à plusieurs postes, afficher « plusieurs ».\nSinon, afficher « un seul ».\n' > s.grym
+verifier "$("$grym" lancer s.grym 2>&1)" "un seul" "le service à plusieurs postes, hors de l'aiguilleur"
+verifier "$(GRYM_SESSION=1 "$grym" lancer s.grym 2>&1)" "plusieurs" "le service à plusieurs postes, dans une session"
 "$grym" traduire p.grym > /dev/null 2>&1
 verifier "$(head -1 p.grymc)" "_connexion" "forme compacte"
 mv p.grym p0.grym; "$grym" traduire p.grymc > /dev/null 2>&1

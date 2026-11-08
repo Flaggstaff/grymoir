@@ -7878,6 +7878,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (p) { if (f) fatal = 1; ok = echouer(diag, b, debut, p); }
             break;
         }
+        case I_POSTES: {   /* « le service à plusieurs postes » (3.18) : l'aiguilleur le dit à ses sessions */
+            const char *s = getenv("GRYM_SESSION");
+            empiler(&pile, vi_booleen(s && *s));
+            break;
+        }
         case I_CONNECTE:   /* « l'utilisateur connecté » (3.17) */
             empiler(&pile, m->connecte ? vi_objet(m->connecte) : vi_absent(NULL));
             break;

@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 2.09 de la spécification, révisée le 8 novembre 2026.
+Version 2.10 de la spécification, révisée le 8 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -162,6 +162,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 142 | `COMMANDE` | 1 avec des arguments | dépile [la liste des arguments, puis] le programme ; la fonction d'interface `commande` le lance sans shell, 30 s au plus ; empile sa sortie (texte UTF-8) ; un échec est de sorte `commande` (grammaire 3.04, § 15.10) |
 | 146 | `NATIF` | une constante texte « n␟bibliothèque␟fonction » | dépile les n arguments (le premier le plus bas) ; charge `bibliothèques/<bibliothèque>/natif.<dylib, so ou dll>` au premier appel, vérifie `grym_natif_version`, appelle la fonction par le contrat de `src/grym_natif.h`, empile la valeur rendue ; un échec est de sorte `natif`. Les poignées se ferment avec la machine (grammaire 3.14, § 21.10) |
 | 147 | `CONNEXION` | aucun | « Les utilisateurs se connectent. » : sautée dans un scénario ou si quelqu'un est déjà connecté ; sinon le nom et le mot de passe (formulaire de l'interface, champs « texte » et « mot de passe », avec la discipline d'une question ; ou les variables `GRYM_UTILISATEUR` et `GRYM_MOT_DE_PASSE_UTILISATEUR`), vérifiés par recherche dans l'entité `utilisateur` et `empreinte_verifier` ; sans utilisateur, le premier se crée. Connecté : la machine garde l'objet (une racine du ramasse-miettes) et signe le journal de son nom. Cinq échecs : erreur qu'aucun essai ne rattrape (grammaire 3.17, § 16.20) |
+| 149 | `POSTES` | aucun | empile vrai si la variable d'environnement `GRYM_SESSION` est posée et non vide (une session de l'aiguilleur), faux sinon (grammaire 3.18) |
 | 148 | `CONNECTÉ` | aucun | empile l'utilisateur connecté, ou absent (grammaire 3.17) |
 | 143 | `VÉRIFIER` | une constante texte, la condition écrite | dépile la condition : fausse, échec « Vérification fausse : … » ; n'existe que dans un scénario, que le compilateur ne compile qu'en mode scénario (`grym scenarios`), comme une action appelée par le programme principal (grammaire 3.05, § 9.7) |
 
@@ -510,3 +511,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 2.07 | 2026-11-07 | Instruction `NATIF` (146) ; les bibliothèques natives chargées par le système (`src/natif.c`) |
 | 2.08 | 2026-11-07 | Index `"n <entité>.<champ>"` des nombres uniques, en collation des nombres ; un nombre entier cherché par égalité passe par l'index de sa colonne |
 | 2.09 | 2026-11-08 | Instructions `CONNEXION` (147) et `CONNECTÉ` (148) ; la marque « connexion » du module (bit 2 de l'octet des marques) ; format version 72 (grammaire 3.17) |
+| 2.10 | 2026-11-08 | Instruction `POSTES` (149) (grammaire 3.18) |

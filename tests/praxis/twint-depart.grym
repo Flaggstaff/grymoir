@@ -8,7 +8,7 @@ Le c vaut un nouveau cabinet :
     Le choix d'agenda vaut faux.
     L'agenda vaut « Praxis ».
     La facturation aux assurances vaut faux.
-    La gestion du personnel vaut faux.
+    Le multiposte vaut faux.
 Conserver le c.
 Régler le cabinet.
 Si le QR twint du cabinet conservé est présent, afficher « avant l'interrupteur : lien remis ».

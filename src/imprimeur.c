@@ -300,7 +300,8 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
      * (`(_le réglage _conservé).logo`) ne servent plus en forme littéraire autour d'un objet cherché (2.33) */
     if (!im->compact && x->type == N_GROUPE && x->nb_enfants == 1 && !(im->garder_groupe && finit_par_dont(x->enfants[0]))
         && (x->enfants[0]->type == N_CHERCHER || x->enfants[0]->type == N_AUJOURDHUI || x->enfants[0]->type == N_MAINTENANT
-            || x->enfants[0]->type == N_NOMBRE || x->enfants[0]->type == N_TEXTE || x->enfants[0]->type == N_CONNECTE))
+            || x->enfants[0]->type == N_NOMBRE || x->enfants[0]->type == N_TEXTE || x->enfants[0]->type == N_CONNECTE
+            || x->enfants[0]->type == N_POSTES))
         x = x->enfants[0];   /* « de 2,5 », « d'aujourd'hui » : un atome n'a pas besoin de ses parenthèses compactes */
     if (x->type == N_FICHIER && !im->compact) {   /* « du fichier « a.jpg » » */
         aj(im, a ? "au fichier " : "du fichier ");
@@ -945,6 +946,9 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     case N_DOCUMENTS_SORTIS:   /* « les documents sortis » ; « _documents_sortis » (3.09) */
         aj(im, im->compact ? "_documents_sortis" : "les documents sortis");
+        return;
+    case N_POSTES:   /* 3.18 */
+        aj(im, im->compact ? "_plusieurs_postes" : "le service à plusieurs postes");
         return;
     case N_CONNECTE:   /* 3.17 */
         aj(im, im->compact ? "_utilisateur_connecté" : "l'utilisateur connecté");

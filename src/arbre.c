@@ -249,6 +249,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case N_DOCUMENTS_SORTIS:
         chaine_ajouter(c, "(documents-sortis)");
         return;
+    case N_POSTES:
+        chaine_ajouter(c, "(plusieurs-postes)");
+        return;
     case N_CONNECTE:
         chaine_ajouter(c, "(utilisateur-connecté)");
         return;

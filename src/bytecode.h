@@ -186,10 +186,11 @@ typedef enum {
     I_NATIF,            /* opérande : une constante « n␟bibliothèque␟fonction » ; dépile les n arguments, empile ce que la
                            fonction C rend (3.14, § 21.10) */
     I_CONNEXION,        /* « Les utilisateurs se connectent. » : la connexion, ou le premier compte (3.17, § 16.20) */
-    I_CONNECTE          /* empile l'utilisateur connecté, ou absent (3.17) */
+    I_CONNECTE,         /* empile l'utilisateur connecté, ou absent (3.17) */
+    I_POSTES            /* empile vrai dans une session de « grym servir --sessions » (GRYM_SESSION), faux sinon (3.18) */
 } CodeInstruction;
 
-#define I_DERNIER I_CONNECTE
+#define I_DERNIER I_POSTES
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

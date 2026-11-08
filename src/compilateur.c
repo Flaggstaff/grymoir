@@ -422,6 +422,9 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_POSTES:   /* 3.18 */
+        emettre(c, I_POSTES, 0, n->ligne, n->colonne);
+        return;
     case N_CONNECTE:   /* 3.17 */
         emettre(c, I_CONNECTE, 0, n->ligne, n->colonne);
         return;

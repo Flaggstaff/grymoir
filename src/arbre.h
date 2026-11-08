@@ -217,6 +217,7 @@ typedef enum {
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
     N_DOCUMENTS_SORTIS,   /* « les documents sortis » (3.09), dans un scénario : une liste de titres */
     N_COMMANDE,      /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) : enfants : le programme [, la liste] */
+    N_POSTES,        /* « le service à plusieurs postes » (3.18) : vrai dans une session de grym servir --sessions */
     N_CONNECTE,      /* « l'utilisateur connecté » (3.17, § 16.20) : l'objet, ou absent */
     N_NATIF,         /* « la fonction C « signal_niveau » » (3.14, § 21.10), tout le corps d'un calcul de bibliothèque : texte : la
                         fonction ; texte2 : la bibliothèque ; enfants : les paramètres du calcul (N_NOM, leur case locale) */

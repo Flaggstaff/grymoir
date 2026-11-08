@@ -54,13 +54,14 @@ Un cabinet, conservé, a :
     un canton (texte), facultatif,
     un préfixe SMS (texte), facultatif,
     une vue d'agenda (« Semaine » ou « Jour »), facultative,
-    une gestion du personnel (vrai ou faux), faux au départ,
+    un multiposte (vrai ou faux), faux au départ, anciennement « gestion du personnel »,
     un BIC (texte), facultatif,
     un mot de passe de direction (mot de passe), facultatif,
     un mot de passe d'équipe (mot de passe), facultatif.
 
-Remarque : la gestion du personnel (3 novembre 2026, le Cabinet du Centre) : un interrupteur de la fiche du cabinet, posé par
-Remarque : départ.grym à la fondation ; faux pour une base d'avant. Allumé, Praxis demande à qui elle ouvre : la Direction,
+Remarque : le multiposte (3 novembre 2026, « gestion du personnel » jusqu'au 8 novembre) : un interrupteur de la fiche du
+Remarque : cabinet, éteint à la fondation (départ.grym) : Praxis tourne alors sur un seul poste, sans salaires. Allumé, plusieurs
+Remarque : postes l'ouvrent par le réseau (docs/v2.md, § 12), et Praxis demande à qui elle ouvre : la Direction,
 Remarque : qui voit tout, ou l'Équipe, qui ne voit ni le Personnel, ni les Sauvegardes, ni les Rendez-vous, ni les SMS, et qui
 Remarque : ne peut rien effacer de la corbeille. Les deux mots de passe, des empreintes, se posent dans Configuration, Accès ;
 Remarque : tant que celui de la Direction manque, Praxis ouvre sans rien demander, en Direction, pour qu'on puisse le poser.
