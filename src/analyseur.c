@@ -568,6 +568,7 @@ typedef struct {
     int interactif;
     int style_declare;   /* « Les nombres s'affichent … » : une seule fois (§ 4.1) */
     int base_chiffree_vue;   /* « La base est chiffrée. » : une seule fois (2.37) */
+    int connexion_vue;       /* « Les utilisateurs se connectent. » : une seule fois (3.17) */
     int bibliotheque_vue;    /* « Cette bibliothèque est … » : une seule fois (2.61) */
     int interne_vu;          /* « Ce fichier est interne à sa bibliothèque. » : une seule fois (2.62) */
     int apparence_declaree;   /* « Les écrans ont … » : une seule fois (§ 22.5) */
@@ -3162,6 +3163,14 @@ static Noeud *base(Analyse *a) {
             Noeud *n = noeud_creer(N_DOCUMENTS_SORTIS, t->ligne, t->colonne, t->debut);
             a->article_force = ART_AUCUN;
             for (int q = 0; q < saut; q++) avancer(a);
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+            return n;
+        }
+        if (t->type == J_ELISION && strcmp(t->valeur, "l") == 0 && est_mot(voir(a, 1), "utilisateur")
+            && est_mot(voir(a, 2), "connecté") && !visible(a, "utilisateur connecté")) {
+            /* « l'utilisateur connecté » (3.17, § 16.20) : absent sans « Les utilisateurs se connectent. » */
+            Noeud *n = noeud_creer(N_CONNECTE, t->ligne, t->colonne, t->debut);
+            a->i += 3;
             n->fin = fin_jeton(&a->j[a->i - 1]);
             return n;
         }
@@ -11450,6 +11459,20 @@ static Noeud *phrase(Analyse *a, int colonne) {
         if (est_mot(&a->j[a->i - 1], "écrans")) attendre_ici(a, "ont");
         a->i -= 2;
     }
+    if (est_mot(t, "les") && est_mot(voir(a, 1), "utilisateurs") && est_mot(voir(a, 2), "se")
+        && est_mot(voir(a, 3), "connectent")) {
+        /* « Les utilisateurs se connectent. » (3.17, § 16.20) : au premier niveau du programme principal, une fois */
+        if (a->formule || a->niveau || a->portee->fichier_index != 0)
+            return erreur(a, t, grym_dupliquer("« Les utilisateurs se connectent. » se déclare au premier niveau du "
+                                               "programme principal."));
+        if (a->connexion_vue) return erreur(a, t, grym_dupliquer("« Les utilisateurs se connectent. » se déclare une seule fois."));
+        a->connexion_vue = 1;
+        a->i += 4;
+        if (!fin_phrase(a, 0)) return NULL;
+        Noeud *n = noeud_creer(P_CONNEXION, t->ligne, t->colonne, t->debut);
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
@@ -12236,6 +12259,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.interactif = interactif;
     a.style_declare = 0;
     a.base_chiffree_vue = 0;
+    a.connexion_vue = 0;
     a.bibliotheque_vue = 0;
     a.interne_vu = 0;
     a.affichage_vu = 0;
@@ -12281,6 +12305,27 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].retrait; break; }
     Noeud *racine = bloc(&a, colonne, 1);
     if (racine && !a.echec) verifier_conflits(&a);
+    if (racine && !a.echec && a.connexion_vue) {
+        /* 3.17 : l'entité que la connexion lit, avec son nom unique et son mot de passe */
+        const Classe *cu = classe_de(a.portee, "utilisateur");
+        const char *tn = cu ? type_du_champ(a.portee, cu, "nom") : NULL, *tm = cu ? type_du_champ(a.portee, cu, "mot de passe") : NULL;
+        int nom_unique = 0, autre_obligatoire = 0;
+        const char *autre = NULL;
+        for (size_t k = 0; cu && k < cu->nb; k++) {
+            if (strcmp(cu->champs[k], "nom") == 0) nom_unique = cu->uniques[k];
+            else if (strcmp(cu->champs[k], "mot de passe") != 0 && !cu->facultatifs[k] && !autre) autre = cu->champs[k];
+        }
+        autre_obligatoire = autre != NULL;
+        char *m = NULL;
+        if (!cu || !cu->conserve || !tn || strcmp(tn, "texte") != 0 || !nom_unique || !tm || strcmp(tm, "mot de passe") != 0)
+            m = grym_dupliquer("« Les utilisateurs se connectent. » lit une entité « utilisateur », conservée, avec un nom "
+                               "(texte), unique, et un mot de passe (mot de passe) : « Un utilisateur, conservé, a : un nom "
+                               "(texte), unique, un mot de passe (mot de passe). »");
+        else if (autre_obligatoire || cu->parent)
+            m = grym_formater("« %s » : les autres champs d'un utilisateur sont facultatifs, et l'entité n'hérite de rien ; "
+                              "le premier compte se crée avec un nom et un mot de passe seulement.", autre ? autre : cu->parent);
+        if (m) { a.echec = 1; diag->message = m; diag->ligne = 1; diag->colonne = 1; }
+    }
     if (racine && !a.echec && !interactif) verifier_contrats(&a);   /* § 13.7 bis ; pas dans la boucle interactive */
     if (racine && !a.echec && !interactif && copie.fichier_index == 0) {   /* un bouton sans événement (§ 22.2) */
         const char *ecran = NULL;

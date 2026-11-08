@@ -1,0 +1,60 @@
+#!/bin/sh
+# La connexion (grammaire 3.17, § 16.20, 7 novembre 2026) : « Les utilisateurs se connectent. » demande un nom et un mot
+# de passe, vérifiés contre les utilisateurs conservés ; sans utilisateur, le premier compte se crée ; « l'utilisateur
+# connecté » le désigne ; le journal porte son nom.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); case "$1" in *"$2"*) ;; *) echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans « $1 »)";; esac; }
+cat > p.grym <<'EOF'
+Les utilisateurs se connectent.
+Un utilisateur, conservé, a :
+    un nom (texte), unique,
+    un mot de passe (mot de passe),
+    un rôle (texte), facultatif.
+Afficher « Bonjour » puis le nom de l'utilisateur connecté.
+EOF
+lancer() { "$grym" lancer p.grym 2>&1; }
+contient "$(printf 'ana\ncourt\ncourt\nana\nsecret123\nautre123\nana\nsecret123\nsecret123\n' | lancer)" "Le mot de passe a huit caractères au moins.
+Premier compte" "premier compte : trop court"
+contient "$(printf 'x\n' | lancer)" "Nom d'utilisateur ?" "le compte existe : on se connecte"
+verifier "$(printf 'ana\nfaux\nana\nsecret123\n' | lancer)" "Nom d'utilisateur ? Mot de passe ? Nom ou mot de passe faux.
+Nom d'utilisateur ? Mot de passe ? Bonjour ana" "un mot de passe faux, puis le bon"
+verifier "$(printf 'bob\nsecret123\n' | lancer | head -1)" "Nom d'utilisateur ? Mot de passe ? Nom ou mot de passe faux." "un nom inconnu"
+verifier "$(GRYM_UTILISATEUR=ana GRYM_MOT_DE_PASSE_UTILISATEUR=secret123 lancer)" "Bonjour ana" "sans question, par l'environnement"
+contient "$(GRYM_UTILISATEUR=ana GRYM_MOT_DE_PASSE_UTILISATEUR=non lancer)" "Nom ou mot de passe faux." "l'environnement refusé"
+contient "$(printf 'a\nb\na\nb\na\nb\na\nb\na\nb\n' | lancer)" "Cinq essais sans connexion" "cinq essais"
+python3 -c 1 2> /dev/null && contient "$(python3 -c "
+import sqlite3; b = sqlite3.connect('p.grymd')
+print(b.execute('select mot_de_passe from (select \"c mot de passe\" as mot_de_passe from \"e utilisateur\")').fetchone()[0][:14])")" "pbkdf2-sha256$" "le mot de passe rangé en empreinte"
+printf 'Un utilisateur, conservé, a :\n    un nom (texte), unique,\n    un mot de passe (mot de passe).\nAfficher l'"'"'utilisateur connecté.\n' > q.grym
+verifier "$("$grym" lancer q.grym 2>&1)" "absent" "sans connexion, personne"
+printf 'Les utilisateurs se connectent.\nAfficher 1.\n' > q.grym
+contient "$("$grym" lancer q.grym 2>&1)" "lit une entité « utilisateur »" "l'entité manque"
+printf 'Les utilisateurs se connectent.\nUn utilisateur, conservé, a :\n    un nom (texte), unique,\n    un mot de passe (mot de passe),\n    un rôle (texte).\n' > q.grym
+contient "$("$grym" lancer q.grym 2>&1)" "« rôle » : les autres champs d'un utilisateur sont facultatifs" "un autre champ obligatoire"
+printf 'Pour faire un essai :\n    Les utilisateurs se connectent.\n' > q.grym
+contient "$("$grym" lancer q.grym 2>&1)" "au premier niveau du programme principal" "dans une action"
+cat > j.grym <<'FIN'
+Les utilisateurs se connectent.
+Un utilisateur, conservé, a :
+    un nom (texte), unique,
+    un mot de passe (mot de passe).
+Une note, conservée, journalisée, a :
+    un texte (texte).
+La n vaut une nouvelle note :
+    Le texte vaut « bonjour ».
+Conserver la n.
+Afficher l'historique de la base.
+FIN
+contient "$(GRYM_UTILISATEUR=léa GRYM_MOT_DE_PASSE_UTILISATEUR=secret123 "$grym" lancer j.grym 2>&1)" "(léa)" "le journal porte le nom de l'utilisateur connecté"
+"$grym" traduire p.grym > /dev/null 2>&1
+verifier "$(head -1 p.grymc)" "_connexion" "forme compacte"
+mv p.grym p0.grym; "$grym" traduire p.grymc > /dev/null 2>&1
+verifier "$(cmp -s p.grym p0.grym && echo pareil)" "pareil" "aller-retour"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

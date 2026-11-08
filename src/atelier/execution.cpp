@@ -658,8 +658,10 @@ Issue Travail::formulaire(Chaine *sortie, Champ *c, size_t nb, size_t *arret, Va
             for (size_t k = 0; k < nb; k++) {
                 const Champ *ch = &c[k];
                 const Saisie &s = saisies[(int)k];
+                const bool cache = ch->type && std::strcmp(ch->type, "mot de passe") == 0;   // 3.17 : jamais en écho
                 const QString valeur = ch->vider ? QString("(vidé)")
                                      : est_fichier(ch) ? (s.fichier ? s.nom_fichier : QString("(inchangé)"))
+                                     : cache ? QString("••••••")
                                      : s.ligne;
                 echo += QString::fromUtf8(ch->libelle) + (ch->question ? " " : " : ") + valeur + "\n";
             }
@@ -1435,6 +1437,10 @@ void Execution::poser() {
             }
             connect(ligne, &QLineEdit::returnPressed, this, [this] { envoyer(0); });
             if (ch->type && std::strcmp(ch->type, "date") == 0) ajouter_calendrier(ligne);   // comme dans un écran
+            if (ch->type && std::strcmp(ch->type, "mot de passe") == 0) {   // la connexion (3.17) : rien ne se voit
+                ligne->setEchoMode(QLineEdit::Password);
+                ligne->setText(QString());
+            }
             w = ligne;
         }
         w->setEnabled(!accepte);

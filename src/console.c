@@ -45,7 +45,8 @@ static Issue console_formulaire(void *contexte, Chaine *sortie, Champ *champs, s
     for (size_t k = 0; k < n; k++) {
         for (;;) {
             char *invite = champ_invite(&champs[k]);
-            char *ligne = c->lire(c->contexte, sortie, invite);
+            const int masque = champs[k].type && strcmp(champs[k].type, "mot de passe") == 0 && c->lire_masque;
+            char *ligne = masque ? c->lire_masque(c->contexte, sortie, invite) : c->lire(c->contexte, sortie, invite);
             free(invite);
             if (!ligne) { *arret = k; return ISSUE_FIN; }
             if (seule(ligne, ".")) { free(ligne); *arret = k; return ISSUE_ANNULE; }   /* § 17 */

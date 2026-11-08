@@ -411,6 +411,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "sortis", t);
             continue;
         }
+        if (est_cle(t, "utilisateur_connecté")) {   /* _utilisateur_connecté → l'utilisateur connecté (3.17) */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "utilisateur", t);
+            mot(r, "connecté", t);
+            continue;
+        }
         if (est_cle(t, "fonction_c")) {   /* _fonction_c(« f ») → la fonction C « f » (3.14, § 21.10) */
             if (!(k + 3 < f && r->e[k + 1].type == J_PAR_OUV && r->e[k + 2].type == J_TEXTE && r->e[k + 3].type == J_PAR_FERM)) {
                 echouer(r, t, grym_dupliquer("« _fonction_c » s'écrit ainsi : _fonction_c(« signal_niveau »)."));
@@ -3596,6 +3602,13 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 mot(r, "passe", &r->e[mdp]);
                 expression(r, mdp + 1, f);
             }
+            point(r, f);
+        } else if (!strcmp(c, "connexion")) {   /* _connexion → Les utilisateurs se connectent. (3.17) */
+            if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _connexion » s'écrit seul.")); return; }
+            mot(r, "les", t);
+            mot(r, "utilisateurs", t);
+            mot(r, "se", t);
+            mot(r, "connectent", t);
             point(r, f);
         } else if (!strcmp(c, "base_chiffrée")) {   /* _base_chiffrée → La base est chiffrée. (2.37) */
             if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _base_chiffrée » s'écrit seul.")); return; }

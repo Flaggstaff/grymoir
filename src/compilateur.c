@@ -422,6 +422,9 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_CONNECTE:   /* 3.17 */
+        emettre(c, I_CONNECTE, 0, n->ligne, n->colonne);
+        return;
     case N_DOCUMENTS_SORTIS:   /* 3.09 */
         emettre(c, I_DOCUMENTS_SORTIS, 0, n->ligne, n->colonne);
         return;
@@ -1625,6 +1628,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         expression(c, ph->enfants[0]);
         if (ph->forme) expression(c, ph->enfants[1]);
         emettre(c, I_RESTAURER, ph->forme | (ph->entier ? 2 : 0), ph->ligne, ph->colonne);
+        return;
+    case P_CONNEXION:   /* 3.17 : la connexion se fait à la place de la phrase ; le module le note */
+        c->module->connexion = 1;
+        emettre(c, I_CONNEXION, 0, ph->ligne, ph->colonne);
         return;
     case P_BASE_CHIFFREE:   /* « La base est chiffrée. » (2.37) : une marque du module, lue avant d'ouvrir la base */
         c->module->base_chiffree = 1;

@@ -260,6 +260,7 @@ struct Machine {
     int absent_permis;         /* la source d'une image calculée (§ 22.8) : un champ d'un objet absent vaut absent */
     Base *base;             /* ouverte au premier besoin */
     char *signature;        /* « Signer le journal avec t. » (2.87) : l'auteur des lignes du journal, ou NULL */
+    Objet *connecte;        /* « l'utilisateur connecté » (3.17), ou NULL ; une racine du ramasse-miettes */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
     int style;              /* affichage des nombres : 0 suisse, 1 française, 2 sans séparateur (§ 4.1) */
@@ -412,6 +413,10 @@ void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, c
     m->console.contexte = contexte;
 }
 
+void machine_lecteur_masque(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, const char *question)) {
+    m->console.lire_masque = lire;
+}
+
 void machine_terminal(Machine *m, int terminal) {
     m->console.terminal = terminal;
 }
@@ -426,6 +431,7 @@ void machine_essai_migration(Machine *m, Chaine *rapport) { m->essai_migration =
 void machine_base(Machine *m, const char *chemin) {
     free(m->signature);
     m->signature = NULL;
+    m->connecte = NULL;   /* une autre base, d'autres utilisateurs (3.17) */
     free(m->chemin_base);
     m->chemin_base = chemin ? grym_dupliquer(chemin) : NULL;
 }
@@ -1359,6 +1365,13 @@ static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t n
             marquer(&p, &v);
             dec_liberer(&v.nombre);
         }
+    }
+    if (m->connecte) {   /* l'utilisateur connecté (3.17) */
+        Valeur v = valeur_nombre(dec_zero());
+        v.type = V_OBJET;
+        v.objet = m->connecte;
+        marquer(&p, &v);
+        dec_liberer(&v.nombre);
     }
     for (EcranVM *e = m->ecran; e; e = e->dessous) {   /* l'objet de chaque écran ouvert (§ 22.1), empilés compris */
         if (!e->objet) continue;
@@ -2747,6 +2760,110 @@ static char *poser(Machine *m, Chaine *sortie, Cadre *cadres, Champ *champs, siz
     if (probleme) { a->fatal = 1; return probleme; }
     if (issue == ISSUE_ANNULE) return grym_dupliquer("Saisie annulée.");
     return NULL;
+}
+
+/* ---------- La connexion (3.17, grammaire § 16.20) ---------- */
+
+static int accepter_reponse(void *c, size_t k, char **message) { (void)c; (void)k; (void)message; return 0; }
+
+static void effacer_texte(char *s) {
+    if (s) { memset(s, 0, strlen(s)); free(s); }
+}
+
+/* « Les utilisateurs se connectent. » : le nom et le mot de passe, vérifiés contre les utilisateurs conservés ; s'il
+ * n'y en a aucun, le premier compte se crée. Les variables GRYM_UTILISATEUR et GRYM_MOT_DE_PASSE_UTILISATEUR les donnent
+ * sans rien demander (essais, serveur), comme GRYM_MOT_DE_PASSE_BASE pour la base. NULL : connecté. */
+static char *connecter(Machine *m, Chaine *sortie, Cadre *cadres, int *fatal) {
+    const ClasseVM *cu = classe_vm(m, "utilisateur");
+    const long kn = cu ? index_champ(cu, "nom") : -1, km = cu ? index_champ(cu, "mot de passe") : -1;
+    if (!cu || !cu->conserve || kn < 0 || km < 0 || !m->base) {
+        *fatal = 1;
+        return grym_dupliquer("La connexion demande l'entité « utilisateur », conservée, avec un nom et un mot de passe.");
+    }
+    const char *env_n = getenv("GRYM_UTILISATEUR"), *env_m = getenv("GRYM_MOT_DE_PASSE_UTILISATEUR");
+    const int auto_ = env_n && env_m;
+    for (int essai = 0; essai < 5; essai++) {
+        Valeur nb;
+        char *e = NULL;
+        if (!base_chercher(m->base, m, "utilisateur\x1f" "2\x1f\x1f" "0\x1f", NULL, 0, &nb, &e)) { *fatal = 1; return e; }
+        const int premier = nb.nombre.n == 0;   /* aucun utilisateur : le premier compte */
+        valeur_liberer(&nb);
+        char *nom = NULL, *mdp = NULL, *mdp2 = NULL;
+        if (auto_) {
+            nom = grym_dupliquer(env_n);
+            mdp = grym_dupliquer(env_m);
+            mdp2 = grym_dupliquer(env_m);
+        } else {
+            Champ c[3];
+            memset(c, 0, sizeof c);
+            for (int q = 0; q < 3; q++) { c[q].question = 1; c[q].type = q ? "mot de passe" : "texte"; }
+            c[0].libelle = premier ? "Premier compte : ton nom d'utilisateur ?" : "Nom d'utilisateur ?";
+            c[1].libelle = premier ? "Ton mot de passe (huit caractères au moins) ?" : "Mot de passe ?";
+            c[2].libelle = "Le même, encore ?";
+            Attente at = { m, 0, NULL };
+            char *p = poser(m, sortie, cadres, c, premier ? 3 : 2, accepter_reponse, NULL, &at);
+            if (p) {
+                for (int q = 0; q < 3; q++) effacer_texte(c[q].ligne);
+                free(at.motif);
+                *fatal = 1;   /* sans connexion, le programme ne va pas plus loin */
+                return p;
+            }
+            nom = c[0].ligne;
+            mdp = c[1].ligne;
+            mdp2 = premier ? c[2].ligne : NULL;
+        }
+        const char *refus = NULL;
+        char *probleme = NULL;
+        if (premier) {
+            if (!nom || !*nom) refus = "Le nom est vide.";
+            else if (!mdp || strlen(mdp) < 8) refus = "Le mot de passe a huit caractères au moins.";
+            else if (!mdp2 || strcmp(mdp, mdp2) != 0) refus = "Les deux mots de passe diffèrent.";
+            else {
+                Objet *o = creer_objet(m, cu, m->epoque);
+                ecrire_champ(m, o, (size_t)kn, vi_texte(nom));
+                Valeur emp = vi_texte("");
+                free(emp.texte);
+                emp.texte = empreinte_creer(mdp);
+                ecrire_champ(m, o, (size_t)km, emp);
+                long id = 0;
+                if (base_conserver(m->base, o, &id, &probleme)) {
+                    ecrire_id(m, o, id);
+                    journaliser(m, o, NULL, NULL, "créé", &probleme);
+                }
+                if (!probleme) m->connecte = o;
+            }
+        } else {
+            Valeur pn = vi_texte(nom ? nom : ""), r;
+            /* compter d'abord : « l'utilisateur conservé dont … » (mode 1) échoue s'il n'y en a aucun */
+            if (base_chercher(m->base, m, "utilisateur\x1f" "2\x1f\x1f" "0\x1f(=[nom]?1)", &pn, 1, &r, &probleme)) {
+                const int un = r.type == V_NOMBRE && r.nombre.n == 1 && r.nombre.ch && r.nombre.ch[0] == 1 && r.nombre.exp == 0;
+                valeur_liberer(&r);
+                if (un && base_chercher(m->base, m, "utilisateur\x1f" "1\x1f\x1f" "0\x1f(=[nom]?1)", &pn, 1, &r, &probleme)) {
+                    Objet *o = r.type == V_OBJET ? r.objet : NULL;
+                    if (o && charger(m, o, &probleme) && o->definis[km] && o->champs[km].type == V_TEXTE
+                        && empreinte_verifier(mdp ? mdp : "", o->champs[km].texte))
+                        m->connecte = o;
+                    valeur_liberer(&r);
+                }
+            }
+            valeur_liberer(&pn);
+            if (!m->connecte && !probleme) refus = "Nom ou mot de passe faux.";
+        }
+        effacer_texte(mdp);
+        effacer_texte(mdp2);
+        if (m->connecte) {   /* le journal porte son nom (2.87) */
+            free(m->signature);
+            m->signature = nom;
+            return NULL;
+        }
+        free(nom);
+        if (probleme) { *fatal = 1; return probleme; }
+        if (auto_) { *fatal = 1; return grym_dupliquer(refus); }
+        chaine_ajouter(sortie, refus);
+        chaine_ajouter(sortie, "\n");
+    }
+    *fatal = 1;
+    return grym_dupliquer("Cinq essais sans connexion : le programme s'arrête.");
 }
 
 /* Une réponse refusée pendant un Ctrl+C : l'arrêt l'emporte sur la relance. */
@@ -7754,6 +7871,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_CONNEXION: {   /* « Les utilisateurs se connectent. » (3.17) : personne dans un scénario ; une fois */
+            if (m->scenario || m->connecte) break;
+            int f = 0;
+            char *p = connecter(m, sortie, cadres, &f);
+            if (p) { if (f) fatal = 1; ok = echouer(diag, b, debut, p); }
+            break;
+        }
+        case I_CONNECTE:   /* « l'utilisateur connecté » (3.17) */
+            empiler(&pile, m->connecte ? vi_objet(m->connecte) : vi_absent(NULL));
+            break;
         case I_NATIF: {   /* « la fonction C « f » » (3.14, § 21.10) : « n␟bibliothèque␟fonction » */
             const char *dn = b->constantes[op].texte;
             const char *s1 = strchr(dn, '\x1f'), *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL;

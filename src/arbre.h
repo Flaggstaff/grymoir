@@ -188,6 +188,7 @@ typedef enum {
     P_RESTAURER,     /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) ; entier 1 : « Vérifier la sauvegarde
                         f [avec le mot de passe m]. » (2.85), sans rien remplacer ; enfants[0] : un chemin ou un
                         fichier ; enfants[1] : le mot de passe (forme 1) */
+    P_CONNEXION,     /* « Les utilisateurs se connectent. » (3.17, § 16.20) : CONNEXION à sa place ; marque du module */
     P_BASE_CHIFFREE, /* « La base est chiffrée. » (2.37, § 16.18) : le module le note ; rien ne s'exécute */
     P_CHANGER_MDP,   /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) : enfants[0] : le nouveau,
                         enfants[1] : l'ancien */
@@ -216,6 +217,7 @@ typedef enum {
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
     N_DOCUMENTS_SORTIS,   /* « les documents sortis » (3.09), dans un scénario : une liste de titres */
     N_COMMANDE,      /* « la sortie de la commande « rigctl » [avec les arguments] » (§ 15.10) : enfants : le programme [, la liste] */
+    N_CONNECTE,      /* « l'utilisateur connecté » (3.17, § 16.20) : l'objet, ou absent */
     N_NATIF,         /* « la fonction C « signal_niveau » » (3.14, § 21.10), tout le corps d'un calcul de bibliothèque : texte : la
                         fonction ; texte2 : la bibliothèque ; enfants : les paramètres du calcul (N_NOM, leur case locale) */
     N_LIGNES,        /* « les lignes de x » (§ 15.9) : enfants[0] : un texte ou un fichier ; une liste */

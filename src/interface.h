@@ -283,6 +283,7 @@ char *champ_invite(const Champ *c);
  * tapée sans son saut de ligne (NULL en fin d'entrée). */
 typedef struct {
     char *(*lire)(void *contexte, Chaine *sortie, const char *invite);
+    char *(*lire_masque)(void *contexte, Chaine *sortie, const char *invite);   /* sans écho ; NULL : lire (3.17) */
     void *contexte;
     int terminal;    /* la sortie est un terminal : « Effacer l'écran. » écrit sa séquence */
     int annonce;     /* « Tapez « . » seul pour annuler. » déjà dit */

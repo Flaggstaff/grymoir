@@ -300,7 +300,7 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
      * (`(_le réglage _conservé).logo`) ne servent plus en forme littéraire autour d'un objet cherché (2.33) */
     if (!im->compact && x->type == N_GROUPE && x->nb_enfants == 1 && !(im->garder_groupe && finit_par_dont(x->enfants[0]))
         && (x->enfants[0]->type == N_CHERCHER || x->enfants[0]->type == N_AUJOURDHUI || x->enfants[0]->type == N_MAINTENANT
-            || x->enfants[0]->type == N_NOMBRE || x->enfants[0]->type == N_TEXTE))
+            || x->enfants[0]->type == N_NOMBRE || x->enfants[0]->type == N_TEXTE || x->enfants[0]->type == N_CONNECTE))
         x = x->enfants[0];   /* « de 2,5 », « d'aujourd'hui » : un atome n'a pas besoin de ses parenthèses compactes */
     if (x->type == N_FICHIER && !im->compact) {   /* « du fichier « a.jpg » » */
         aj(im, a ? "au fichier " : "du fichier ");
@@ -945,6 +945,9 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     case N_DOCUMENTS_SORTIS:   /* « les documents sortis » ; « _documents_sortis » (3.09) */
         aj(im, im->compact ? "_documents_sortis" : "les documents sortis");
+        return;
+    case N_CONNECTE:   /* 3.17 */
+        aj(im, im->compact ? "_utilisateur_connecté" : "l'utilisateur connecté");
         return;
     case N_NATIF:   /* « la fonction C « f » » ; « _fonction_c(« f ») » (3.14, § 21.10) */
         aj(im, im->compact ? "_fonction_c(« " : "la fonction C « ");
@@ -3312,6 +3315,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         return;
     case P_BASE_CHIFFREE:   /* 2.37 */
         aj(im, c ? "_base_chiffrée\n" : "La base est chiffrée.\n");
+        return;
+    case P_CONNEXION:   /* 3.17 */
+        aj(im, c ? "_connexion\n" : "Les utilisateurs se connectent.\n");
         return;
     case P_CHANGER_MDP:     /* 2.37 */
         aj(im, c ? "_changer_mot_de_passe " : "Changer le mot de passe de la base pour ");

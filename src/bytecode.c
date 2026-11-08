@@ -270,6 +270,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_GESTE:          return "GESTE";
     case I_DOCUMENTS_SORTIS: return "DOCUMENTS_SORTIS";
     case I_NATIF:          return "NATIF";
+    case I_CONNEXION:      return "CONNEXION";
+    case I_CONNECTE:       return "CONNECTÉ";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -501,6 +503,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_COMMANDE: besoin = op ? 2 : 1; effet = 1 - besoin; break;
             case I_VERIFIER: besoin = 1; effet = -1; break;
             case I_DOCUMENTS_SORTIS: besoin = 0; effet = 1; break;
+            case I_CONNEXION: besoin = 0; effet = 0; break;
+            case I_CONNECTE: besoin = 0; effet = 1; break;
             case I_NATIF: {   /* « n␟bibliothèque␟fonction » : dépile n, empile 1 (3.14) */
                 const char *dn = op < b->nb_constantes && b->constantes[op].type == C_TEXTE ? b->constantes[op].texte : "";
                 besoin = strtol(dn, NULL, 10);
@@ -624,7 +628,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 71  /* 71 : les champs abandonnés d'une classe (2.49) ; versions 1 à 70 restent lisibles : sans base chiffrée (69) ; un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 72  /* 72 : la marque de connexion (3.17) ; 71 : les champs abandonnés d'une classe (2.49) ; versions 1 à 70 restent lisibles : sans base chiffrée (69) ; un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -723,7 +727,8 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
         ecrire_u32(&o, (uint32_t)c->nb_abandonnes);   /* format 71 (2.49) */
         for (size_t q = 0; q < c->nb_abandonnes; q++) ecrire_chaine(&o, c->abandonnes[q]);
     }
-    ecrire_u8(&o, m->base_chiffree ? 1u : 0u);   /* format 70 : les marques du module ; bit 1 : base chiffrée */
+    /* format 70 : les marques du module ; bit 1 : base chiffrée ; format 72 : bit 2, connexion (3.17) */
+    ecrire_u8(&o, (m->base_chiffree ? 1u : 0u) | (m->connexion ? 2u : 0u));
     *taille = o.n;
     return o.d;
 }
@@ -979,8 +984,10 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
     }
     if (version >= 70) {
         const uint32_t marques = lire_u(&l, 1);
-        if (l.echec || marques > 1) return echec_module(m, erreur, grym_dupliquer("marques du module illisibles."));
+        if (l.echec || marques > (version >= 72 ? 3u : 1u))
+            return echec_module(m, erreur, grym_dupliquer("marques du module illisibles."));
         m->base_chiffree = (int)(marques & 1);
+        m->connexion = (int)((marques >> 1) & 1);
     }
     if (l.pos != taille) return echec_module(m, erreur, grym_dupliquer("octets en trop à la fin du fichier."));
     char *detail = NULL;
@@ -999,6 +1006,7 @@ Module *module_creer(void) {
     m->classes = NULL;
     m->nb_classes = 0;
     m->base_chiffree = 0;
+    m->connexion = 0;
     return m;
 }
 

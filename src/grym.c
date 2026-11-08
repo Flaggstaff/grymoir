@@ -115,6 +115,21 @@ static char *lire_masque(const char *invite) {
     return l;
 }
 
+/* Un champ « mot de passe » d'un formulaire (la connexion, 3.17) : ce qui attend s'affiche, puis la saisie sans écho. */
+static char *lire_masque_pour_la_machine(void *contexte, Chaine *sortie, const char *question) {
+    (void)contexte;
+    if (sortie->d) {
+        fputs(sortie->d, stdout);
+        sortie->n = 0;
+        sortie->d[0] = '\0';
+    }
+    fflush(stdout);
+    char *invite = grym_formater("%s ", question);
+    char *l = lire_masque(invite);
+    free(invite);
+    return l;
+}
+
 /* « La base est chiffrée. » (2.37) : le mot de passe, demandé à la console ; nouveau, choisi puis confirmé. */
 static char *demander_mdp_console(void *contexte, int nouveau) {
     (void)contexte;
@@ -234,6 +249,7 @@ static int lancer(const char *chemin) {
     if (!b) return EXIT_FAILURE;
     Machine *m = machine_creer();
     machine_lecteur(m, lire_pour_la_machine, NULL);
+    machine_lecteur_masque(m, lire_masque_pour_la_machine);
     machine_terminal(m, sortie_terminal());
     machine_demande_mot_de_passe(m, demander_mdp_console, NULL);
     situer(m, chemin);

@@ -183,11 +183,13 @@ typedef enum {
     I_GESTE,            /* opérande : une constante « forme␟ligne␟écran␟élément » ; dépile la valeur pour écrire et choisir ;
                            range le geste, que l'écran simulé jouera (3.08) */
     I_DOCUMENTS_SORTIS, /* empile la liste des titres des documents fabriqués dans le scénario (3.09) */
-    I_NATIF             /* opérande : une constante « n␟bibliothèque␟fonction » ; dépile les n arguments, empile ce que la
+    I_NATIF,            /* opérande : une constante « n␟bibliothèque␟fonction » ; dépile les n arguments, empile ce que la
                            fonction C rend (3.14, § 21.10) */
+    I_CONNEXION,        /* « Les utilisateurs se connectent. » : la connexion, ou le premier compte (3.17, § 16.20) */
+    I_CONNECTE          /* empile l'utilisateur connecté, ou absent (3.17) */
 } CodeInstruction;
 
-#define I_DERNIER I_NATIF
+#define I_DERNIER I_CONNECTE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
@@ -292,6 +294,7 @@ typedef struct {
     ClasseModule *classes;
     size_t nb_classes;
     int base_chiffree;    /* « La base est chiffrée. » (2.37, § 16.18) : le mot de passe avant d'ouvrir la base */
+    int connexion;        /* « Les utilisateurs se connectent. » (3.17, § 16.20) */
 } Module;
 
 Module *module_creer(void);

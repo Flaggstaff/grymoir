@@ -60,6 +60,8 @@ void machine_terminal(Machine *m, int terminal);
 /* Lecteur des réponses de l'utilisateur (grammaire, § 17) : la machine écrit d'abord ce qui attend
  * dans `sortie` et la vide, affiche la question, puis rend la ligne tapée, sans son saut de ligne
  * (NULL en fin d'entrée). Sans lecteur, poser une question est une erreur d'exécution. */
+/* La lecture sans écho d'un champ « mot de passe » (la connexion, 3.17) ; sans elle, la lecture ordinaire. */
+void machine_lecteur_masque(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, const char *question));
 void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, const char *question),
                      void *contexte);
 

@@ -249,6 +249,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case N_DOCUMENTS_SORTIS:
         chaine_ajouter(c, "(documents-sortis)");
         return;
+    case N_CONNECTE:
+        chaine_ajouter(c, "(utilisateur-connecté)");
+        return;
     case N_NATIF:   /* (fonction-c « f » de « bibliothèque ») (3.14) */
         chaine_ajouter(c, "(fonction-c « ");
         chaine_ajouter(c, n->texte);
@@ -856,6 +859,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         return;
     case P_BASE_CHIFFREE:
         chaine_ajouter(c, "(base chiffrée)");
+        return;
+    case P_CONNEXION:
+        chaine_ajouter(c, "(connexion)");
         return;
     case P_CHANGER_MDP:
         chaine_ajouter(c, "(changer le mot de passe ");
