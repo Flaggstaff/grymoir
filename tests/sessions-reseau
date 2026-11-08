@@ -26,6 +26,26 @@ hôte inconnu : 403
 en clair : fermé
 sans autorité : refusé
 toujours debout : 200" "le réseau, en TLS"
+# 8 novembre 2026 : dix jetons faux depuis une adresse, et elle attend (429) ; le jeton se garde d'un lancement à l'autre
+verifier "$(python3 - "$port" cert/autorite.crt <<'FIN'
+import http.client, ssl, sys
+ctx = ssl.create_default_context(cafile=sys.argv[2])
+r = []
+for k in range(11):
+    c = http.client.HTTPSConnection('127.0.0.1', int(sys.argv[1]), context=ctx, timeout=10)
+    c.request('GET', '/?jeton=' + '0' * 32, headers={'Host': f'praxis.local:{sys.argv[1]}'})
+    r.append(c.getresponse().status)
+print(r[0], r[9], r[10])
+FIN
+)" "403 403 429" "le frein des jetons faux"
+premier=$(grep -o 'jeton=[0-9a-f]*' ag.txt | head -1)
+kill $pid 2> /dev/null; wait $pid 2> /dev/null
+"$grym" servir p.grym --reseau cert --port "$port" --sans-navigateur > ag.txt 2>&1 < /dev/null &
+pid=$!
+n=0
+while ! grep -q 'jeton=' ag.txt 2> /dev/null && [ "$n" -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+verifier "$(grep -o 'jeton=[0-9a-f]*' ag.txt | head -1)" "$premier" "le même jeton au lancement suivant"
+verifier "$(ls -l cert/jeton | cut -c1-10)" "-rw-------" "le jeton, lisible par son propriétaire seul"
 verifier "$("$grym" servir p.grym --reseau /pas/de/certificats --sans-navigateur 2>&1)" "Le certificat « /pas/de/certificats/serveur.crt » ne se lit pas : crée-le avec « grym certificat »." "sans certificat"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]

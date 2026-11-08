@@ -1,6 +1,6 @@
 # Installer Praxis sur plusieurs postes d'un cabinet
 
-Version 1.0, rédigée le 8 novembre 2026. Pour un cabinet équipé de Mac, qui veut ouvrir Praxis sur plusieurs postes.
+Version 1.1, révisée le 8 novembre 2026. Pour un cabinet équipé de Mac, qui veut ouvrir Praxis sur plusieurs postes.
 
 Par défaut, Praxis tourne sur **un seul poste** : on l'ouvre, on travaille, rien d'autre à régler. Ce guide ne sert que si le
 cabinet choisit le **multiposte**. Ce choix active aussi la Direction et l'Équipe (deux mots de passe) et le Personnel
@@ -89,8 +89,10 @@ Fermer d'abord l'application Praxis sur le poste principal, puis, dans le Termin
   Les autres postes n'ont pas à le connaître.
 - `--base` et `--ecriture` font servir **la base de l'application**, pas une copie : ce que les postes font se retrouve
   dans Praxis, et inversement.
-- Le Terminal affiche l'adresse : `https://praxis.local:8443/?jeton=…`. C'est elle qu'on ouvre sur chaque poste (un
-  marque-page suffit, une fois). Elle reste la même tant que le service tourne ; elle change à chaque relance.
+- Le Terminal affiche l'adresse : `https://praxis.local:8443/?jeton=…`. C'est elle qu'on ouvre sur chaque poste, et on
+  la garde en marque-page : elle reste la même d'un matin à l'autre. Si un poste est perdu ou volé, effacer le fichier
+  `~/Cabinet/jeton` : la relance suivante donne une adresse neuve, et les anciens marque-pages ne mènent plus nulle part.
+- Un poste qui se trompe trop souvent d'adresse, ou ouvre trop de sessions, attend dix minutes.
 - macOS peut demander si `grym` accepte les connexions entrantes : répondre Autoriser.
 - Le soir : Ctrl+C dans le Terminal arrête le service, et toutes les sessions avec lui.
 
@@ -108,7 +110,6 @@ même adresse. Le choix et le réglage du VPN dépendent du routeur du cabinet :
 
 - **Le démarrage automatique** au matin. Il demanderait de ranger le mot de passe des données sur le disque, en clair ou
   presque : pas avant une solution sûre (le trousseau du Mac).
-- **L'adresse stable.** Le jeton change à chaque relance du service : il faut rouvrir l'adresse affichée.
 - **Le poste principal comme poste de travail** pendant le service : par Safari, sur la même adresse, comme les autres.
   L'application et le service ouverts en même temps sur la même base n'ont pas encore été éprouvés sur un Mac.
 - **Windows** : le service ne tourne pas encore sous Windows ; un poste Windows peut toutefois s'y connecter par son

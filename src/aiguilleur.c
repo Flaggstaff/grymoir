@@ -42,8 +42,10 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <stdint.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -89,6 +91,7 @@ typedef struct {
     char jeton[33];          /* celui de l'adresse affichée */
     char hote[32], origine[48];
     TlsServeur *tls;         /* --reseau : le chiffrement ; NULL sur 127.0.0.1 */
+    struct { uint32_t ip; time_t debut; int echecs, nouveaux; } freins[64];   /* par adresse : les essais récents */
     char **hotes, **origines;   /* --reseau : les noms du certificat, avec le port ; « https://… » */
     size_t nb_hotes;
     Session s[MAX_SESSIONS];
@@ -385,7 +388,32 @@ static int parmi(const char *x, size_t n, char *const *liste, size_t nb, const c
     return 0;
 }
 
-static void accueillir(Aiguilleur *a, int fd) {
+/* Le frein d'une adresse (8 novembre 2026) : dix jetons faux en dix minutes, ou dix nouveaux visiteurs en dix minutes,
+ * et l'adresse attend la fin de la fenêtre. Un poste du cabinet n'en approche jamais ; un essai de mots de passe par
+ * sessions neuves (chacune donnant cinq essais au programme) s'y heurte. La table oublie l'adresse la plus ancienne. */
+enum { FENETRE = 600, LIMITE = 10 };
+
+static int *frein(Aiguilleur *a, uint32_t ip, int echec) {
+    const time_t t = time(NULL);
+    int k, vieux = 0;
+    for (k = 0; k < 64; k++) {
+        if (a->freins[k].ip == ip && a->freins[k].debut) break;
+        if (a->freins[k].debut < a->freins[vieux].debut) vieux = k;
+    }
+    if (k == 64) {
+        k = vieux;
+        a->freins[k].ip = ip;
+        a->freins[k].debut = t;
+        a->freins[k].echecs = a->freins[k].nouveaux = 0;
+    }
+    if (t - a->freins[k].debut > FENETRE) {
+        a->freins[k].debut = t;
+        a->freins[k].echecs = a->freins[k].nouveaux = 0;
+    }
+    return echec ? &a->freins[k].echecs : &a->freins[k].nouveaux;
+}
+
+static void accueillir(Aiguilleur *a, int fd, uint32_t ip) {
     Flux flux = { fd, NULL }, *f = &flux;
     struct timeval t5 = { 5, 0 };
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &t5, sizeof t5);   /* la poignée de main et les en-têtes : 5 s au plus */
@@ -409,7 +437,17 @@ static void accueillir(Aiguilleur *a, int fd) {
     if (!s && strncmp(e, "GET /?jeton=", 12) == 0) {
         /* un nouveau visiteur, avec le jeton de l'adresse affichée : sa session, son cookie */
         const char *j = e + 12, *fj = strchr(j, ' ');
-        if (!fj || !meme(j, (size_t)(fj - j), a->jeton)) { refuser(f, "Accès refusé : ouvre l'adresse affichée dans le terminal."); goto fin; }
+        if (*frein(a, ip, 1) >= LIMITE || *frein(a, ip, 0) >= LIMITE) {
+            repondre_simple(f, "429 Too Many Requests", "Retry-After: 600\r\n",
+                            "Trop d'essais depuis ce poste : attends dix minutes.");
+            goto fin;
+        }
+        if (!fj || !meme(j, (size_t)(fj - j), a->jeton)) {
+            ++*frein(a, ip, 1);
+            refuser(f, "Accès refusé : ouvre l'adresse affichée dans le terminal.");
+            goto fin;
+        }
+        ++*frein(a, ip, 0);
         for (int k = 0; k < MAX_SESSIONS && !s; k++)
             if (!a->s[k].visiteur[0]) s = &a->s[k];
         if (!s) { repondre_simple(f, "503 Service Unavailable", NULL, "Trop de sessions ouvertes : réessaie plus tard."); goto fin; }
@@ -474,6 +512,27 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     a.inactivite = inactivite > 0 ? inactivite * 60 : 30 * 60;
     for (int k = 0; k < MAX_SESSIONS; k++) a.s[k].sortie = -1;
     if (!hex_aleatoire(a.jeton)) { fputs("Aucun générateur aléatoire du système : pas de jeton.\n", stderr); return EXIT_FAILURE; }
+    if (reseau) {
+        /* 8 novembre 2026 : sur le réseau, le jeton se garde dans le dossier des certificats (« jeton », lisible par son
+         * seul propriétaire) : l'adresse des postes reste la même d'un matin à l'autre, un marque-page suffit. Effacer
+         * le fichier en donne un neuf, et retire l'accès à tous les marque-pages. */
+        char *chemin = grym_formater("%s/jeton", reseau);
+        FILE *fj = fopen(chemin, "r");
+        char lu[64] = "";
+        if (fj) {
+            if (!fgets(lu, sizeof lu, fj)) lu[0] = 0;
+            fclose(fj);
+        }
+        size_t n = 0;
+        while (n < 32 && ((lu[n] >= '0' && lu[n] <= '9') || (lu[n] >= 'a' && lu[n] <= 'f'))) n++;
+        if (n == 32) memcpy(a.jeton, lu, 32);
+        else if ((fj = fopen(chemin, "w")) != NULL) {
+            fchmod(fileno(fj), 0600);
+            fprintf(fj, "%s\n", a.jeton);
+            fclose(fj);
+        }
+        free(chemin);
+    }
     a.ecoute = socket(AF_INET, SOCK_STREAM, 0);
     int un = 1;
     setsockopt(a.ecoute, SOL_SOCKET, SO_REUSEADDR, &un, sizeof un);
@@ -522,8 +581,11 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
         const int r = poll(&q, 1, 1000);
         veiller(&a);
         if (r > 0 && (q.revents & POLLIN)) {
-            int f = accept(a.ecoute, NULL, NULL);
-            if (f >= 0) accueillir(&a, f);
+            struct sockaddr_in de;
+            socklen_t lde = sizeof de;
+            memset(&de, 0, sizeof de);
+            int f = accept(a.ecoute, (struct sockaddr *)&de, &lde);
+            if (f >= 0) accueillir(&a, f, ntohl(de.sin_addr.s_addr));
         }
     }
     printf("Arrêt : les sessions se ferment.\n");
