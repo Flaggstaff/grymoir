@@ -32,3 +32,6 @@ _essai_praxis/
 _charge_praxis/
 _essai_*_projet/
 *.clés
+
+# Mbed TLS, construit par make
+vendor/mbedtls/libmbedtls.a

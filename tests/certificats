@@ -1,0 +1,32 @@
+#!/bin/sh
+# grym certificat (docs/v2.md, § 12, 8 novembre 2026) : l'autorité du cabinet, créée une fois puis gardée ; le certificat
+# du serveur, neuf à chaque fois, pour ses noms et ses adresses, signé par elle ; les clés lisibles par leur seul
+# propriétaire. La chaîne se vérifie par OpenSSL, quand il est là.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); case "$1" in *"$2"*) ;; *) echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans « $1 »)";; esac; }
+contient "$("$grym" certificat "$d" "Cabinet Seydoux" praxis.local 192.168.1.20 2>&1)" "pour praxis.local, 192.168.1.20" "première création"
+verifier "$(cd "$d" && ls | tr '\n' ' ')" "autorite.cle autorite.crt serveur.cle serveur.crt " "les quatre fichiers"
+avant=$(cat "$d/autorite.crt")
+serveur=$(cat "$d/serveur.crt")
+"$grym" certificat "$d" "Cabinet Seydoux" praxis.local > /dev/null 2>&1
+verifier "$(cat "$d/autorite.crt")" "$avant" "l'autorité se garde"
+total=$((total + 1)); [ "$(cat "$d/serveur.crt")" != "$serveur" ] || { echecs=$((echecs + 1)); echo "ÉCHEC : le certificat du serveur se refait"; }
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) ;; *)
+    verifier "$(ls -l "$d/autorite.cle" | cut -c1-10)" "-rw-------" "la clé de l'autorité, au propriétaire seul"
+    verifier "$(ls -l "$d/serveur.cle" | cut -c1-10)" "-rw-------" "la clé du serveur, au propriétaire seul";;
+esac
+contient "$(head -1 "$d/serveur.crt")" "BEGIN CERTIFICATE" "un certificat PEM"
+if command -v openssl > /dev/null; then
+    verifier "$(openssl verify -CAfile "$d/autorite.crt" "$d/serveur.crt" 2>&1)" "$d/serveur.crt: OK" "la chaîne, par OpenSSL"
+    contient "$(openssl x509 -in "$d/serveur.crt" -noout -ext subjectAltName,extendedKeyUsage 2>&1)" "DNS:praxis.local" "le nom du serveur"
+    contient "$(openssl x509 -in "$d/serveur.crt" -noout -ext extendedKeyUsage 2>&1)" "TLS Web Server Authentication" "l'usage serverAuth"
+    contient "$(openssl x509 -in "$d/autorite.crt" -noout -subject 2>&1)" "Cabinet Seydoux" "le nom de l'autorité"
+fi
+contient "$("$grym" certificat /dossier/qui/n/existe/pas Cab x.local 2>&1)" "ne s'écrit pas" "un dossier qui n'existe pas"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

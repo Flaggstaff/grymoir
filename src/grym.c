@@ -19,6 +19,7 @@
 #include "vm.h"
 #include "serveur.h"
 #include "aiguilleur.h"
+#include "tls.h"
 #include "lsp.h"
 #include "texte.h"
 
@@ -403,6 +404,23 @@ static void ouvrir_navigateur(const char *adresse) {
     free(commande);
 }
 
+/* grym certificat dossier cabinet nom… : l'autorité du cabinet (une fois) et le certificat du serveur (docs/v2.md, § 12). */
+static int certificat(const char *dossier, const char *cabinet, const char *const *noms, size_t nb) {
+    char *erreur = NULL;
+    if (!tls_preparer_certificats(dossier, cabinet, noms, nb, &erreur)) {
+        fprintf(stderr, "%s\n", erreur);
+        free(erreur);
+        return EXIT_FAILURE;
+    }
+    printf("Dans « %s » :\n"
+           "  autorite.crt  l'autorité du cabinet : à installer une fois sur chaque poste, comme autorité de confiance\n"
+           "  autorite.cle  sa clé : à garder hors du serveur, en lieu sûr ; elle signe les certificats suivants\n"
+           "  serveur.crt   le certificat du serveur, pour ", dossier);
+    for (size_t k = 0; k < nb; k++) printf("%s%s", k ? ", " : "", noms[k]);
+    printf(" (800 jours)\n  serveur.cle   sa clé, lue par « grym servir --reseau »\n");
+    return EXIT_SUCCESS;
+}
+
 /* grym servir : l'application dans le navigateur (docs/v2.md). */
 static int servir(const char *chemin, int port, int navigateur) {
     Module *b = charger(chemin);
@@ -679,6 +697,8 @@ int main(int argc, char **argv) {
         }
         if (bon) return servir(argv[2], port, navigateur);
     }
+    if (argc >= 5 && strcmp(argv[1], "certificat") == 0)   /* grym certificat dossier cabinet nom… (docs/v2.md, § 12) */
+        return certificat(argv[2], argv[3], (const char *const *)(argv + 4), (size_t)(argc - 4));
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);
     if (argc == 3 && strcmp(argv[1], "migration") == 0) return migration(argv[2]);
     if (argc == 3 && strcmp(argv[1], "formater") == 0) return formater(argv[2]);
@@ -693,6 +713,7 @@ int main(int argc, char **argv) {
             "  grym lancer fichier.grymb           exécute un bytecode compilé\n"
             "  grym servir fichier.grym            l'application dans le navigateur\n"
             "    [--sessions] [--inactivite M]     une session par navigateur (docs/v2.md, § 11)\n"
+            "  grym certificat dossier cabinet nom…  l'autorité du cabinet et le certificat du serveur (§ 12)\n"
             "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym migration fichier.grym         ce que le prochain lancement fera à la base, sans rien changer\n"

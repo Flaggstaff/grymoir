@@ -13,6 +13,11 @@ SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -
                -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0
 SQLITE_O     = vendor/sqlite/sqlite3.o
 
+# Mbed TLS 3.6 LTS (vendor/mbedtls/PROVENANCE.md) : le chiffrement de l'aiguilleur sur le réseau (docs/v2.md, § 12)
+MBEDTLS_OBJ = $(patsubst %.c,%.o,$(wildcard vendor/mbedtls/library/*.c))
+MBEDTLS_A   = vendor/mbedtls/libmbedtls.a
+TLS         = src/tls.c $(MBEDTLS_A)
+
 # Windows : prises réseau et générateur aléatoire du système (grym servir, docs/v2.md)
 # dlopen, pour les fonctions C des bibliothèques (3.14) : dans libdl sous Linux, déjà dans la bibliothèque du C
 # ailleurs (macOS accepte -ldl) ; Windows charge par LoadLibrary
@@ -29,11 +34,17 @@ ENTETES   = src/natif.h src/grym_natif.h src/qr.h src/coffre.h src/teinte.h src/
 
 all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide test_serie
 
+vendor/mbedtls/library/%.o: vendor/mbedtls/library/%.c
+	$(CC) -std=c99 -O2 -w -Ivendor/mbedtls/include -Ivendor/mbedtls/library -c -o $@ $<
+
+$(MBEDTLS_A): $(MBEDTLS_OBJ)
+	$(AR) rcs $@ $(MBEDTLS_OBJ)
+
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c src/lsp.c src/serveur.c src/aiguilleur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h src/aiguilleur.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/serveur.c src/aiguilleur.c $(EXECUTION) $(RESEAU) -lm $(DL)
+grym: src/grym.c src/lsp.c src/serveur.c src/aiguilleur.c $(TLS) $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h src/aiguilleur.h src/tls.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -isystem vendor/mbedtls/include -o $@ src/grym.c src/lsp.c src/serveur.c src/aiguilleur.c $(TLS) $(EXECUTION) $(RESEAU) -lm $(DL)
 
 outils/windows/grym-ressources.o: outils/windows/grym.rc outils/windows/grymoir.manifest
 	$(WINDRES) -I outils/windows -i outils/windows/grym.rc -o $@
@@ -98,6 +109,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/conflits
 	sh tests/connexion
 	sh tests/sessions-concurrentes
+	sh tests/certificats
 	sh tests/praxis-justificatif
 	sh tests/praxis-electronique
 	sh tests/praxis-twint
@@ -124,6 +136,6 @@ clean:
 
 # Recompiler SQLite prend une trentaine de secondes : « make clean » le garde, « make distclean » non.
 distclean: clean
-	rm -f $(SQLITE_O)
+	rm -f $(SQLITE_O) $(MBEDTLS_OBJ) $(MBEDTLS_A)
 
 .PHONY: all test clean distclean

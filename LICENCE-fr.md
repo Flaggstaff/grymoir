@@ -40,5 +40,5 @@ bibliothèque native inclut, peut être copié dans son code sous la même excep
 ## Ce qui n'est pas à GrymoiR
 
 Les dossiers `vendor/` gardent la licence de leurs auteurs, indiquée dans chacun : SQLite et SQLite3MC, Monocypher,
-QR Code generator, les polices Atkinson Hyperlegible (OFL 1.1), les icônes Lucide. L'atelier s'appuie sur Qt 6
+QR Code generator, Mbed TLS (Apache-2.0), les polices Atkinson Hyperlegible (OFL 1.1), les icônes Lucide. L'atelier s'appuie sur Qt 6
 (LGPL v3) et sur whisper.cpp (MIT) ; une application fabriquée qui les embarque respecte aussi leurs licences.
