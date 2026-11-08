@@ -422,7 +422,7 @@ static int certificat(const char *dossier, const char *cabinet, const char *cons
 }
 
 /* grym servir : l'application dans le navigateur (docs/v2.md). */
-static int servir(const char *chemin, int port, int navigateur) {
+static int servir(const char *chemin, int port, int navigateur, const char *base, const char *ecriture) {
     Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
     const char *nom = strrchr(chemin, '/');
@@ -442,6 +442,10 @@ static int servir(const char *chemin, int port, int navigateur) {
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, serveur_demander_mot_de_passe, s);   /* une base chiffrée (2.37) */
     situer(m, chemin);
+    /* --base, --ecriture (8 novembre 2026) : la base et le dossier d'une application fabriquée, pour la servir à
+     * plusieurs postes sans la déplacer (docs/v2.md, § 11) */
+    if (base) machine_base(m, base);
+    if (ecriture) machine_dossier_ecriture(m, ecriture);
     Chaine sortie = {0};
     Diagnostic d;
     grym_interruption = 0;
@@ -673,10 +677,13 @@ int main(int argc, char **argv) {
     if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
         int port = 0, navigateur = 1, bon = 1, sessions = 0, inactivite = 30;
         const char *reseau = NULL;   /* le dossier des certificats : sur le réseau local, en TLS (docs/v2.md, § 12) */
+        const char *base = NULL, *ecriture = NULL;   /* la base, le dossier d'écriture imposés (docs/v2.md, § 11) */
         for (int k = 3; k < argc && bon; k++) {
             if (strcmp(argv[k], "--sans-navigateur") == 0) navigateur = 0;
             else if (strcmp(argv[k], "--sessions") == 0) sessions = 1;   /* 3.18 : une session par navigateur */
             else if (strcmp(argv[k], "--reseau") == 0 && k + 1 < argc) { reseau = argv[++k]; sessions = 1; }   /* § 12 */
+            else if (strcmp(argv[k], "--base") == 0 && k + 1 < argc) base = argv[++k];
+            else if (strcmp(argv[k], "--ecriture") == 0 && k + 1 < argc) ecriture = argv[++k];
             else if (strcmp(argv[k], "--inactivite") == 0 && k + 1 < argc) {
                 char *e = NULL;
                 long n = strtol(argv[++k], &e, 10);
@@ -713,9 +720,9 @@ int main(int argc, char **argv) {
 #else
             (void)chiffree;
 #endif
-            return aiguilleur_servir(argv[0], argv[2], port, navigateur, inactivite, reseau, ouvrir_navigateur);
+            return aiguilleur_servir(argv[0], argv[2], port, navigateur, inactivite, reseau, base, ecriture, ouvrir_navigateur);
         }
-        if (bon) return servir(argv[2], port, navigateur);
+        if (bon) return servir(argv[2], port, navigateur, base, ecriture);
     }
     if (argc >= 5 && strcmp(argv[1], "certificat") == 0)   /* grym certificat dossier cabinet nom… (docs/v2.md, § 12) */
         return certificat(argv[2], argv[3], (const char *const *)(argv + 4), (size_t)(argc - 4));
@@ -734,6 +741,7 @@ int main(int argc, char **argv) {
             "  grym servir fichier.grym            l'application dans le navigateur\n"
             "    [--sessions] [--inactivite M]     une session par navigateur (docs/v2.md, § 11)\n"
             "    [--reseau dossier]                sur le réseau local, en TLS, avec ses certificats (§ 12)\n"
+            "    [--base f.grymd] [--ecriture d]   la base et le dossier d'écriture d'une application fabriquée\n"
             "  grym certificat dossier cabinet nom…  l'autorité du cabinet et le certificat du serveur (§ 12)\n"
             "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"

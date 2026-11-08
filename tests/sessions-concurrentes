@@ -28,6 +28,25 @@ sans cookie : 403  mauvais jeton : 403
 A revient : p.grym Nom d&#39;utilisateur ? Mot de passe ? Envoyer Annuler
 autre hôte : 403
 autre origine : 403"
-if [ "$obtenu" = "$attendu" ]; then echo "1/1 tests réussis"; exit 0; fi
+# --base : les sessions ouvrent la base imposée (celle d'une application fabriquée), pas celle d'à côté du programme
+kill $pid 2> /dev/null; wait $pid 2> /dev/null
+mkdir donnees
+GRYM_UTILISATEUR=ana GRYM_MOT_DE_PASSE_UTILISATEUR=secret123 "$grym" servir p.grym --sessions --base "$d/donnees/app.grymd" --sans-navigateur > ag.txt 2>&1 < /dev/null &
+pid=$!
+n=0
+while ! grep -q 'jeton=' ag.txt 2> /dev/null && [ "$n" -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+python3 - "$d" <<'FIN' > base.txt 2>&1
+import http.client, re, sys
+port, jeton = re.search(r'127\.0\.0\.1:(\d+)/\?jeton=([0-9a-f]+)', open(sys.argv[1] + '/ag.txt').read()).groups()
+def req(c, ck=None):
+    x = http.client.HTTPConnection('127.0.0.1', int(port), timeout=30)
+    h = {'Host': f'127.0.0.1:{port}'}
+    if ck: h['Cookie'] = ck
+    x.request('GET', c, headers=h); r = x.getresponse(); return dict(r.getheaders()), r.read().decode()
+h, b = req('/?jeton=' + jeton); h, b = req('/', h['Set-Cookie'].split(';')[0])
+print('Bonjour ana' in b)
+FIN
+[ "$(cat base.txt)" = "True" ] && [ -f donnees/app.grymd ] || { echo "ÉCHEC : --base (la session n'a pas ouvert la base imposée)"; cat base.txt ag.txt; exit 1; }
+if [ "$obtenu" = "$attendu" ]; then echo "2/2 tests réussis"; exit 0; fi
 echo "ÉCHEC : deux navigateurs"; echo "attendu :"; echo "$attendu"; echo "obtenu :"; echo "$obtenu"; echo "aiguilleur :"; cat ag.txt
 exit 1

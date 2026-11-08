@@ -7,8 +7,8 @@
  * ouvrir : ouvre l'adresse dans le navigateur (si navigateur). Rend le code de sortie. */
 /* reseau : NULL (127.0.0.1, en clair), ou le dossier des certificats (grym certificat) : l'aiguilleur écoute alors sur
  * toutes les adresses de la machine, en TLS seulement, port 8443 par défaut, et n'accepte que les noms du certificat
- * (docs/v2.md, § 12). */
+ * (docs/v2.md, § 12). base, ecriture : passés à chaque session (--base, --ecriture), ou NULL. */
 int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
-                      const char *reseau, void (*ouvrir)(const char *adresse));
+                      const char *reseau, const char *base, const char *ecriture, void (*ouvrir)(const char *adresse));
 
 #endif

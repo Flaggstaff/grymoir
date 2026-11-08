@@ -30,8 +30,9 @@
 
 #ifdef _WIN32
 int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
-                      const char *reseau, void (*ouvrir)(const char *adresse)) {
-    (void)grym; (void)programme; (void)port; (void)navigateur; (void)inactivite; (void)reseau; (void)ouvrir;
+                      const char *reseau, const char *base, const char *ecriture, void (*ouvrir)(const char *adresse)) {
+    (void)grym; (void)programme; (void)port; (void)navigateur; (void)inactivite; (void)reseau; (void)base; (void)ecriture;
+    (void)ouvrir;
     fputs("« grym servir --sessions » ne tourne pas encore sous Windows : lance-le sur un Mac ou sous Linux.\n", stderr);
     return EXIT_FAILURE;
 }
@@ -83,6 +84,7 @@ static int flux_ecrire(Flux *f, const char *d, size_t n) {
 
 typedef struct {
     const char *grym, *programme;
+    const char *base, *ecriture;   /* passés aux sessions, ou NULL */
     int ecoute, port;
     char jeton[33];          /* celui de l'adresse affichée */
     char hote[32], origine[48];
@@ -204,7 +206,16 @@ static int lancer_session(Aiguilleur *a, Session *s) {
         close(t[1]);
         close(a->ecoute);
         setenv("GRYM_SESSION", "1", 1);   /* « le service à plusieurs postes » (3.18) */
-        execlp(a->grym, a->grym, "servir", a->programme, "--sans-navigateur", (char *)NULL);
+        const char *argv[10];
+        int n = 0;
+        argv[n++] = a->grym;
+        argv[n++] = "servir";
+        argv[n++] = a->programme;
+        argv[n++] = "--sans-navigateur";
+        if (a->base) { argv[n++] = "--base"; argv[n++] = a->base; }
+        if (a->ecriture) { argv[n++] = "--ecriture"; argv[n++] = a->ecriture; }
+        argv[n] = NULL;
+        execvp(a->grym, (char *const *)argv);
         _exit(127);
     }
     close(t[1]);
@@ -444,9 +455,11 @@ fin:
 }
 
 int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
-                      const char *reseau, void (*ouvrir)(const char *adresse)) {
+                      const char *reseau, const char *base, const char *ecriture, void (*ouvrir)(const char *adresse)) {
     Aiguilleur a;
     memset(&a, 0, sizeof a);
+    a.base = base;
+    a.ecriture = ecriture;
     char **noms = NULL;
     size_t nb_noms = 0;
     if (reseau) {   /* § 12 : le certificat du serveur, ses noms ; écoute sur toutes les adresses, en TLS seulement */
