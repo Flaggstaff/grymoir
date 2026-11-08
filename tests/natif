@@ -49,7 +49,10 @@ GRYM_EXPORTE void signal_muet(int nb, const grym_valeur *a, grym_resultat *r) { 
 GRYM_EXPORTE void signal_bavard(int nb, const grym_valeur *a, grym_resultat *r) { (void)nb; (void)a; r->texte(r, "un"); r->texte(r, "deux"); }
 GRYM_EXPORTE void signal_bancal(int nb, const grym_valeur *a, grym_resultat *r) { (void)nb; (void)a; r->nombre(r, "1e5"); }
 EOF
-if ! "$cc" -shared -fPIC -I"$racine/src" -o "$S/natif.$ext" natif.c > cc.txt 2>&1; then
+# compiler vers un nom sans accent, puis déplacer : sous Windows (MSYS2), l'éditeur de liens n'ouvre pas un chemin
+# accentué comme « bibliothèques/… » (8 novembre 2026)
+compiler() { "$cc" -shared -fPIC -I"$racine/src" -o "natif-compile.$ext" "$1" && mv "natif-compile.$ext" "$S/natif.$ext"; }
+if ! compiler natif.c > cc.txt 2>&1; then
     echo "tests/natif : la bibliothèque d'essai ne se compile pas avec « $cc » :"; cat cc.txt; exit 1
 fi
 programme() { printf 'Utiliser la bibliothèque « Signal », version 1.\n%s\n' "$1" > p.grym; }
@@ -96,10 +99,10 @@ mv "$S/natif.$ext" natif.garde
 programme 'Afficher le rapport de 7 et de 2.'
 contient "$(lancer)" "n'a pas de code natif pour ce système : il manque « bibliothèques/Signal/natif.$ext »" "le code natif manque"
 printf '#include "grym_natif.h"\nGRYM_EXPORTE int grym_natif_version(void) { return 99; }\n' > v.c
-"$cc" -shared -fPIC -I"$racine/src" -o "$S/natif.$ext" v.c > /dev/null 2>&1
+compiler v.c > /dev/null 2>&1
 contient "$(lancer)" "suit le contrat natif 99" "un autre contrat"
 printf '#include "grym_natif.h"\nGRYM_EXPORTE int signal_rien(void) { return 0; }\n' > v.c
-"$cc" -shared -fPIC -I"$racine/src" -o "$S/natif.$ext" v.c > /dev/null 2>&1
+compiler v.c > /dev/null 2>&1
 contient "$(lancer)" "n'exporte pas « grym_natif_version »" "le contrat absent"
 echo "pas une bibliothèque" > "$S/natif.$ext"
 contient "$(lancer)" "ne se charge pas" "un fichier qui n'est pas une bibliothèque"

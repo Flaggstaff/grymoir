@@ -9,7 +9,11 @@ if [ ! -x "$essai" ]; then echo "courriel : sauté (test_courriel absent)"; exit
 command -v python3 >/dev/null 2>&1 && command -v openssl >/dev/null 2>&1 || { echo "courriel : sauté (python3 ou openssl absent)"; exit 0; }
 d=$(mktemp -d)
 trap 'kill $serveur 2>/dev/null; rm -rf "$d"' EXIT
-openssl req -x509 -newkey rsa:2048 -nodes -subj "/CN=127.0.0.1" -days 1 -keyout "$d/cle.pem" -out "$d/cert.pem" >/dev/null 2>&1
+# MSYS2_ARG_CONV_EXCL : sous Windows (MSYS2), « /CN=… » serait pris pour un chemin et converti, le certificat ne se
+# créait pas et le faux serveur ne démarrait pas (« Connection refused », 3.0.1) ; sans effet ailleurs
+MSYS2_ARG_CONV_EXCL='*' openssl req -x509 -newkey rsa:2048 -nodes -subj "/CN=127.0.0.1" -days 1 -keyout "$d/cle.pem" \
+    -out "$d/cert.pem" >/dev/null 2>&1
+[ -s "$d/cert.pem" ] || { echo "courriel : le certificat d'essai ne se crée pas (openssl)"; exit 1; }
 port=$((20000 + $$ % 20000))
 echecs=0
 servir() {   # mode, connexions

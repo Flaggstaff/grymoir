@@ -1,3 +1,18 @@
+# GrymoiR 3.0.1
+
+Publiée le 8 novembre 2026, le soir de la 3.0. Des corrections, pas de nouveauté du langage.
+
+- **L'aide de `grym`** : les options `--port N` et `--sans-navigateur` retrouvent leur place, sous `grym servir`.
+- **Le premier lancement sur macOS** : la commande `xattr` remplace le Contrôle-clic, qui ne suffit pas (ci-dessous).
+- **L'intégration continue** de GitHub, rouge depuis le 6 novembre : ses machines Linux sont fixées à Ubuntu 24.04
+  (GitHub fait passer « ubuntu-latest » à Ubuntu 26 depuis le 19 octobre 2026) ; les essais de l'atelier y tournent
+  sans écran ; sous Windows, les essais du cœur se lient à Winsock et l'essai des fonctions C compile hors d'un chemin
+  accentué.
+- **Windows, l'atelier et les applications fabriquées** : les réglages (ceux d'une écoute, par exemple) ne se gardaient
+  pas, faute d'organisation pour QSettings, qui range dans le registre ; l'application prend désormais son nom comme
+  organisation, sans déplacer sa base. L'essai des courriels créait mal son certificat sous MSYS2. Corrigé d'après les
+  journaux de GitHub, pas encore vérifié sur un vrai Windows.
+
 # GrymoiR 3.0
 
 Publiée le 8 novembre 2026. La première version de GrymoiR mise à la disposition de tous : le langage de programmation

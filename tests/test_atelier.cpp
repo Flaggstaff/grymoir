@@ -213,6 +213,10 @@ int main(int argc, char **argv) {
     qputenv("GRYMOIR_SANS_APERCU", "1");
     qputenv("GRYM_MOT_DE_PASSE_BASE", "essai-essai");   // Praxis a sa base chiffrée (21 octobre 2026)
     QApplication app(argc, argv);
+    // QSettings exige une organisation et un nom d'application ; sans eux, sous Windows, il ne lit ni n'écrit rien,
+    // et les essais des réglages d'écoute échouaient là seulement (8 novembre 2026, 3.0.1)
+    QApplication::setOrganizationName(QString::fromUtf8("GrymoiR essais"));
+    QApplication::setApplicationName("test_atelier");
 
     // Coloration : chaque mot selon le lexeur ; les noms restent sans couleur
     VERIFIER(dessin("Le total vaut 12,50.") == "mm.......mmmm.nnnnno");

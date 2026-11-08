@@ -282,6 +282,13 @@ int main(int argc, char **argv) {
         Theme::courant().installer(app);
         const QString donnees = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
         QDir().mkpath(donnees);
+#ifdef Q_OS_WIN
+        // Sous Windows, QSettings range les réglages dans le registre et exige une organisation : sans elle, il ne lit
+        // ni n'écrit rien (AccessError, documentation de QSettings) ; les réglages d'une écoute, par exemple, se
+        // perdaient. L'organisation prend le nom de l'application, après le calcul du dossier des données, qui reste
+        // donc le même (8 novembre 2026, 3.0.1). Sous macOS et Linux, rien ne change.
+        QApplication::setOrganizationName(nom);
+#endif
         const QString chemin = QDir(programme).filePath(principal);
         Execution e(chemin);
         e.setWindowTitle(nom);

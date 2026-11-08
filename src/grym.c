@@ -40,7 +40,7 @@
 #define terminal() isatty(fileno(stdin))
 #endif
 
-#define VERSION "3.0"   /* la version publiée (charte, art. 12) : 3.0, le 8 novembre 2026 */
+#define VERSION "3.0.1"   /* la version publiée (charte, art. 12) : 3.0 le 8 novembre 2026, 3.0.1 le même soir */
 
 static char *lire_fichier(FILE *f, size_t *taille) {
     size_t cap = 4096, n = 0;
@@ -918,8 +918,8 @@ int main(int argc, char **argv) {
             "    [--base f.grymd] [--ecriture d]   la base et le dossier d'écriture d'une application fabriquée\n"
             "    [--trousseau nom]                 le mot de passe de la base, pris dans le trousseau du système\n"
             "    [--plist]                         l'agent launchd qui démarre ce service à l'ouverture de session\n"
+            "    [--port N] [--sans-navigateur]\n"
             "  grym certificat dossier cabinet nom…  l'autorité du cabinet et le certificat du serveur (§ 12)\n"
-            "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym migration fichier.grym         ce que le prochain lancement fera à la base, sans rien changer\n"
             "  grym exemples fichier.grym          vérifie les exemples du programme, sans exécuter le reste\n"

@@ -5,6 +5,9 @@ on:
   push:
   pull_request:
 
+# Ubuntu 24.04, pas « ubuntu-latest » (8 novembre 2026, 3.0.1) : GitHub fait passer « ubuntu-latest » à Ubuntu 26 depuis le
+# 19 octobre 2026 (actions/runner-images, ticket 14748), avec d'autres compilateurs ; l'intégration continue est rouge
+# depuis. Le passage à Ubuntu 26 se fera exprès, un jour, pas par surprise.
 jobs:
   unix:
     name: ${{ matrix.os }} (${{ matrix.cc }})
@@ -13,8 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, cc: gcc }
-          - { os: ubuntu-latest, cc: clang }
+          - { os: ubuntu-24.04, cc: gcc }
+          - { os: ubuntu-24.04, cc: clang }
           - { os: macos-latest, cc: clang }
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +35,7 @@ jobs:
 
   sanitizers:
     name: ubuntu (ASan et UBSan)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Tests sous AddressSanitizer et UndefinedBehaviorSanitizer
@@ -74,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Qt 6 (Ubuntu)
@@ -88,6 +91,9 @@ jobs:
           cmake -B construction -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt 2>/dev/null || true)"
           cmake --build construction --parallel
       - name: Essais
+        # sans écran : sous Linux, une fenêtre attendrait un affichage qui n'existe pas (la tâche était tuée, code 143)
+        env:
+          QT_QPA_PLATFORM: ${{ runner.os == 'Linux' && 'offscreen' || 'cocoa' }}
         run: ctest --test-dir construction --output-on-failure
 
   atelier-windows:
