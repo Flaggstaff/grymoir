@@ -1,0 +1,109 @@
+# La publication de GrymoiR (8 novembre 2026) : un tag « v3.0.0 » poussé sur GitHub fabrique GrymoiR pour les trois
+# systèmes et les range dans une publication GitHub (Releases), avec leurs empreintes SHA-256 :
+#   GrymoiR-<version>-macos.dmg            l'atelier et grym (GrymoiR.app/Contents/MacOS/grym), signature ad hoc
+#   GrymoiR-<version>-windows.exe          l'installateur (Inno Setup), non signé
+#   GrymoiR-<version>-linux-x86_64.AppImage l'atelier, un seul fichier
+#   grym-<version>-linux-x86_64            l'outil en ligne de commande seul
+#   SHA256SUMS.txt
+# Pour publier : git tag v3.0.0 && git push origin v3.0.0 ; ou à la main (Actions > publication > Run workflow).
+# Les avertissements de macOS (Gatekeeper) et de Windows (SmartScreen) au premier lancement sont attendus : rien
+# n'est signé par un certificat payant (docs/notes-de-version.md).
+name: publication
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (sans le v), pour un essai sans tag'
+        required: true
+        default: '3.0.0'
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.version) }}
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/grymoir-modeles
+          key: modele-large-v3-turbo-q5_0-e050f797
+      - name: Qt 6
+        run: brew install qt
+      - name: GrymoiR.dmg
+        run: |
+          ./paquet-mac
+          mkdir -p sortie
+          mv GrymoiR.dmg "sortie/GrymoiR-${VERSION#v}-macos.dmg"
+      - uses: actions/upload-artifact@v4
+        with: { name: macos, path: sortie/, if-no-files-found: error }
+
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/grymoir-modeles
+          key: modele-large-v3-turbo-q5_0-e050f797
+      - name: Qt 6
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-multimedia-dev cmake
+      - name: GrymoiR-x86_64.AppImage et grym
+        run: |
+          ./paquet-linux
+          mkdir -p sortie
+          mv paquet/GrymoiR-x86_64.AppImage "sortie/GrymoiR-${VERSION#v}-linux-x86_64.AppImage"
+          mv paquet/grym-linux-x86_64 "sortie/grym-${VERSION#v}-linux-x86_64"
+      - uses: actions/upload-artifact@v4
+        with: { name: linux, path: sortie/, if-no-files-found: error }
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/grymoir-modeles
+          key: modele-large-v3-turbo-q5_0-e050f797
+      - name: Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make diffutils git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-multimedia mingw-w64-ucrt-x86_64-qt6-tools
+      - name: GrymoiR-installation.exe
+        shell: msys2 {0}
+        run: |
+          GRYM_VERSION="${VERSION#v}" ./paquet-windows
+          mkdir -p sortie
+          mv paquet/GrymoiR-installation.exe "sortie/GrymoiR-${VERSION#v}-windows.exe"
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: sortie/, if-no-files-found: error }
+
+  publier:
+    needs: [macos, linux, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: paquets, merge-multiple: true }
+      - name: Empreintes et publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd paquets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release create "$VERSION" * --repo "$GITHUB_REPOSITORY" --title "GrymoiR ${VERSION#v}" \
+            --notes-file ../docs/notes-de-version.md $([ "$GITHUB_REF_TYPE" = tag ] || echo --target "$GITHUB_SHA")

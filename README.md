@@ -2,6 +2,9 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
+**GrymoiR 3.0**, publiée le 8 novembre 2026 : paquets pour macOS, Linux et Windows dans les publications GitHub
+(`.github/workflows/publication.yml`, déclenchée par un tag `v*`), notes dans `docs/notes-de-version.md`.
+
 **Licence** : EUPL v. 1.2 seulement (`LICENCE`), avec une exception pour les applications écrites en GrymoiR, qui restent
 à leur auteur, sous la licence de son choix (`LICENCE-fr.md`). Les dossiers `vendor/` gardent la licence de leurs auteurs.
 

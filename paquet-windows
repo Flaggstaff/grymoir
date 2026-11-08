@@ -94,7 +94,7 @@ echo "5. L'installateur (Inno Setup)…"
 # s'arrêtait là, sans message (exécution 40926784702)
 commit="$(git rev-parse --short HEAD 2>/dev/null || true)"
 [ -n "$commit" ] || commit="$(printf '%.7s' "${GITHUB_SHA:-local}")"
-version="$(date +%Y.%m.%d)-$commit"
+version="${GRYM_VERSION:-$(date +%Y.%m.%d)-$commit}"   # la publication donne la sienne (publication.yml)
 rm -f "$paquet/GrymoiR-installation.exe"
 MSYS2_ARG_CONV_EXCL='*' "$iscc" /Qp "/DSource=$(cygpath -w "$dossier")" "/DVersion=$version" \
     "/DSortie=$(cygpath -w "$paquet")" "$(cygpath -w "$depot/outils/windows/GrymoiR.iss")"

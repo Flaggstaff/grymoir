@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.68, révisée le 8 novembre 2026.
+Version 1.69, révisée le 8 novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -184,8 +184,9 @@ Horizon post-v1, sans date :
 | A5 | Les projets et leurs fichiers (`docs/atelier.md`, § 5 quater) : nouveau projet, projets récents, renommer, corbeille, fermer ; première application créée ainsi, `projets/Gestion de projet` | fait le 10 octobre 2026 |
 | W1 | Le web (`docs/web.md`) : les écrans rendus en HTML, avec le thème ; `grym servir` montre les programmes à écrans | fait le 29 septembre 2026 |
 | W2 | `grym publier` : un site de pages fixes tiré de la base, adresses stables, sortie déterministe, refus des écrans impubliables | à venir |
-| W3 | Conception, sans code : une machine par visiteur, comptes et droits dans la grammaire | à venir |
-| W4 | `grym` en public : sessions, sécurité, guide de déploiement | à venir |
+| W3 | Une machine par visiteur, comptes dans la grammaire : `grym servir --sessions` (une session par navigateur, `docs/v2.md`, § 11), `Les utilisateurs se connectent.` (grammaire, § 16.20), les conflits entre sessions (§ 16.6) ; les droits restent écrits par le programme (`Refuser`) | fait le 8 novembre 2026 |
+| W4 | `grym` sur le réseau d'un cabinet : TLS, certificats, adresse stable, frein par adresse, démarrage automatique, guide de déploiement (`docs/v2.md`, § 12 ; `docs/installation-multiposte.md`) ; jamais directement en public, sur internet | fait le 8 novembre 2026, sur un réseau local |
+| v3.0 | La première version publiée : l'atelier, `grym` et les exemples, pour macOS, Linux et Windows (`.github/workflows/publication.yml`), sous EUPL 1.2 ; langage à la grammaire 3.18 ; notes : `docs/notes-de-version.md` | publiée le 8 novembre 2026 |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -303,3 +304,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.66 | 2026-11-07 | Art. 14 : la licence, EUPL v. 1.2 seulement, et l'exception pour les applications écrites en GrymoiR |
 | 1.67 | 2026-11-07 | Art. 13 : la sorte `conflit` s'ajoute (grammaire 3.16) |
 | 1.68 | 2026-11-08 | Art. 11 : plusieurs sessions sur une base, et le réseau local en TLS seulement (`docs/v2.md`, § 11, § 12) ; le langage reste sans concurrence |
+| 1.69 | 2026-11-08 | Art. 12 : W3 et W4 faits (sessions, comptes, réseau local) ; v3.0, la première version publiée |

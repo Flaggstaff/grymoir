@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# GrymoiR : fabriquer GrymoiR-x86_64.AppImage, GrymoiR pour Linux, et grym-linux-x86_64, l'outil seul. À lancer sous
+# Linux, depuis le dépôt (c'est ce que fait la publication, .github/workflows/publication.yml) :
+#   ./paquet-linux
+# L'AppImage est un seul fichier, exécutable, qui embarque Qt (linuxdeploy et son greffon Qt) : l'atelier, l'outil grym
+# (dans l'image : usr/bin/grym ; lancé par « GrymoiR-x86_64.AppImage grym … » n'est pas pris en charge, d'où le binaire
+# à part), les exemples « Amis du Tilleul » et « Gestion de projet », et le modèle de transcription (grammaire, § 15.8).
+# Il faut Qt 6 (qt6-base-dev, qt6-svg-dev, qt6-multimedia-dev), cmake, et curl. GRYM_SANS_MODELE=1 : sans le modèle
+# (547 Mio), pour un essai.
+set -euo pipefail
+[ "$(uname -s)" = "Linux" ] || { echo "./paquet-linux se lance sous Linux." >&2; exit 1; }
+depot="$(cd "$(dirname "$0")" && pwd)"
+cd "$depot"
+
+echo "1. Construction (cœur, atelier)…"
+make -s grym
+if [ ! -x construction/grym-atelier ]; then
+    cmake -B construction -DCMAKE_BUILD_TYPE=Release > /dev/null
+    cmake --build construction --parallel "$(nproc)" > /dev/null
+fi
+if [ -z "${GRYM_SANS_ESSAIS:-}" ]; then
+    echo "   essais…"
+    make -s test > /dev/null
+fi
+
+echo "2. L'image…"
+paquet="$depot/paquet"
+rm -rf "$paquet"
+mkdir -p "$paquet"
+travail="$(mktemp -d)"
+trap 'rm -rf "$travail"' EXIT
+appdir="$travail/AppDir"
+mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/256x256/apps"
+cp construction/grym-atelier "$appdir/usr/bin/"
+cp grym "$appdir/usr/bin/grym"
+# les exemples, là où l'atelier les cherche : à côté de son exécutable, dans ../Resources/Exemples
+exemples="$appdir/usr/Resources/Exemples"
+mkdir -p "$exemples/Amis du Tilleul" "$exemples/Gestion de projet"
+cp docs/guide/chapitre-12/*.grym docs/guide/chapitre-12/*.png "$exemples/Amis du Tilleul/"
+printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprogramme principal : association.grym\n" \
+    > "$exemples/Amis du Tilleul/projet.grymatelier"
+cp -R "projets/Gestion de projet/." "$exemples/Gestion de projet/"
+rm -f "$exemples/Gestion de projet/"*.grymd "$exemples/Gestion de projet/"*.grymb
+if [ -z "${GRYM_SANS_MODELE:-}" ]; then
+    mkdir -p "$appdir/usr/share/grymoir/modeles"
+    cp "$(outils/modele-transcription)" "$appdir/usr/share/grymoir/modeles/"
+fi
+mkdir -p "$appdir/usr/share/doc/grymoir"
+cp LICENCE LICENCE-fr.md docs/notes-de-version.md "$appdir/usr/share/doc/grymoir/" 2>/dev/null || true
+printf '[Desktop Entry]\nType=Application\nName=GrymoiR\nComment=Le langage de programmation en français\nExec=grym-atelier\nIcon=grymoir\nCategories=Development;\n' \
+    > "$appdir/usr/share/applications/grymoir.desktop"
+cp outils/icone-application.png "$appdir/usr/share/icons/hicolor/256x256/apps/grymoir.png"
+outils="${GRYMOIR_OUTILS:-$HOME/.cache/grymoir-outils}"
+mkdir -p "$outils"
+for o in linuxdeploy/linuxdeploy/linuxdeploy-x86_64.AppImage linuxdeploy/linuxdeploy-plugin-qt/linuxdeploy-plugin-qt-x86_64.AppImage; do
+    f="$outils/$(basename "$o")"
+    [ -x "$f" ] || { curl -sSfL -o "$f" "https://github.com/${o%/*}/releases/download/continuous/$(basename "$o")"; chmod +x "$f"; }
+done
+export PATH="$outils:$PATH" APPIMAGE_EXTRACT_AND_RUN=1
+export QMAKE="${QMAKE:-$(command -v qmake6 || echo /usr/lib/qt6/bin/qmake6)}"
+export OUTPUT="$paquet/GrymoiR-x86_64.AppImage"
+(cd "$travail" && linuxdeploy-x86_64.AppImage --appdir "$appdir" --plugin qt --output appimage \
+    -e "$appdir/usr/bin/grym-atelier" -e "$appdir/usr/bin/grym" -d "$appdir/usr/share/applications/grymoir.desktop" \
+    -i "$appdir/usr/share/icons/hicolor/256x256/apps/grymoir.png" > "$travail/journal.txt" 2>&1) \
+    || { tail -n 40 "$travail/journal.txt" >&2; exit 1; }
+cp grym "$paquet/grym-linux-x86_64"
+echo "Prêt : $paquet/GrymoiR-x86_64.AppImage (l'atelier) et $paquet/grym-linux-x86_64 (l'outil seul)"

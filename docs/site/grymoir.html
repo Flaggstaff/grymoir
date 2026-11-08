@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GrymoiR 3.0 · le langage de programmation en français</title>
+<meta name="description" content="GrymoiR : écrire des applications de gestion en français courant. Version 3.0 pour macOS, Linux et Windows, sous licence EUPL 1.2.">
+<style>
+:root { --fond: #fbfaf7; --texte: #1d1b16; --doux: #5d5a52; --carte: #ffffff; --bord: #e4e0d6; --accent: #7a3e12; --code: #f2efe7; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root { --fond: #16150f; --texte: #ece8dd; --doux: #a9a497; --carte: #1f1d16; --bord: #35322a; --accent: #e3a066; --code: #26241c; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 17px/1.6 Georgia, "Iowan Old Style", serif; }
+main { max-width: 52rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+h1 { font-size: 2.6rem; margin: 0 0 .2rem; letter-spacing: .01em; }
+h1 span { color: var(--accent); }
+h2 { font-size: 1.35rem; margin: 2.6rem 0 .8rem; }
+p.chapeau { font-size: 1.2rem; color: var(--doux); margin-top: 0; }
+pre { background: var(--code); border: 1px solid var(--bord); border-radius: 8px; padding: 1rem 1.2rem; overflow-x: auto;
+      font: 15px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.carte { background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: 1.1rem 1.2rem; }
+.carte h3 { margin: 0 0 .3rem; font-size: 1.1rem; }
+.carte p { margin: .2rem 0 .8rem; color: var(--doux); font-size: .95rem; }
+a.bouton { display: inline-block; background: var(--accent); color: var(--fond); text-decoration: none; padding: .5rem .9rem;
+           border-radius: 6px; font-family: system-ui, sans-serif; font-size: .95rem; }
+a { color: var(--accent); }
+small, .doux { color: var(--doux); }
+ul { padding-left: 1.2rem; }
+footer { margin-top: 3rem; border-top: 1px solid var(--bord); padding-top: 1rem; font-size: .9rem; color: var(--doux); }
+</style>
+</head>
+<body>
+<main>
+<h1>Grymoi<span>R</span> 3.0</h1>
+<p class="chapeau">Un langage de programmation en français courant, pour écrire des applications de gestion fiables : le langage, la base de données et l’application, dans un seul outil.</p>
+
+<pre>Un client, conservé, a :
+    un nom (texte), unique,
+    un solde (nombre).
+
+Le c vaut un nouveau client :
+    Le nom vaut « Atelier Dubois ».
+    Le solde vaut 120,50.
+Conserver le c.
+Afficher le solde du client conservé dont le nom est « Atelier Dubois ».</pre>
+<p class="doux">Des nombres décimaux exacts (jamais d’erreur d’arrondi sur une facture), une base intégrée qui se met à jour toute seule quand le programme change, des écrans, des documents imprimés, et des scénarios qui éprouvent un programme avant chaque livraison.</p>
+
+<h2>Télécharger</h2>
+<div class="grille">
+  <div class="carte"><h3>macOS</h3><p>GrymoiR.app à glisser dans Applications : l’atelier, l’outil <code>grym</code> et les exemples.</p>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.0/GrymoiR-3.0.0-macos.dmg">GrymoiR-3.0.0-macos.dmg</a></div>
+  <div class="carte"><h3>Windows</h3><p>Windows 10 (1903) ou 11. Installation sans droits d’administrateur.</p>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.0/GrymoiR-3.0.0-windows.exe">GrymoiR-3.0.0-windows.exe</a></div>
+  <div class="carte"><h3>Linux</h3><p>x86_64, distributions de 2024 et après. Un seul fichier à rendre exécutable.</p>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.0/GrymoiR-3.0.0-linux-x86_64.AppImage">AppImage</a>
+    <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.0/grym-3.0.0-linux-x86_64">grym seul</a></div>
+</div>
+<p class="doux">Empreintes : <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.0/SHA256SUMS.txt">SHA256SUMS.txt</a>. Toutes les versions : <a href="https://github.com/Flaggstaff/grymoir/releases">github.com/Flaggstaff/grymoir/releases</a>.</p>
+
+<h2>Au premier lancement</h2>
+<p>Les paquets ne sont pas signés par un certificat payant, et le système le dit une fois :</p>
+<ul>
+  <li><strong>macOS</strong> : Contrôle-clic sur GrymoiR dans Applications, « Ouvrir », puis « Ouvrir » encore.</li>
+  <li><strong>Windows</strong> : « Informations complémentaires », puis « Exécuter quand même ».</li>
+  <li><strong>Linux</strong> : <code>chmod +x GrymoiR-3.0.0-linux-x86_64.AppImage</code>, puis le lancer.</li>
+</ul>
+<p>L’atelier s’ouvre sur l’exemple « Amis du Tilleul », une petite association : ses membres, ses cotisations, ses écrans.</p>
+
+<h2>Ce qui est nouveau en 3.0</h2>
+<ul>
+  <li>Plusieurs postes sur une même application, par le réseau local chiffré, avec des comptes et des conflits refusés au lieu d’être écrasés.</li>
+  <li>Des calculs écrits en C dans une bibliothèque, quand GrymoiR ne suffit pas.</li>
+  <li>Des recherches et des tris jusqu’à trente fois plus rapides.</li>
+</ul>
+<p><a href="https://github.com/Flaggstaff/grymoir/blob/main/docs/notes-de-version.md">Les notes de version complètes</a>, avec ce qui n’est pas encore fait.</p>
+
+<h2>Licence</h2>
+<p>GrymoiR est libre, sous licence publique de l’Union européenne (EUPL 1.2). Ce que tu écris en GrymoiR t’appartient, sous la licence de ton choix. <a href="https://github.com/Flaggstaff/grymoir">Le code source</a> est public.</p>
+
+<footer>GrymoiR, par Alain Thiémard (Flaggstaff), Bulle. Version 3.0, publiée le 8 novembre 2026.</footer>
+</main>
+</body>
+</html>
