@@ -14,7 +14,8 @@
  * Une session inactive (aucune requête) pendant la durée choisie s'arrête ; sa base est déjà validée, puisqu'elle
  * attendait une réponse (§ 17). Une session terminée (le programme est allé au bout) renaît à la visite suivante.
  *
- * POSIX seulement : sous Windows, « --sessions » le dit et s'arrête. */
+ * Sur les trois systèmes : sous Windows (8 novembre 2026), les sessions partent par CreateProcessW, chaque requête
+ * dans un fil d'exécution ; éprouvé sous Wine (les mêmes essais que sous Linux). */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -28,38 +29,81 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <stdint.h>
+#include <time.h>
 #ifdef _WIN32
-int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
-                      const char *reseau, const char *base, const char *ecriture, void (*ouvrir)(const char *adresse)) {
-    (void)grym; (void)programme; (void)port; (void)navigateur; (void)inactivite; (void)reseau; (void)base; (void)ecriture;
-    (void)ouvrir;
-    fputs("« grym servir --sessions » ne tourne pas encore sous Windows : lance-le sur un Mac ou sous Linux.\n", stderr);
-    return EXIT_FAILURE;
-}
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #else
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
-#include <stdint.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
+#endif
+
+/* ---------- La plateforme (8 novembre 2026 : Windows aussi) ----------
+ * Une prise est un entier (Windows : un SOCKET rangé dans un int, comme tls.c le fait déjà). Une session est un
+ * processus (POSIX : son pid ; Windows : sa poignée) et un tube, sa sortie. Une requête transmise part dans un processus
+ * fils (POSIX : fork) ou dans un fil d'exécution (Windows), qui ne touche à rien de commun. */
+#ifdef _WIN32
+typedef HANDLE Proc;
+typedef HANDLE Tube;
+#define TUBE_NUL NULL
+static volatile LONG arreter = 0;
+static BOOL WINAPI sur_ctrl(DWORD t) { (void)t; arreter = 1; return TRUE; }
+static long prise_lire(int f, void *b, size_t n) { return recv((SOCKET)f, (char *)b, (int)n, 0); }
+static long prise_envoyer(int f, const char *d, size_t n) { return send((SOCKET)f, d, (int)n, 0); }
+static void prise_fermer(int f) { closesocket((SOCKET)f); }
+static void prise_delai(int f, int secondes) {
+    DWORD ms = (DWORD)secondes * 1000;
+    setsockopt((SOCKET)f, SOL_SOCKET, SO_RCVTIMEO, (const char *)&ms, sizeof ms);
+}
+static int prise_valide(int f) { return (SOCKET)f != INVALID_SOCKET && f != -1; }
+#else
+typedef pid_t Proc;
+typedef int Tube;
+#define TUBE_NUL (-1)
+static volatile sig_atomic_t arreter = 0;
+static void sur_signal(int n) { (void)n; arreter = 1; }
+static long prise_lire(int f, void *b, size_t n) {
+    for (;;) {
+        ssize_t r = read(f, b, n);
+        if (r < 0 && errno == EINTR) continue;
+        return (long)r;
+    }
+}
+static long prise_envoyer(int f, const char *d, size_t n) {
+    for (;;) {
+        ssize_t e = write(f, d, n);
+        if (e < 0 && errno == EINTR) continue;
+        return (long)e;
+    }
+}
+static void prise_fermer(int f) { close(f); }
+static void prise_delai(int f, int secondes) {
+    struct timeval t = { secondes, 0 };
+    setsockopt(f, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof t);
+}
+static int prise_valide(int f) { return f >= 0; }
+#endif
 
 enum { MAX_SESSIONS = 32, MAX_ENTETES = 65536, MAX_CORPS = 64 * 1024 * 1024 };
 
 typedef struct {
     char visiteur[33];   /* le cookie du visiteur ; vide : place libre */
-    pid_t pid;           /* la session ; 0 : terminée, à relancer à la prochaine visite */
+    Proc pid;            /* la session ; 0 : terminée, à relancer à la prochaine visite */
     int port;            /* son port interne */
     char jeton[33];      /* son jeton : l'aiguilleur le présente pour le visiteur */
-    int sortie;          /* sa sortie standard, lue et recopiée ; -1 */
+    Tube sortie;         /* sa sortie standard, lue et recopiée ; TUBE_NUL */
     time_t derniere;     /* sa dernière requête */
 } Session;
 
@@ -70,12 +114,7 @@ typedef struct {
 } Flux;
 
 static long flux_lire(Flux *f, void *b, size_t n) {
-    if (f->tls) return tls_lire(f->tls, b, n);
-    for (;;) {
-        ssize_t r = read(f->fd, b, n);
-        if (r < 0 && errno == EINTR) continue;
-        return (long)r;
-    }
+    return f->tls ? tls_lire(f->tls, b, n) : prise_lire(f->fd, b, n);
 }
 
 static int tout_ecrire(int f, const char *d, size_t n);
@@ -98,9 +137,6 @@ typedef struct {
     int inactivite;          /* en secondes */
 } Aiguilleur;
 
-static volatile sig_atomic_t arreter = 0;
-static void sur_signal(int n) { (void)n; arreter = 1; }
-
 static int hex_aleatoire(char *hex) {
     unsigned char o[16];
     if (!aleatoire_systeme(o, sizeof o)) return 0;
@@ -118,8 +154,7 @@ static int meme(const char *a, size_t na, const char *b) {
 
 static int tout_ecrire(int f, const char *d, size_t n) {
     while (n) {
-        ssize_t e = write(f, d, n);
-        if (e < 0 && errno == EINTR) continue;
+        long e = prise_envoyer(f, d, n);
         if (e <= 0) return 0;
         d += e;
         n -= (size_t)e;
@@ -197,6 +232,108 @@ static char *lire_entetes(Flux *f, size_t *lu, size_t *taille_entetes) {
     return NULL;
 }
 
+#ifdef _WIN32
+/* Windows : « grym.exe servir programme --sans-navigateur … », lancé par CreateProcessW, sa sortie dans un tube ; le
+ * même exécutable que l'aiguilleur (GetModuleFileNameW). Les arguments se citent selon les règles de la bibliothèque C
+ * de Microsoft : entre guillemets, chaque guillemet et les barres obliques inverses qui le précèdent doublés. */
+static void citer(Chaine *c, const char *x) {
+    chaine_ajouter(c, " \"");
+    size_t barres = 0;
+    for (const char *p = x; *p; p++) {
+        char u[2] = { *p, 0 };
+        if (*p == '\\') { barres++; chaine_ajouter(c, u); continue; }
+        if (*p == '"') { for (size_t k = 0; k <= barres; k++) chaine_ajouter(c, "\\"); }
+        barres = 0;
+        chaine_ajouter(c, u);
+    }
+    for (size_t k = 0; k < barres; k++) chaine_ajouter(c, "\\");
+    chaine_ajouter(c, "\"");
+}
+
+static wchar_t *large(const char *s) {
+    int n = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
+    wchar_t *w = grym_allouer((size_t)(n > 0 ? n : 1) * sizeof *w);
+    if (n <= 0 || !MultiByteToWideChar(CP_UTF8, 0, s, -1, w, n)) w[0] = 0;
+    return w;
+}
+
+static int lancer_session(Aiguilleur *a, Session *s) {
+    SECURITY_ATTRIBUTES sa = { sizeof sa, NULL, TRUE };
+    HANDLE lire = NULL, ecrire = NULL;
+    if (!CreatePipe(&lire, &ecrire, &sa, 0)) return 0;
+    SetHandleInformation(lire, HANDLE_FLAG_INHERIT, 0);   /* le bout lu reste à l'aiguilleur */
+    wchar_t exe[4096];
+    DWORD le = GetModuleFileNameW(NULL, exe, 4096);
+    if (le == 0 || le >= 4096) { CloseHandle(lire); CloseHandle(ecrire); return 0; }
+    Chaine c = {0};
+    chaine_ajouter(&c, "grym");
+    citer(&c, "servir");
+    citer(&c, a->programme);
+    citer(&c, "--sans-navigateur");
+    if (a->base) { citer(&c, "--base"); citer(&c, a->base); }
+    if (a->ecriture) { citer(&c, "--ecriture"); citer(&c, a->ecriture); }
+    wchar_t *ligne_cmd = large(c.d);
+    free(c.d);
+    STARTUPINFOW si;
+    memset(&si, 0, sizeof si);
+    si.cb = sizeof si;
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = ecrire;
+    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    PROCESS_INFORMATION pi;
+    memset(&pi, 0, sizeof pi);
+    const BOOL ok = CreateProcessW(exe, ligne_cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+    free(ligne_cmd);
+    CloseHandle(ecrire);
+    if (!ok) { CloseHandle(lire); return 0; }
+    CloseHandle(pi.hThread);
+    /* la première ligne d'adresse, dix secondes au plus */
+    char ligne[4096];
+    size_t n = 0;
+    int trouve = 0;
+    const time_t debut = time(NULL);
+    while (!trouve && n < sizeof ligne - 1 && time(NULL) - debut < 10) {
+        DWORD dispo = 0, lu = 0;
+        if (!PeekNamedPipe(lire, NULL, 0, NULL, &dispo, NULL)) break;
+        if (!dispo) { Sleep(50); continue; }
+        if (!ReadFile(lire, ligne + n, (DWORD)(sizeof ligne - 1 - n), &lu, NULL) || !lu) break;
+        n += lu;
+        ligne[n] = 0;
+        const char *h = strstr(ligne, "http://127.0.0.1:");
+        const char *j = h ? strstr(h, "/?jeton=") : NULL;
+        if (j && strlen(j + 8) >= 32) {
+            s->port = atoi(h + 17);
+            memcpy(s->jeton, j + 8, 32);
+            s->jeton[32] = 0;
+            trouve = s->port > 0;
+        }
+    }
+    if (!trouve) {
+        TerminateProcess(pi.hProcess, 1);
+        WaitForSingleObject(pi.hProcess, 5000);
+        CloseHandle(pi.hProcess);
+        CloseHandle(lire);
+        return 0;
+    }
+    s->pid = pi.hProcess;
+    s->sortie = lire;
+    s->derniere = time(NULL);
+    return 1;
+}
+
+static void arreter_session(Session *s) {
+    if (s->pid != 0) {
+        TerminateProcess(s->pid, 0);
+        WaitForSingleObject(s->pid, 5000);
+        CloseHandle(s->pid);
+    }
+    if (s->sortie != TUBE_NUL) CloseHandle(s->sortie);
+    s->pid = 0;
+    s->sortie = TUBE_NUL;
+}
+
+#else
 /* Lance la session d'un visiteur : « grym servir programme --sans-navigateur », son adresse lue sur sa sortie. */
 static int lancer_session(Aiguilleur *a, Session *s) {
     int t[2];
@@ -257,14 +394,16 @@ static int lancer_session(Aiguilleur *a, Session *s) {
 }
 
 static void arreter_session(Session *s) {
-    if (s->pid > 0) {
+    if (s->pid != 0) {
         kill(s->pid, SIGTERM);
         waitpid(s->pid, NULL, 0);
     }
-    if (s->sortie >= 0) close(s->sortie);
+    if (s->sortie != TUBE_NUL) close(s->sortie);
     s->pid = 0;
-    s->sortie = -1;
+    s->sortie = TUBE_NUL;
 }
+
+#endif
 
 /* Fils : lit le reste du corps, transmet la requête récrite à la session, rend sa réponse au navigateur. */
 static void transmettre(const Session *s, Flux *f, char *e, size_t lu, size_t te) {
@@ -272,15 +411,15 @@ static void transmettre(const Session *s, Flux *f, char *e, size_t lu, size_t te
     const char *cl = entete(e, "content-length", &lcl);
     const unsigned long corps = cl ? strtoul(cl, NULL, 10) : 0;
     if (corps > MAX_CORPS) { repondre_simple(f, "413 Payload Too Large", NULL, "Trop gros."); return; }
-    int c = socket(AF_INET, SOCK_STREAM, 0);
+    int c = (int)socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in ad;
     memset(&ad, 0, sizeof ad);
     ad.sin_family = AF_INET;
     ad.sin_addr.s_addr = htonl(0x7F000001);
     ad.sin_port = htons((unsigned short)s->port);
-    if (c < 0 || connect(c, (struct sockaddr *)&ad, sizeof ad) != 0) {
+    if (!prise_valide(c) || connect(c, (struct sockaddr *)&ad, sizeof ad) != 0) {
         repondre_simple(f, "502 Bad Gateway", NULL, "La session ne répond pas : recharge la page.");
-        if (c >= 0) close(c);
+        if (prise_valide(c)) prise_fermer(c);
         return;
     }
     /* la ligne de requête, puis les en-têtes, sans ceux que la session vérifie ; puis les siens */
@@ -327,8 +466,7 @@ static void transmettre(const Session *s, Flux *f, char *e, size_t lu, size_t te
     int ok = tout_ecrire(c, r.d, r.n) && tout_ecrire(c, e + te, lu - te);
     free(r.d);
     /* le reste du corps, puis la réponse */
-    struct timeval t = { 30, 0 };
-    setsockopt(f->fd, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof t);
+    prise_delai(f->fd, 30);
     char tampon[65536];
     for (unsigned long reste = corps > lu - te ? corps - (lu - te) : 0; ok && reste;) {
         long n = flux_lire(f, tampon, reste < sizeof tampon ? reste : sizeof tampon);
@@ -337,12 +475,11 @@ static void transmettre(const Session *s, Flux *f, char *e, size_t lu, size_t te
         reste -= (unsigned long)n;
     }
     for (;;) {
-        ssize_t n = read(c, tampon, sizeof tampon);
-        if (n < 0 && errno == EINTR) continue;
+        long n = prise_lire(c, tampon, sizeof tampon);
         if (n <= 0) break;
         if (!flux_ecrire(f, tampon, (size_t)n)) break;
     }
-    close(c);
+    prise_fermer(c);
 }
 
 static Session *session_de(Aiguilleur *a, const char *v, size_t n) {
@@ -355,6 +492,23 @@ static Session *session_de(Aiguilleur *a, const char *v, size_t n) {
 /* Recopie ce que les sessions écrivent (leurs messages, leurs erreurs) ; ferme les sessions terminées. */
 static void veiller(Aiguilleur *a) {
     char b[4096];
+#ifdef _WIN32
+    for (int k = 0; k < MAX_SESSIONS; k++) {
+        Session *s = &a->s[k];
+        for (DWORD dispo = 0, lu = 0; s->sortie != TUBE_NUL;) {
+            if (!PeekNamedPipe(s->sortie, NULL, 0, NULL, &dispo, NULL)) { CloseHandle(s->sortie); s->sortie = TUBE_NUL; break; }
+            if (!dispo) break;
+            if (!ReadFile(s->sortie, b, sizeof b, &lu, NULL) || !lu) { CloseHandle(s->sortie); s->sortie = TUBE_NUL; break; }
+            fwrite(b, 1, lu, stdout);
+        }
+        if (s->pid != 0 && WaitForSingleObject(s->pid, 0) == WAIT_OBJECT_0) {   /* la session est finie */
+            CloseHandle(s->pid);
+            s->pid = 0;
+            if (s->sortie != TUBE_NUL) { CloseHandle(s->sortie); s->sortie = TUBE_NUL; }
+        }
+    }
+    fflush(stdout);
+#else
     for (int k = 0; k < MAX_SESSIONS; k++) {
         Session *s = &a->s[k];
         if (s->sortie < 0) continue;
@@ -372,9 +526,10 @@ static void veiller(Aiguilleur *a) {
                 a->s[k].pid = 0;
                 if (a->s[k].sortie >= 0) { close(a->s[k].sortie); a->s[k].sortie = -1; }
             }
+#endif
     const time_t maintenant = time(NULL);
     for (int k = 0; k < MAX_SESSIONS; k++)
-        if (a->s[k].pid > 0 && maintenant - a->s[k].derniere > a->inactivite) {
+        if (a->s[k].pid != 0 && maintenant - a->s[k].derniere > a->inactivite) {
             printf("Session %.6s… arrêtée : inactive depuis %d min.\n", a->s[k].visiteur, a->inactivite / 60);
             arreter_session(&a->s[k]);
         }
@@ -413,18 +568,36 @@ static int *frein(Aiguilleur *a, uint32_t ip, int echec) {
     return echec ? &a->freins[k].echecs : &a->freins[k].nouveaux;
 }
 
+#ifdef _WIN32
+typedef struct {
+    Session session;
+    Flux flux;
+    char *e;
+    size_t lu, te;
+} Confie;
+
+static DWORD WINAPI transmettre_fil(LPVOID p) {
+    Confie *x = p;
+    transmettre(&x->session, &x->flux, x->e, x->lu, x->te);
+    tls_fermer(x->flux.tls, 1);
+    prise_fermer(x->flux.fd);
+    free(x->e);
+    free(x);
+    return 0;
+}
+#endif
+
 static void accueillir(Aiguilleur *a, int fd, uint32_t ip) {
     Flux flux = { fd, NULL }, *f = &flux;
-    struct timeval t5 = { 5, 0 };
-    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &t5, sizeof t5);   /* la poignée de main et les en-têtes : 5 s au plus */
+    prise_delai(fd, 5);   /* la poignée de main et les en-têtes : 5 s au plus */
     if (a->tls) {
         char *pb = NULL;
         flux.tls = tls_accepter(a->tls, fd, &pb);
-        if (!flux.tls) { free(pb); close(fd); return; }   /* un navigateur en clair, un balayage du réseau */
+        if (!flux.tls) { free(pb); prise_fermer(fd); return; }   /* un navigateur en clair, un balayage du réseau */
     }
     size_t lu = 0, te = 0;
     char *e = lire_entetes(f, &lu, &te);
-    if (!e) { tls_fermer(flux.tls, 0); close(fd); return; }
+    if (!e) { tls_fermer(flux.tls, 0); prise_fermer(fd); return; }
     size_t lh = 0, lo = 0, lv = 0;
     const char *h = entete(e, "host", &lh), *o = entete(e, "origin", &lo);
     const char *v = cookie_visiteur(e, &lv);
@@ -453,7 +626,7 @@ static void accueillir(Aiguilleur *a, int fd, uint32_t ip) {
         if (!s) { repondre_simple(f, "503 Service Unavailable", NULL, "Trop de sessions ouvertes : réessaie plus tard."); goto fin; }
         if (!hex_aleatoire(s->visiteur)) { s->visiteur[0] = 0; refuser(f, "Aucun générateur aléatoire."); goto fin; }
         s->pid = 0;
-        s->sortie = -1;
+        s->sortie = TUBE_NUL;
         char *c = grym_formater("Set-Cookie: grym_aiguilleur=%s; HttpOnly; SameSite=Strict; Path=/%s\r\nLocation: /\r\n",
                                 s->visiteur, a->tls ? "; Secure" : "");
         repondre_simple(f, "303 See Other", c, "");
@@ -463,7 +636,7 @@ static void accueillir(Aiguilleur *a, int fd, uint32_t ip) {
         goto fin;
     }
     if (!s) { refuser(f, "Accès refusé : ouvre l'adresse affichée dans le terminal."); goto fin; }
-    if (s->pid <= 0) {   /* première visite, ou session terminée ou arrêtée : elle (re)naît */
+    if (s->pid == 0) {   /* première visite, ou session terminée ou arrêtée : elle (re)naît */
         if (!lancer_session(a, s)) {
             repondre_simple(f, "502 Bad Gateway", NULL, "La session ne démarre pas : vois le terminal de l'aiguilleur.");
             goto fin;
@@ -472,6 +645,24 @@ static void accueillir(Aiguilleur *a, int fd, uint32_t ip) {
         fflush(stdout);
     }
     s->derniere = time(NULL);
+#ifdef _WIN32
+    /* un fil d'exécution reprend la connexion, son chiffrement et la requête ; il ne lit de la session que son port et
+     * son jeton, recopiés */
+    Confie *x = grym_allouer(sizeof *x);
+    x->session = *s;
+    x->flux = flux;
+    x->e = e;
+    x->lu = lu;
+    x->te = te;
+    HANDLE fil = CreateThread(NULL, 0, transmettre_fil, x, 0, NULL);
+    if (!fil) {
+        free(x);
+        repondre_simple(f, "503 Service Unavailable", NULL, "Plus de fil d'exécution disponible.");
+    } else {
+        CloseHandle(fil);
+        return;   /* le fil ferme la connexion et libère la requête */
+    }
+#else
     pid_t p = fork();
     if (p == 0) {
         close(a->ecoute);
@@ -486,10 +677,11 @@ static void accueillir(Aiguilleur *a, int fd, uint32_t ip) {
         tls_fermer(flux.tls, 0);
         flux.tls = NULL;
     }
+#endif
 fin:
     free(e);
     if (flux.tls) tls_fermer(flux.tls, 1);
-    close(fd);
+    prise_fermer(fd);
 }
 
 int aiguilleur_servir(const char *grym, const char *programme, int port, int navigateur, int inactivite,
@@ -510,7 +702,12 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     a.grym = grym;
     a.programme = programme;
     a.inactivite = inactivite > 0 ? inactivite * 60 : 30 * 60;
-    for (int k = 0; k < MAX_SESSIONS; k++) a.s[k].sortie = -1;
+    for (int k = 0; k < MAX_SESSIONS; k++) a.s[k].sortie = TUBE_NUL;
+#ifdef _WIN32
+    WSADATA w;
+    if (WSAStartup(MAKEWORD(2, 2), &w) != 0) { fputs("Réseau indisponible (WSAStartup).\n", stderr); return EXIT_FAILURE; }
+    SetEnvironmentVariableA("GRYM_SESSION", "1");   /* hérité par les sessions : « le service à plusieurs postes » */
+#endif
     if (!hex_aleatoire(a.jeton)) { fputs("Aucun générateur aléatoire du système : pas de jeton.\n", stderr); return EXIT_FAILURE; }
     if (reseau) {
         /* 8 novembre 2026 : sur le réseau, le jeton se garde dans le dossier des certificats (« jeton », lisible par son
@@ -527,27 +724,35 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
         while (n < 32 && ((lu[n] >= '0' && lu[n] <= '9') || (lu[n] >= 'a' && lu[n] <= 'f'))) n++;
         if (n == 32) memcpy(a.jeton, lu, 32);
         else if ((fj = fopen(chemin, "w")) != NULL) {
+#ifndef _WIN32
             fchmod(fileno(fj), 0600);
+#endif
             fprintf(fj, "%s\n", a.jeton);
             fclose(fj);
         }
         free(chemin);
     }
-    a.ecoute = socket(AF_INET, SOCK_STREAM, 0);
-    int un = 1;
+    a.ecoute = (int)socket(AF_INET, SOCK_STREAM, 0);
+#ifndef _WIN32
+    int un = 1;   /* Windows : SO_REUSEADDR laisserait un autre programme prendre le même port */
     setsockopt(a.ecoute, SOL_SOCKET, SO_REUSEADDR, &un, sizeof un);
+#endif
     struct sockaddr_in ad;
     memset(&ad, 0, sizeof ad);
     ad.sin_family = AF_INET;
     /* 127.0.0.1, sauf --reseau : alors toutes les adresses, en TLS seulement (docs/v2.md, § 5, règle 1 ; § 12) */
     ad.sin_addr.s_addr = htonl(reseau ? INADDR_ANY : 0x7F000001);
     ad.sin_port = htons((unsigned short)port);
-    if (a.ecoute < 0 || bind(a.ecoute, (struct sockaddr *)&ad, sizeof ad) != 0 || listen(a.ecoute, 64) != 0) {
+    if (!prise_valide(a.ecoute) || bind(a.ecoute, (struct sockaddr *)&ad, sizeof ad) != 0 || listen(a.ecoute, 64) != 0) {
         if (port) fprintf(stderr, "Le port %d est déjà pris : choisis-en un autre avec --port.\n", port);
         else fputs("Impossible d'écouter sur 127.0.0.1.\n", stderr);
         return EXIT_FAILURE;
     }
+#ifdef _WIN32
+    SetHandleInformation((HANDLE)(SOCKET)a.ecoute, HANDLE_FLAG_INHERIT, 0);   /* les sessions n'en héritent pas */
+#else
     fcntl(a.ecoute, F_SETFD, FD_CLOEXEC);
+#endif
     socklen_t l = sizeof ad;
     getsockname(a.ecoute, (struct sockaddr *)&ad, &l);
     a.port = ntohs(ad.sin_port);
@@ -569,29 +774,46 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     printf("« %s » est servi, une session par navigateur, à l'adresse :\n  %s\n%sCtrl+C pour arrêter.\n", programme, adresse,
            a.tls ? "Sur le réseau local, en TLS : chaque poste a installé l'autorité du cabinet (docs/v2.md, § 12).\n" : "");
     fflush(stdout);
+#ifdef _WIN32
+    SetConsoleCtrlHandler(sur_ctrl, TRUE);
+#else
     signal(SIGPIPE, SIG_IGN);
     struct sigaction sa;
     memset(&sa, 0, sizeof sa);
     sa.sa_handler = sur_signal;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+#endif
     if (navigateur && ouvrir) ouvrir(adresse);
     while (!arreter) {
+#ifdef _WIN32
+        WSAPOLLFD q = { (SOCKET)a.ecoute, POLLRDNORM, 0 };
+        const int r = WSAPoll(&q, 1, 1000);
+        const int pret = r > 0 && (q.revents & POLLRDNORM);
+#else
         struct pollfd q = { a.ecoute, POLLIN, 0 };
         const int r = poll(&q, 1, 1000);
+        const int pret = r > 0 && (q.revents & POLLIN);
+#endif
         veiller(&a);
-        if (r > 0 && (q.revents & POLLIN)) {
+        if (pret) {
             struct sockaddr_in de;
+#ifdef _WIN32
+            int lde = sizeof de;
+#else
             socklen_t lde = sizeof de;
+#endif
             memset(&de, 0, sizeof de);
-            int f = accept(a.ecoute, (struct sockaddr *)&de, &lde);
-            if (f >= 0) accueillir(&a, f, ntohl(de.sin_addr.s_addr));
+            int f = (int)accept(a.ecoute, (struct sockaddr *)&de, &lde);
+            if (prise_valide(f)) accueillir(&a, f, ntohl(de.sin_addr.s_addr));
         }
     }
     printf("Arrêt : les sessions se ferment.\n");
     for (int k = 0; k < MAX_SESSIONS; k++) arreter_session(&a.s[k]);
+#ifndef _WIN32
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
-    close(a.ecoute);
+#endif
+    prise_fermer(a.ecoute);
     for (size_t k = 0; k < a.nb_hotes; k++) { free(a.hotes[k]); free(a.origines[k]); }
     free(a.hotes);
     free(a.origines);
@@ -600,4 +822,3 @@ int aiguilleur_servir(const char *grym, const char *programme, int port, int nav
     tls_serveur_detruire(a.tls);
     return EXIT_SUCCESS;
 }
-#endif

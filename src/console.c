@@ -83,11 +83,123 @@ Interface console_interface(Console *c) {
 /* ---------- La commande (3.04, grammaire § 15.10) ---------- */
 
 #ifdef _WIN32
+#include <windows.h>
+
+/* Windows (8 novembre 2026) : CreateProcessW, sans shell ; la ligne de commande se cite selon les règles de la
+ * bibliothèque C de Microsoft, le programme se cherche dans le PATH (« .exe » ajouté). Mêmes limites que sous POSIX :
+ * 30 secondes, 16 Mo. */
+static void citer_win(Chaine *c, const char *x) {
+    chaine_ajouter(c, "\"");
+    size_t barres = 0;
+    for (const char *p = x; *p; p++) {
+        char u[2] = { *p, 0 };
+        if (*p == '\\') { barres++; chaine_ajouter(c, u); continue; }
+        if (*p == '"') for (size_t k = 0; k <= barres; k++) chaine_ajouter(c, "\\");
+        barres = 0;
+        chaine_ajouter(c, u);
+    }
+    for (size_t k = 0; k < barres; k++) chaine_ajouter(c, "\\");
+    chaine_ajouter(c, "\"");
+}
+
+static int vider_tube(HANDLE h, Chaine *c, size_t limite, int *trop) {
+    DWORD dispo = 0;
+    if (!PeekNamedPipe(h, NULL, 0, NULL, &dispo, NULL)) return 0;   /* fermé */
+    while (dispo) {
+        char b[4096];
+        DWORD lu = 0;
+        if (!ReadFile(h, b, dispo < sizeof b ? dispo : (DWORD)sizeof b, &lu, NULL) || !lu) return 0;
+        if (c->n + lu > limite) *trop = 1;
+        else {
+            for (DWORD k = 0; k < lu; k++) {
+                /* un octet nul : la machine dira « pas un texte », comme sous POSIX, par un octet impossible en UTF-8 */
+                char u[2] = { b[k] ? b[k] : (char)0xff, 0 };
+                chaine_ajouter(c, u);
+            }
+        }
+        if (!PeekNamedPipe(h, NULL, 0, NULL, &dispo, NULL)) return 0;
+    }
+    return 1;
+}
+
 int console_commande(void *contexte, const char *programme, const char *const *arguments, size_t nb, char **sortie,
                      size_t *taille, char **erreurs, int *code, char **erreur) {
-    (void)contexte; (void)arguments; (void)nb; (void)sortie; (void)taille; (void)erreurs; (void)code;
-    *erreur = grym_formater("La commande « %s » ne se lance pas encore dans la console sous Windows : l'atelier le sait.", programme);
-    return 0;
+    (void)contexte;
+    enum { LIMITE = 16 * 1024 * 1024, DELAI_MS = 30000 };
+    SECURITY_ATTRIBUTES sa = { sizeof sa, NULL, TRUE };
+    HANDLE out_l = NULL, out_e = NULL, err_l = NULL, err_e = NULL;
+    if (!CreatePipe(&out_l, &out_e, &sa, 0)) { *erreur = grym_dupliquer("La commande ne peut pas démarrer."); return 0; }
+    if (!CreatePipe(&err_l, &err_e, &sa, 0)) {
+        CloseHandle(out_l); CloseHandle(out_e);
+        *erreur = grym_dupliquer("La commande ne peut pas démarrer.");
+        return 0;
+    }
+    SetHandleInformation(out_l, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(err_l, HANDLE_FLAG_INHERIT, 0);
+    Chaine ligne = {0};
+    citer_win(&ligne, programme);
+    for (size_t k = 0; k < nb; k++) { chaine_ajouter(&ligne, " "); citer_win(&ligne, arguments[k]); }
+    int nw = MultiByteToWideChar(CP_UTF8, 0, ligne.d, -1, NULL, 0);
+    wchar_t *w = grym_allouer((size_t)(nw > 0 ? nw : 1) * sizeof *w);
+    if (nw <= 0 || !MultiByteToWideChar(CP_UTF8, 0, ligne.d, -1, w, nw)) w[0] = 0;
+    free(chaine_rendre(&ligne));
+    STARTUPINFOW si;
+    memset(&si, 0, sizeof si);
+    si.cb = sizeof si;
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = out_e;
+    si.hStdError = err_e;
+    si.hStdInput = NULL;
+    PROCESS_INFORMATION pi;
+    memset(&pi, 0, sizeof pi);
+    const BOOL ok = CreateProcessW(NULL, w, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+    const DWORD e_exec = ok ? 0 : GetLastError();
+    free(w);
+    CloseHandle(out_e);
+    CloseHandle(err_e);
+    if (!ok) {
+        CloseHandle(out_l); CloseHandle(err_l);
+        *erreur = e_exec == ERROR_FILE_NOT_FOUND || e_exec == ERROR_PATH_NOT_FOUND
+                ? grym_formater("La commande « %s » est introuvable.", programme)
+                : grym_formater("La commande « %s » ne peut pas démarrer (erreur %lu de Windows).", programme,
+                                (unsigned long)e_exec);
+        return 0;
+    }
+    CloseHandle(pi.hThread);
+    Chaine out = {0}, err = {0};
+    int trop = 0, delai = 0, o_ouvert = 1, e_ouvert = 1;
+    const ULONGLONG fin = GetTickCount64() + DELAI_MS;
+    for (;;) {
+        if (o_ouvert) o_ouvert = vider_tube(out_l, &out, LIMITE, &trop);
+        if (e_ouvert) e_ouvert = vider_tube(err_l, &err, LIMITE, &trop);
+        if (trop) break;
+        const DWORD r = WaitForSingleObject(pi.hProcess, 20);
+        if (r == WAIT_OBJECT_0 && !o_ouvert && !e_ouvert) break;
+        if (r == WAIT_OBJECT_0) {   /* fini : ce qui reste dans les tubes, puis on s'arrête */
+            if (o_ouvert) vider_tube(out_l, &out, LIMITE, &trop);
+            if (e_ouvert) vider_tube(err_l, &err, LIMITE, &trop);
+            break;
+        }
+        if (GetTickCount64() > fin) { delai = 1; break; }
+    }
+    if (delai || trop) TerminateProcess(pi.hProcess, 1);
+    WaitForSingleObject(pi.hProcess, 5000);
+    DWORD statut = 0;
+    GetExitCodeProcess(pi.hProcess, &statut);
+    CloseHandle(pi.hProcess);
+    CloseHandle(out_l);
+    CloseHandle(err_l);
+    if (delai || trop) {
+        free(chaine_rendre(&out)); free(chaine_rendre(&err));
+        *erreur = delai ? grym_formater("La commande « %s » n'a pas fini en 30 secondes : arrêtée.", programme)
+                        : grym_formater("La commande « %s » écrit plus de 16 Mo : arrêtée.", programme);
+        return 0;
+    }
+    *taille = out.n;
+    *sortie = chaine_rendre(&out);
+    *erreurs = chaine_rendre(&err);
+    *code = (int)statut;
+    return 1;
 }
 #else
 static long ms_maintenant(void) {

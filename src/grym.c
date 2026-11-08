@@ -422,7 +422,40 @@ static int certificat(const char *dossier, const char *cabinet, const char *cons
     return EXIT_SUCCESS;
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <wincred.h>
+/* Windows : le Gestionnaire d'identification (8 novembre 2026), une identification générique de ce nom, rangée par
+ * « cmdkey /generic:nom /user:grymoir /pass » (cmdkey demande le mot de passe) ; son secret, en UTF-16, devient de
+ * l'UTF-8. */
+static char *lire_trousseau(const char *nom, char **erreur) {
+    int n = MultiByteToWideChar(CP_UTF8, 0, nom, -1, NULL, 0);
+    wchar_t *w = grym_allouer((size_t)(n > 0 ? n : 1) * sizeof *w);
+    if (n <= 0 || !MultiByteToWideChar(CP_UTF8, 0, nom, -1, w, n)) w[0] = 0;
+    PCREDENTIALW c = NULL;
+    const BOOL ok = CredReadW(w, CRED_TYPE_GENERIC, 0, &c);
+    free(w);
+    char *mdp = NULL;
+    if (ok && c && c->CredentialBlobSize >= 2) {
+        const int nc = (int)(c->CredentialBlobSize / 2);
+        const wchar_t *s = (const wchar_t *)c->CredentialBlob;
+        int l = WideCharToMultiByte(CP_UTF8, 0, s, nc, NULL, 0, NULL, NULL);
+        if (l > 0) {
+            mdp = grym_allouer((size_t)l + 1);
+            WideCharToMultiByte(CP_UTF8, 0, s, nc, mdp, l, NULL, NULL);
+            mdp[l] = 0;
+        }
+        SecureZeroMemory(c->CredentialBlob, c->CredentialBlobSize);
+    }
+    if (c) CredFree(c);
+    if (!mdp || !*mdp) {
+        free(mdp);
+        *erreur = grym_formater("Le Gestionnaire d'identification n'a pas de mot de passe « %s ». Range-le une fois : "
+                                "cmdkey /generic:\"%s\" /user:grymoir /pass", nom, nom);
+        return NULL;
+    }
+    return mdp;
+}
+#else
 /* Le mot de passe de la base, rangé dans le trousseau du système sous ce nom (8 novembre 2026, docs/v2.md, § 11) :
  * macOS, « security find-generic-password -a $USER -s nom -w » ; ailleurs, « secret-tool lookup service nom »
  * (libsecret). Sans shell, sans écho ; rien ne s'écrit sur le disque. NULL et *erreur (à libérer) sinon. */
@@ -441,6 +474,7 @@ static char *lire_trousseau(const char *nom, char **erreur) {
         (void)compte;
         execlp("secret-tool", "secret-tool", "lookup", "service", nom, (char *)NULL);
 #endif
+
         _exit(127);
     }
     close(t[1]);
@@ -471,6 +505,15 @@ static char *lire_trousseau(const char *nom, char **erreur) {
     return mdp;
 }
 #endif
+
+/* Une variable d'environnement pour les sessions, sur chaque système. */
+static void poser_env(const char *nom, const char *valeur) {
+#ifdef _WIN32
+    _putenv_s(nom, valeur);
+#else
+    setenv(nom, valeur, 1);
+#endif
+}
 
 /* « --plist » (8 novembre 2026) : le fichier d'un agent launchd qui relance la même commande à l'ouverture de session et
  * la garde en vie (Apple, « Creating Launch Daemons and Agents ») ; à poser dans ~/Library/LaunchAgents. Les chemins
@@ -827,7 +870,6 @@ int main(int argc, char **argv) {
             if (!b) return EXIT_FAILURE;
             const int chiffree = b->base_chiffree;
             module_detruire(b);
-#ifndef _WIN32
             if (chiffree && trousseau) {   /* sans personne au clavier : le démarrage automatique (§ 11) */
                 char *pb = NULL, *mdp = lire_trousseau(trousseau, &pb);
                 if (!mdp) {
@@ -835,7 +877,7 @@ int main(int argc, char **argv) {
                     free(pb);
                     return EXIT_FAILURE;
                 }
-                setenv("GRYM_MOT_DE_PASSE_BASE", mdp, 1);
+                poser_env("GRYM_MOT_DE_PASSE_BASE", mdp);
                 memset(mdp, 0, strlen(mdp));
                 free(mdp);
             }
@@ -848,14 +890,10 @@ int main(int argc, char **argv) {
                     free(mdp);
                     return EXIT_FAILURE;
                 }
-                setenv("GRYM_MOT_DE_PASSE_BASE", mdp, 1);
+                poser_env("GRYM_MOT_DE_PASSE_BASE", mdp);
                 memset(mdp, 0, strlen(mdp));
                 free(mdp);
             }
-#else
-            (void)chiffree;
-            (void)trousseau;
-#endif
             return aiguilleur_servir(argv[0], argv[2], port, navigateur, inactivite, reseau, base, ecriture, ouvrir_navigateur);
         }
         if (bon) return servir(argv[2], port, navigateur, base, ecriture);

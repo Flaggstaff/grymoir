@@ -144,7 +144,9 @@ même adresse. Le choix et le réglage du VPN dépendent du routeur du cabinet :
 
 - **Le poste principal comme poste de travail** pendant le service : par Safari, sur la même adresse, comme les autres.
   L'application et le service ouverts en même temps sur la même base n'ont pas encore été éprouvés sur un Mac.
-- **Windows** : le service ne tourne pas encore sous Windows ; un poste Windows peut toutefois s'y connecter par son
-  navigateur, après avoir installé l'autorité (magasin de certificats de Windows).
+- **Un poste principal sous Windows** : le service y tourne (`grym.exe`, mêmes commandes ; le mot de passe des données se
+  range par `cmdkey /generic:"GrymoiR Praxis-N" /user:grymoir /pass` et se lit par `--trousseau`), mais il n'a été
+  éprouvé que sous Wine ; `--plist` est propre à macOS. Un poste Windows se connecte par son navigateur, après avoir
+  installé l'autorité (magasin de certificats de Windows).
 
 Le détail technique : `docs/v2.md`, § 11 (les sessions) et § 12 (le réseau).
