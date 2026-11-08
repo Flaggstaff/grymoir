@@ -1,6 +1,6 @@
 # Installer Praxis sur plusieurs postes d'un cabinet
 
-Version 1.1, révisée le 8 novembre 2026. Pour un cabinet équipé de Mac, qui veut ouvrir Praxis sur plusieurs postes.
+Version 1.2, révisée le 8 novembre 2026. Pour un cabinet équipé de Mac, qui veut ouvrir Praxis sur plusieurs postes.
 
 Par défaut, Praxis tourne sur **un seul poste** : on l'ouvre, on travaille, rien d'autre à régler. Ce guide ne sert que si le
 cabinet choisit le **multiposte**. Ce choix active aussi la Direction et l'Équipe (deux mots de passe) et le Personnel
@@ -100,7 +100,41 @@ Sur un poste, Safari ouvre l'adresse ; Praxis demande « Qui est là ? » : le m
 l'Équipe. Si deux personnes changent le même champ du même patient en même temps, la seconde reçoit un message et
 recommence ; rien ne s'écrase (grammaire, § 16.6).
 
-## 6. Depuis l'extérieur
+## 6. Démarrer seul, à l'ouverture de session (une fois)
+
+Le service peut démarrer tout seul quand le poste principal ouvre la session, et se relancer s'il s'arrête. Le mot de
+passe des données vient alors du **trousseau** du Mac, où il est rangé chiffré ; jamais d'un fichier.
+
+1. Ranger le mot de passe des données dans le trousseau, une fois (`security` le demande sans l'afficher) :
+
+   ```
+   security add-generic-password -a "$USER" -s "GrymoiR Praxis-N" -U -w
+   ```
+
+2. Faire écrire à `grym` le fichier de démarrage, avec la même commande qu'à l'étape 5, plus `--trousseau` et `--plist` :
+
+   ```
+   ~/Downloads/grymoir/grym servir "/Applications/Praxis-N.app/Contents/Resources/Programme/Praxis.grym" \
+       --reseau ~/Cabinet \
+       --base "$HOME/Library/Application Support/Praxis-N/Praxis.grymd" \
+       --ecriture "$HOME/Documents/Praxis-N" \
+       --trousseau "GrymoiR Praxis-N" --plist > ~/Library/LaunchAgents/ch.grymoir.Praxis.grym.plist
+   launchctl load ~/Library/LaunchAgents/ch.grymoir.Praxis.grym.plist
+   ```
+
+3. La première fois, macOS demande si `security` peut lire ce mot de passe : « Toujours autoriser ».
+
+Ce que fait le fichier : macOS lance le service à l'ouverture de session (`RunAtLoad`) et le relance s'il s'arrête
+(`KeepAlive`) ; ses messages vont dans `~/Library/Logs/GrymoiR-Praxis.grym.log`. Pour l'arrêter :
+`launchctl unload ~/Library/LaunchAgents/ch.grymoir.Praxis.grym.plist`.
+
+Sources : Apple, « Creating Launch Daemons and Agents » (archive de la documentation, consultée le 8 novembre 2026),
+https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html ;
+l'aide de `security`, dont le code est publié par Apple : « Specify -w as the last option to be prompted », « -w Display
+only the password on stdout » (https://opensource.apple.com/source/Security/Security-57740.51.3/SecurityTool/security.c.auto.html).
+Non éprouvé sur un Mac au 8 novembre 2026 : à essayer avant de l'installer chez un cabinet.
+
+## 7. Depuis l'extérieur
 
 Jamais directement par internet : le service ne s'y montre pas, et ne doit pas s'y montrer. Pour travailler hors du
 cabinet, un VPN (WireGuard, Tailscale ou celui du routeur) place le portable sur le réseau du cabinet ; il ouvre alors la
@@ -108,8 +142,6 @@ même adresse. Le choix et le réglage du VPN dépendent du routeur du cabinet :
 
 ## Ce qui n'est pas encore fait
 
-- **Le démarrage automatique** au matin. Il demanderait de ranger le mot de passe des données sur le disque, en clair ou
-  presque : pas avant une solution sûre (le trousseau du Mac).
 - **Le poste principal comme poste de travail** pendant le service : par Safari, sur la même adresse, comme les autres.
   L'application et le service ouverts en même temps sur la même base n'ont pas encore été éprouvés sur un Mac.
 - **Windows** : le service ne tourne pas encore sous Windows ; un poste Windows peut toutefois s'y connecter par son

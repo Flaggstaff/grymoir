@@ -8,7 +8,7 @@
  *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 12)
  */
 #ifndef _WIN32
-#define _POSIX_C_SOURCE 200809L   /* fileno, isatty */
+#define _XOPEN_SOURCE 700   /* fileno, isatty ; realpath (--plist) */
 #endif
 
 #include "chemins.h"
@@ -36,10 +36,11 @@
 #else
 #include <termios.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #define terminal() isatty(fileno(stdin))
 #endif
 
-#define VERSION "2.0"   /* dernier jalon livré (charte, art. 12) */
+#define VERSION "3.0"   /* la version publiée (charte, art. 12) : 3.0, le 8 novembre 2026 */
 
 static char *lire_fichier(FILE *f, size_t *taille) {
     size_t cap = 4096, n = 0;
@@ -421,6 +422,125 @@ static int certificat(const char *dossier, const char *cabinet, const char *cons
     return EXIT_SUCCESS;
 }
 
+#ifndef _WIN32
+/* Le mot de passe de la base, rangé dans le trousseau du système sous ce nom (8 novembre 2026, docs/v2.md, § 11) :
+ * macOS, « security find-generic-password -a $USER -s nom -w » ; ailleurs, « secret-tool lookup service nom »
+ * (libsecret). Sans shell, sans écho ; rien ne s'écrit sur le disque. NULL et *erreur (à libérer) sinon. */
+static char *lire_trousseau(const char *nom, char **erreur) {
+    int t[2];
+    if (pipe(t) != 0) { *erreur = grym_dupliquer("Le trousseau ne se lit pas : plus de tuyau disponible."); return NULL; }
+    const char *compte = getenv("USER") ? getenv("USER") : "";
+    pid_t p = fork();
+    if (p == 0) {
+        dup2(t[1], STDOUT_FILENO);
+        close(t[0]);
+        close(t[1]);
+#ifdef __APPLE__
+        execl("/usr/bin/security", "security", "find-generic-password", "-a", compte, "-s", nom, "-w", (char *)NULL);
+#else
+        (void)compte;
+        execlp("secret-tool", "secret-tool", "lookup", "service", nom, (char *)NULL);
+#endif
+        _exit(127);
+    }
+    close(t[1]);
+    Chaine c = {0};
+    char b[512];
+    for (ssize_t n; p > 0 && (n = read(t[0], b, sizeof b - 1)) > 0;) {
+        b[n] = 0;
+        chaine_ajouter(&c, b);
+    }
+    close(t[0]);
+    int etat = 1;
+    if (p > 0) waitpid(p, &etat, 0);
+    char *mdp = c.d ? c.d : grym_dupliquer("");
+    size_t l = strlen(mdp);
+    while (l && (mdp[l - 1] == '\n' || mdp[l - 1] == '\r')) mdp[--l] = 0;
+    if (p < 0 || !WIFEXITED(etat) || WEXITSTATUS(etat) != 0 || !l) {
+        memset(mdp, 0, l);
+        free(mdp);
+#ifdef __APPLE__
+        *erreur = grym_formater("Le trousseau n'a pas de mot de passe « %s » pour ce compte. Range-le une fois : "
+                                "security add-generic-password -a \"$USER\" -s \"%s\" -U -w", nom, nom);
+#else
+        *erreur = grym_formater("Le trousseau n'a pas de mot de passe « %s » (secret-tool, libsecret). Range-le une fois : "
+                                "secret-tool store --label=\"%s\" service \"%s\"", nom, nom, nom);
+#endif
+        return NULL;
+    }
+    return mdp;
+}
+#endif
+
+/* « --plist » (8 novembre 2026) : le fichier d'un agent launchd qui relance la même commande à l'ouverture de session et
+ * la garde en vie (Apple, « Creating Launch Daemons and Agents ») ; à poser dans ~/Library/LaunchAgents. Les chemins
+ * deviennent absolus : launchd ne part pas du dossier courant. */
+static void xml(const char *s) {
+    for (; *s; s++) {
+        if (*s == '&') fputs("&amp;", stdout);
+        else if (*s == '<') fputs("&lt;", stdout);
+        else if (*s == '>') fputs("&gt;", stdout);
+        else putchar(*s);
+    }
+}
+
+static int plist(int argc, char **argv) {
+    char *grym = NULL, *prog = NULL;
+#ifndef _WIN32
+    grym = realpath(argv[0], NULL);
+    prog = realpath(argv[2], NULL);
+#endif
+    if (!grym || !prog) {
+        fputs("--plist : le chemin de grym ou du programme ne se résout pas.\n", stderr);
+        free(grym);
+        free(prog);
+        return EXIT_FAILURE;
+    }
+    const char *nom = strrchr(prog, '/') ? strrchr(prog, '/') + 1 : prog;
+    char *etiquette = grym_formater("ch.grymoir.%s", nom);
+    for (char *p = etiquette; *p; p++)
+        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '.')) *p = '-';
+    const char *home = getenv("HOME") ? getenv("HOME") : "/tmp";
+    printf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+           "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+           "<plist version=\"1.0\">\n<dict>\n    <key>Label</key>\n    <string>");
+    xml(etiquette);
+    printf("</string>\n    <key>ProgramArguments</key>\n    <array>\n        <string>");
+    xml(grym);
+    printf("</string>\n        <string>servir</string>\n        <string>");
+    xml(prog);
+    printf("</string>\n");
+    for (int k = 3; k < argc; k++) {
+        if (strcmp(argv[k], "--plist") == 0) continue;
+        char *absolu = NULL;
+#ifndef _WIN32
+        /* la valeur d'une option de chemin : absolue */
+        if (k > 3 && (strcmp(argv[k - 1], "--reseau") == 0 || strcmp(argv[k - 1], "--base") == 0
+                      || strcmp(argv[k - 1], "--ecriture") == 0))
+            absolu = realpath(argv[k], NULL);
+#endif
+        printf("        <string>");
+        xml(absolu ? absolu : argv[k]);
+        printf("</string>\n");
+        free(absolu);
+    }
+    printf("        <string>--sans-navigateur</string>\n    </array>\n"
+           "    <key>RunAtLoad</key>\n    <true/>\n    <key>KeepAlive</key>\n    <true/>\n"
+           "    <key>StandardOutPath</key>\n    <string>");
+    xml(home);
+    printf("/Library/Logs/GrymoiR-");
+    xml(nom);
+    printf(".log</string>\n    <key>StandardErrorPath</key>\n    <string>");
+    xml(home);
+    printf("/Library/Logs/GrymoiR-");
+    xml(nom);
+    printf(".log</string>\n</dict>\n</plist>\n");
+    free(etiquette);
+    free(grym);
+    free(prog);
+    return EXIT_SUCCESS;
+}
+
 /* grym servir : l'application dans le navigateur (docs/v2.md). */
 static int servir(const char *chemin, int port, int navigateur, const char *base, const char *ecriture) {
     Module *b = charger(chemin);
@@ -675,15 +795,19 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "exemples") == 0) return exemples(argv[2]);
     if (argc == 3 && strcmp(argv[1], "scenarios") == 0) return scenarios(argv[2]);   /* § 9.7 */
     if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
+        for (int k = 3; k < argc; k++)
+            if (strcmp(argv[k], "--plist") == 0) return plist(argc, argv);   /* le démarrage automatique (§ 11) */
         int port = 0, navigateur = 1, bon = 1, sessions = 0, inactivite = 30;
         const char *reseau = NULL;   /* le dossier des certificats : sur le réseau local, en TLS (docs/v2.md, § 12) */
         const char *base = NULL, *ecriture = NULL;   /* la base, le dossier d'écriture imposés (docs/v2.md, § 11) */
+        const char *trousseau = NULL;   /* le nom du mot de passe de la base dans le trousseau (démarrage automatique) */
         for (int k = 3; k < argc && bon; k++) {
             if (strcmp(argv[k], "--sans-navigateur") == 0) navigateur = 0;
             else if (strcmp(argv[k], "--sessions") == 0) sessions = 1;   /* 3.18 : une session par navigateur */
             else if (strcmp(argv[k], "--reseau") == 0 && k + 1 < argc) { reseau = argv[++k]; sessions = 1; }   /* § 12 */
             else if (strcmp(argv[k], "--base") == 0 && k + 1 < argc) base = argv[++k];
             else if (strcmp(argv[k], "--ecriture") == 0 && k + 1 < argc) ecriture = argv[++k];
+            else if (strcmp(argv[k], "--trousseau") == 0 && k + 1 < argc) { trousseau = argv[++k]; sessions = 1; }
             else if (strcmp(argv[k], "--inactivite") == 0 && k + 1 < argc) {
                 char *e = NULL;
                 long n = strtol(argv[++k], &e, 10);
@@ -704,6 +828,17 @@ int main(int argc, char **argv) {
             const int chiffree = b->base_chiffree;
             module_detruire(b);
 #ifndef _WIN32
+            if (chiffree && trousseau) {   /* sans personne au clavier : le démarrage automatique (§ 11) */
+                char *pb = NULL, *mdp = lire_trousseau(trousseau, &pb);
+                if (!mdp) {
+                    fprintf(stderr, "%s\n", pb);
+                    free(pb);
+                    return EXIT_FAILURE;
+                }
+                setenv("GRYM_MOT_DE_PASSE_BASE", mdp, 1);
+                memset(mdp, 0, strlen(mdp));
+                free(mdp);
+            }
             if (chiffree && !getenv("GRYM_MOT_DE_PASSE_BASE")) {
                 /* 3.18 : une base chiffrée, son mot de passe une fois ici, pour toutes les sessions ; les postes
                  * n'ont pas à le connaître (chacun se connecte comme le programme le demande) */
@@ -719,6 +854,7 @@ int main(int argc, char **argv) {
             }
 #else
             (void)chiffree;
+            (void)trousseau;
 #endif
             return aiguilleur_servir(argv[0], argv[2], port, navigateur, inactivite, reseau, base, ecriture, ouvrir_navigateur);
         }
@@ -742,6 +878,8 @@ int main(int argc, char **argv) {
             "    [--sessions] [--inactivite M]     une session par navigateur (docs/v2.md, § 11)\n"
             "    [--reseau dossier]                sur le réseau local, en TLS, avec ses certificats (§ 12)\n"
             "    [--base f.grymd] [--ecriture d]   la base et le dossier d'écriture d'une application fabriquée\n"
+            "    [--trousseau nom]                 le mot de passe de la base, pris dans le trousseau du système\n"
+            "    [--plist]                         l'agent launchd qui démarre ce service à l'ouverture de session\n"
             "  grym certificat dossier cabinet nom…  l'autorité du cabinet et le certificat du serveur (§ 12)\n"
             "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"

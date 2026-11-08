@@ -1,0 +1,37 @@
+#!/bin/sh
+# --trousseau (8 novembre 2026, docs/v2.md, § 11) : le mot de passe d'une base chiffrée pris dans le trousseau du système,
+# pour un service qui démarre sans personne au clavier. Sous Linux, un faux « secret-tool » en tête du PATH joue le
+# trousseau ; sous macOS (security, le vrai trousseau) et Windows, sauté. Sans python3, sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+case "$(uname -s)" in Linux) ;; *) echo "trousseau : sauté ($(uname -s))"; exit 0;; esac
+command -v python3 > /dev/null || { echo "trousseau : sauté (python3 absent)"; exit 0; }
+d=$(mktemp -d)
+cd "$d" || exit 1
+mkdir bin
+printf '#!/bin/sh\n[ "$1 $2 $3" = "lookup service GrymoiR Essai" ] && echo "mdp-de-la-base-123" && exit 0\nexit 1\n' > bin/secret-tool
+chmod +x bin/secret-tool
+printf 'La base est chiffrée.\nUne note, conservée, a :\n    un texte (texte).\nLa r vaut la réponse à « Prêt ? ».\n' > p.grym
+GRYM_MOT_DE_PASSE_BASE=mdp-de-la-base-123 "$grym" lancer p.grym < /dev/null > /dev/null 2>&1
+PATH="$d/bin:$PATH" "$grym" servir p.grym --trousseau "GrymoiR Essai" --sans-navigateur > ag.txt 2>&1 < /dev/null &
+pid=$!
+trap 'kill $pid 2> /dev/null; wait $pid 2> /dev/null; rm -rf "$d"' EXIT
+n=0
+while ! grep -q 'jeton=' ag.txt 2> /dev/null && [ "$n" -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; cat ag.txt; fi; }
+verifier "$(python3 - "$d" <<'FIN'
+import http.client, re, sys
+port, jeton = re.search(r'127\.0\.0\.1:(\d+)/\?jeton=([0-9a-f]+)', open(sys.argv[1] + '/ag.txt').read()).groups()
+def req(c, ck=None):
+    x = http.client.HTTPConnection('127.0.0.1', int(port), timeout=30)
+    h = {'Host': f'127.0.0.1:{port}'}
+    if ck: h['Cookie'] = ck
+    x.request('GET', c, headers=h); r = x.getresponse(); return dict(r.getheaders()), r.read().decode()
+h, b = req('/?jeton=' + jeton); h, b = req('/', h['Set-Cookie'].split(';')[0])
+print('Prêt ?' in b, 'type="password"' in b)
+FIN
+)" "True False" "la base s'ouvre, sans page de mot de passe"
+verifier "$(PATH="$d/bin:$PATH" "$grym" servir p.grym --trousseau "Autre" --sans-navigateur 2>&1 < /dev/null)" "Le trousseau n'a pas de mot de passe « Autre » (secret-tool, libsecret). Range-le une fois : secret-tool store --label=\"Autre\" service \"Autre\"" "un nom inconnu du trousseau"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]
