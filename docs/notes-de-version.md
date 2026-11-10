@@ -1,3 +1,17 @@
+# GrymoiR 3.1.1
+
+Publiée le 10 novembre 2026, le jour de la 3.1. Des corrections, pas de nouveauté du langage.
+
+- **Corrigé** : une partie qui s'utilise elle-même, rencontrée après un premier usage, ou deux parties qui s'utilisent
+  l'une l'autre, arrêtaient `grym`, `grym lsp` et l'éditeur de l'atelier (« double free ») au lieu d'un refus. Elles
+  reçoivent désormais « La partie « a » s'utilise elle-même. »
+- **Corrigé** : des parties imbriquées (une partie qui en montre une autre), déclarées avant l'écran qui les emploie,
+  lisaient de la mémoire déjà libérée et donnaient une erreur fausse sur un programme juste.
+- **Corrigé** : au-delà de 64 parties dans un fichier, les suivantes passaient pour « pas déclarées ».
+- **Pour le mainteneur** : `outils/essais-par-mutation`, qui abîme au hasard les programmes du dépôt et garde ce qui
+  fait tomber `grym` (manuel du mainteneur, § 2).
+- **Pas encore** : la page « Apprendre GrymoiR » garde le moteur de la 3.1.0, compilé avant ces corrections.
+
 # GrymoiR 3.1
 
 Publiée le 10 novembre 2026. Le langage passe à la grammaire 3.19.
