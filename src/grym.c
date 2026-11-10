@@ -40,7 +40,7 @@
 #define terminal() isatty(fileno(stdin))
 #endif
 
-#define VERSION "3.0.1"   /* la version publiée (charte, art. 12) : 3.0 le 8 novembre 2026, 3.0.1 le même soir */
+#define VERSION "3.1.0"   /* la version publiée (charte, art. 12) : 3.0 le 8 novembre 2026, 3.0.1 le même soir, 3.1 le 10 */
 
 static char *lire_fichier(FILE *f, size_t *taille) {
     size_t cap = 4096, n = 0;

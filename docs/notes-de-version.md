@@ -1,3 +1,24 @@
+# GrymoiR 3.1
+
+Publiée le 10 novembre 2026. Le langage passe à la grammaire 3.19.
+
+- **Apprendre GrymoiR dans le navigateur** : `docs/site/apprendre.html`, publiée sur le site à côté de la page de
+  téléchargement. Le guide « Premiers pas » en leçons, onze exercices, et le vrai moteur de GrymoiR compilé en
+  WebAssembly, exécuté dans la page : sans installation, sans compte, hors ligne une fois téléchargée. Pas d'écrans ni
+  de documents (ils restent à l'atelier), un seul fichier par programme, une base vidée à chaque lancement. Éprouvée
+  dans Chromium ; Firefox et Safari pas encore.
+- **Le langage** (grammaire 3.19) : `vrai`, `faux` et une condition entre parenthèses en argument d'un calcul ;
+  `est parmi` dans toute condition (le champ multiple d'un objet, la relation inverse, une liste calculée), plus
+  seulement dans un `dont` ; dans un scénario, `On voit l'erreur « … » dans l'écran …` vérifie qu'un écran a refusé.
+- **Plusieurs postes sur une base** : les conflits couvrent désormais les champs multiples (gagner un élément qu'un
+  autre a retiré, perdre un élément qu'un autre a ajouté) et les suppressions (supprimer un objet qu'un autre a changé,
+  écrire un objet qu'un autre a mis à la corbeille). Un champ facultatif resté vide ne fait plus de faux conflit.
+- **Le démarrage automatique** d'un service : `grym servir … --systemd` (Linux) et `--tache` (Windows), à côté de
+  `--plist` (macOS). Les fichiers produits sont éprouvés ; le démarrage réel ne l'est encore ni sous Linux ni sous
+  Windows.
+- **Corrigé** : un rang démesuré (`le 99999999999999999e caractère`) devenait négatif sous Windows, où un entier `long`
+  fait 32 bits.
+
 # GrymoiR 3.0.1
 
 Publiée le 8 novembre 2026, le soir de la 3.0. Des corrections, pas de nouveauté du langage.

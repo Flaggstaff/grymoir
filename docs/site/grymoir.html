@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GrymoiR 3.0.1 · le langage de programmation en français</title>
-<meta name="description" content="GrymoiR : écrire des applications de gestion en français courant. Version 3.0 pour macOS, Linux et Windows, sous licence EUPL 1.2.">
+<title>GrymoiR 3.1.0 · le langage de programmation en français</title>
+<meta name="description" content="GrymoiR : écrire des applications de gestion en français courant. Version 3.1 pour macOS, Linux et Windows, sous licence EUPL 1.2.">
 <style>
 :root { --fond: #fbfaf7; --texte: #1d1b16; --doux: #5d5a52; --carte: #ffffff; --bord: #e4e0d6; --accent: #7a3e12; --code: #f2efe7; color-scheme: light; }
 @media (prefers-color-scheme: dark) {
@@ -33,7 +33,7 @@ footer { margin-top: 3rem; border-top: 1px solid var(--bord); padding-top: 1rem;
 </head>
 <body>
 <main>
-<h1>Grymoi<span>R</span> 3.0.1</h1>
+<h1>Grymoi<span>R</span> 3.1.0</h1>
 <p class="chapeau">Un langage de programmation en français courant, pour écrire des applications de gestion fiables : le langage, la base de données et l’application, dans un seul outil.</p>
 
 <pre>Un client, conservé, a :
@@ -47,43 +47,48 @@ Conserver le c.
 Afficher le solde du client conservé dont le nom est « Atelier Dubois ».</pre>
 <p class="doux">Des nombres décimaux exacts (jamais d’erreur d’arrondi sur une facture), une base intégrée qui se met à jour toute seule quand le programme change, des écrans, des documents imprimés, et des scénarios qui éprouvent un programme avant chaque livraison.</p>
 
-<h2>Essayer sans rien installer</h2>
-<p>Le guide « Premiers pas » en leçons et en exercices, avec le vrai moteur de GrymoiR exécuté dans la page : tu écris, tu lances, tu vois ce que GrymoiR affiche. Un seul fichier, qui marche aussi hors ligne une fois téléchargé.</p>
-<p><a class="bouton" href="apprendre.html">Apprendre GrymoiR dans le navigateur</a></p>
+<h2>Apprendre, sans rien installer</h2>
+<p>GrymoiR s’apprend dans ton navigateur. La page <a href="apprendre.html">Apprendre GrymoiR</a> reprend le guide « Premiers pas » en leçons courtes : tu lis, tu modifies le programme, tu le lances, et tu vois ce qu’il affiche.</p>
+<p>Le moteur qui tourne dans la page est le vrai : le même que celui de l’atelier, compilé pour le navigateur. Une erreur y donne le message que GrymoiR donnerait sur ton ordinateur, avec la ligne fautive. Quand une leçon annonce un résultat, la page le cherche dans le tien et te dit si tu l’as obtenu.</p>
+<p>Au fil des chapitres, tu construis la gestion d’une petite association : ses membres, leurs cotisations, sa comptabilité en partie double. Onze exercices te font ensuite écrire tes propres programmes, du premier <code>Afficher</code> à ta première base de données.</p>
+<p>Pas de compte, pas d’inscription : ton travail et ta progression restent dans ton navigateur, et rien n’est envoyé nulle part. La page tient en un seul fichier ; une fois téléchargée, elle marche aussi hors ligne.</p>
+<p><a class="bouton" href="apprendre.html">Commencer la première leçon</a></p>
+<p class="doux">Les écrans et les documents imprimés se découvrent ensuite dans l’atelier, à télécharger ci-dessous. Navigateurs récents : Firefox, Chrome, Edge ou Safari.</p>
 
 <h2>Télécharger</h2>
 <div class="grille">
   <div class="carte"><h3>macOS</h3><p>GrymoiR.app à glisser dans Applications : l’atelier, l’outil <code>grym</code> et les exemples.</p>
-    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.1/GrymoiR-3.0.1-macos.dmg">GrymoiR-3.0.1-macos.dmg</a></div>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.0/GrymoiR-3.1.0-macos.dmg">GrymoiR-3.1.0-macos.dmg</a></div>
   <div class="carte"><h3>Windows</h3><p>Windows 10 (1903) ou 11. Installation sans droits d’administrateur.</p>
-    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.1/GrymoiR-3.0.1-windows.exe">GrymoiR-3.0.1-windows.exe</a></div>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.0/GrymoiR-3.1.0-windows.exe">GrymoiR-3.1.0-windows.exe</a></div>
   <div class="carte"><h3>Linux</h3><p>x86_64, distributions de 2024 et après. Un seul fichier à rendre exécutable.</p>
-    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.1/GrymoiR-3.0.1-linux-x86_64.AppImage">AppImage</a>
-    <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.1/grym-3.0.1-linux-x86_64">grym seul</a></div>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.0/GrymoiR-3.1.0-linux-x86_64.AppImage">AppImage</a>
+    <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.0/grym-3.1.0-linux-x86_64">grym seul</a></div>
 </div>
-<p class="doux">Empreintes : <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.0.1/SHA256SUMS.txt">SHA256SUMS.txt</a>. Toutes les versions : <a href="https://github.com/Flaggstaff/grymoir/releases">github.com/Flaggstaff/grymoir/releases</a>.</p>
+<p class="doux">Empreintes : <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.0/SHA256SUMS.txt">SHA256SUMS.txt</a>. Toutes les versions : <a href="https://github.com/Flaggstaff/grymoir/releases">github.com/Flaggstaff/grymoir/releases</a>.</p>
 
 <h2>Au premier lancement</h2>
 <p>Les paquets ne sont pas signés par un certificat payant, et le système le dit une fois :</p>
 <ul>
   <li><strong>macOS</strong> : glisser GrymoiR dans Applications, puis, une fois, dans le Terminal :<br><code>xattr -dr com.apple.quarantine /Applications/GrymoiR.app</code><br><span class="doux">Sans cette commande, macOS dit que GrymoiR « est endommagé » : c’est sa façon de refuser une application téléchargée qui n’est pas signée par Apple. Elle n’est pas abîmée ; la commande retire la marque « téléchargé d’internet », et GrymoiR s’ouvre normalement.</span></li>
   <li><strong>Windows</strong> : « Informations complémentaires », puis « Exécuter quand même ».</li>
-  <li><strong>Linux</strong> : <code>chmod +x GrymoiR-3.0.1-linux-x86_64.AppImage</code>, puis le lancer.</li>
+  <li><strong>Linux</strong> : <code>chmod +x GrymoiR-3.1.0-linux-x86_64.AppImage</code>, puis le lancer.</li>
 </ul>
 <p>L’atelier s’ouvre sur l’exemple « Amis du Tilleul », une petite association : ses membres, ses cotisations, ses écrans.</p>
 
-<h2>Ce qui est nouveau en 3.0</h2>
+<h2>Ce qui est nouveau en 3.1</h2>
 <ul>
-  <li>Plusieurs postes sur une même application, par le réseau local chiffré, avec des comptes et des conflits refusés au lieu d’être écrasés.</li>
-  <li>Des calculs écrits en C dans une bibliothèque, quand GrymoiR ne suffit pas.</li>
-  <li>Des recherches et des tris jusqu’à trente fois plus rapides.</li>
+  <li>Apprendre GrymoiR dans le navigateur, avec le vrai moteur.</li>
+  <li>Plusieurs postes qui modifient la même liste ou suppriment le même objet : le second est averti au lieu d’écraser le travail du premier.</li>
+  <li>Le service d’un cabinet démarre tout seul sous Linux et Windows, comme sous macOS.</li>
+  <li>Des scénarios qui vérifient qu’un écran refuse ce qu’il doit refuser.</li>
 </ul>
 <p><a href="https://github.com/Flaggstaff/grymoir/blob/main/docs/notes-de-version.md">Les notes de version complètes</a>, avec ce qui n’est pas encore fait.</p>
 
 <h2>Licence</h2>
 <p>GrymoiR est libre, sous licence publique de l’Union européenne (EUPL 1.2). Ce que tu écris en GrymoiR t’appartient, sous la licence de ton choix. <a href="https://github.com/Flaggstaff/grymoir">Le code source</a> est public.</p>
 
-<footer>GrymoiR, par Alain Thiémard (Flaggstaff), Bulle. Version 3.0.1, publiée le 8 novembre 2026.</footer>
+<footer>GrymoiR, par Alain Thiémard (Flaggstaff), Bulle. Version 3.1.0, publiée le 10 novembre 2026.</footer>
 </main>
 </body>
 </html>
