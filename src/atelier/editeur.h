@@ -21,6 +21,8 @@ struct Diagnostic_atelier {
     // des conséquences de la première ; ligne, colonne, message
     struct Suivante { QString message; int ligne = 0; int colonne = 0; };
     QVector<Suivante> suivantes;
+    // les avertissements (grammaire 3.20) : rien n'est faux, l'intention est douteuse ; soulignés en pointillé
+    QVector<Suivante> avertissements;
 };
 
 // Analyse une source complète par le cœur, sans rien exécuter. `chemin` : le fichier, pour trouver ceux qu'il

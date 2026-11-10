@@ -13,6 +13,7 @@
 
 #include "chemins.h"
 #include "analyseur.h"
+#include "lexeur.h"
 #include "bytecode.h"
 #include "compilateur.h"
 #include "imprimeur.h"
@@ -181,11 +182,40 @@ static void signaler(const char *fichier, const Diagnostic *d) {
     else          fprintf(stderr, "%s : erreur : %s\n", fichier, d->message);
 }
 
-/* Charge un fichier : bytecode s'il commence par « GRYM », source sinon (compilée). */
 static int est_compact(const char *chemin) {
     size_t l = strlen(chemin);
     return l > 6 && strcmp(chemin + l - 6, ".grymc") == 0;
 }
+
+/* Les avertissements d'une source (grammaire 3.20) : sur la sortie d'erreur, sans rien arrêter. */
+static void avertir_source(const char *chemin, const char *source, size_t taille) {
+    Avertissement *a = NULL;
+    const size_t n = avertissements_source(source, taille, &a);
+    for (size_t k = 0; k < n; k++)
+        fprintf(stderr, "%s:%d:%d : avertissement : %s\n", chemin, a[k].ligne, a[k].colonne, a[k].message);
+    avertissements_liberer(a, n);
+}
+
+/* Le programme et chacun des fichiers qu'il utilise, une seule fois par commande (« grym scenarios » charge le
+ * programme une fois par scénario). La forme compacte n'en a pas. */
+static void avertir_programme(const char *chemin, const char *source, size_t taille, const Programme *p) {
+    static int dits = 0;
+    if (dits) return;
+    dits = 1;
+    if (!est_compact(chemin)) avertir_source(chemin, source, taille);
+    for (size_t k = 0; k < p->nb_fichiers; k++) {
+        if (!p->fichiers[k] || est_compact(p->fichiers[k])) continue;
+        FILE *f = grym_fopen(p->fichiers[k], "rb");
+        if (!f) continue;
+        size_t t = 0;
+        char *d = lire_fichier(f, &t);
+        fclose(f);
+        if (d) avertir_source(p->fichiers[k], d, t);
+        free(d);
+    }
+}
+
+/* Charge un fichier : bytecode s'il commence par « GRYM », source sinon (compilée). */
 
 static Module *charger(const char *chemin) {
     FILE *f = grym_fopen(chemin, "rb");
@@ -217,6 +247,7 @@ static Module *charger(const char *chemin) {
             signaler(chemin, &d);
             diagnostic_liberer(&d);
         } else {
+            avertir_programme(chemin, donnees, taille, &p);
             b = compiler(&p, &d);
             if (!b) {
                 signaler(chemin, &d);

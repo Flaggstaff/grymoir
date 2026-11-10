@@ -113,6 +113,20 @@ static void verifier_position(int l, const char *src, int index, int ligne, int 
     }
 }
 
+/* Les avertissements (grammaire 3.20) : leur nombre, et le premier à la position donnée, avec le fragment. */
+static void verifier_avertissements(int l, const char *src, size_t attendus, int ligne, int colonne, const char *fragment) {
+    total++;
+    Avertissement *a = NULL;
+    const size_t n = avertissements_source(src, strlen(src), &a);
+    if (n != attendus || (n && (a[0].ligne != ligne || a[0].colonne != colonne || !strstr(a[0].message, fragment)))) {
+        echecs++;
+        printf("ÉCHEC (test ligne %d)\n  source  : %s\n  attendu : %lu avertissement(s)\n  obtenu  : %lu%s%s\n", l, src,
+               (unsigned long)attendus, (unsigned long)n, n ? ", " : "", n ? a[0].message : "");
+    }
+    avertissements_liberer(a, n);
+}
+#define VA(src, n, li, co, frag) verifier_avertissements(__LINE__, src, n, li, co, frag)
+
 #define V(src, att)        verifier(__LINE__, src, att)
 #define VM(src, frag)      verifier_message(__LINE__, src, frag)
 #define VP(src, i, li, co) verifier_position(__LINE__, src, i, li, co)
@@ -270,6 +284,16 @@ int main(void) {
     VM("1234.5", "Écris « 1234,5 ».");
     VP("Le x vaut 21.09.2026.", 3, 1, 11);
     VP("Le x vaut 21.09.2026.", 4, 1, 21);
+
+    /* Avertissements (grammaire 3.20, § 1.5) : un signe haut en tête d'un texte que « suivi de » colle au précédent */
+    VA("Afficher \"L'IBAN\" suivi de « : Configuration. ».", 1, 1, 28, "perd l'espace devant « : »");
+    VA("Le x vaut \"a\" suivie de « ; puis la suite ».\nLe y vaut y suivi de « ? vraiment ».", 2, 1, 25, "écris \" ; puis la suite\"");
+    VA("Le x vaut \"a\" suivi de \" : Configuration.\".", 0, 0, 0, "");   /* guillemets droits : l'espace reste */
+    VA("Le x vaut \"a\" suivi de « ; » suivi de « : ».", 0, 0, 0, "");   /* un signe seul : une donnée (ADIF, séparateur) */
+    VA("Afficher \"mois\" puis « : 28 jours ».", 0, 0, 0, "");           /* « puis » met l'espace */
+    VA("Afficher « : 28 jours ».", 0, 0, 0, "");                         /* en tête : rien à coller */
+    VA("Le x vaut \"a\" suivi de « Sexe : M ».", 0, 0, 0, "");           /* le signe au milieu */
+    VA("Le x vaut « a.", 0, 0, 0, "");                                   /* illisible : l'analyse le dira */
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

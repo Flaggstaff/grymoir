@@ -8,6 +8,7 @@
  */
 #include "lsp.h"
 #include "analyseur.h"
+#include "lexeur.h"
 #include "imprimeur.h"
 #include "json.h"
 #include "texte.h"
@@ -193,9 +194,11 @@ static void publier_diagnostics(Serveur *s, const Document *d) {
     chaine_ajouter(&c, "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
     json_ecrire_texte(&c, d->uri);
     chaine_ajouter(&c, ",\"diagnostics\":[");
+    int premier = 1;   /* faut-il une virgule avant le diagnostic suivant */
     if (analyser_document(d, &p, &diag)) {
         programme_liberer(&p);
     } else {
+        premier = 0;
         /* une erreur dans un fichier utilisé se signale sur la phrase « Utiliser » qui y mène (§ 21) */
         int ailleurs = diag.fichier && diag.origine_ligne > 0;
         int ligne = ailleurs ? diag.origine_ligne : diag.ligne > 0 ? diag.ligne : 1;
@@ -232,6 +235,24 @@ static void publier_diagnostics(Serveur *s, const Document *d) {
             }
         }
         diagnostic_liberer(&diag);
+    }
+    /* les avertissements (grammaire 3.20), en sévérité 2 (avertissement) : rien n'est faux, l'intention est douteuse */
+    if (!est_compact(d->uri)) {
+        Avertissement *a = NULL;
+        const size_t n = avertissements_source(d->texte, strlen(d->texte), &a);
+        for (size_t k = 0; k < n; k++) {
+            long f3;
+            const long d3 = colonne_utf16(d->texte, a[k].ligne, a[k].colonne, &f3);
+            char t[256];
+            snprintf(t, sizeof t, "%s{\"range\":{\"start\":{\"line\":%d,\"character\":%ld},\"end\":{\"line\":%d,\"character\":%ld}},"
+                                  "\"severity\":2,\"source\":\"grym\",\"message\":", premier ? "" : ",", a[k].ligne - 1, d3,
+                     a[k].ligne - 1, f3);
+            chaine_ajouter(&c, t);
+            json_ecrire_texte(&c, a[k].message);
+            chaine_ajouter(&c, "}");
+            premier = 0;
+        }
+        avertissements_liberer(a, n);
     }
     chaine_ajouter(&c, "]}}");
     char *m = chaine_rendre(&c);

@@ -954,3 +954,53 @@ Jeton lexeur_suivant(Lexeur *lx) {
     }
     return j;
 }
+
+
+/* ---------- Avertissements (grammaire 3.20, § 1.5) ---------- */
+
+size_t avertissements_source(const char *source, size_t taille, Avertissement **sortie) {
+    *sortie = NULL;
+    char *erreur = NULL;
+    Lexeur *lx = lexeur_creer(source, taille, &erreur);
+    if (!lx) { free(erreur); return 0; }
+    size_t n = 0, cap = 0;
+    /* seul « suivi de » colle deux textes ; « puis » met une espace entre eux, et l'espace perdue n'y manque pas */
+    int suivi_avant = 0, suivi = 0, de = 0;   /* le jeton d'avant-dernier est « suivi », le dernier « suivi » ou « de » */
+    for (;;) {
+        Jeton j = lexeur_suivant(lx);
+        if (j.type == J_FIN || j.type == J_ERREUR) { jeton_liberer(&j); break; }
+        const int colle = suivi_avant && de;
+        suivi_avant = suivi;
+        suivi = j.type == J_MOT && j.valeur && (!strcmp(j.valeur, "suivi") || !strcmp(j.valeur, "suivie")
+                                                || !strcmp(j.valeur, "suivis") || !strcmp(j.valeur, "suivies"));
+        de = j.type == J_MOT && j.valeur && !strcmp(j.valeur, "de");
+        if (j.type == J_TEXTE && colle && j.debut < lx->n && lx->cp[j.debut] == 0xAB && j.valeur) {
+            const unsigned char *v = (const unsigned char *)j.valeur;
+            /* un signe haut suivi d'un mot : de la prose ; un signe seul est souvent une donnée (« <CALL:6> » en ADIF,
+             * un séparateur « ; ») et n'est pas averti */
+            const int haut = v[0] == ':' || v[0] == ';' || v[0] == '!' || v[0] == '?';
+            if (haut && v[1] == ' ' && v[2] && v[2] != ' ') {
+                if (n == cap) {
+                    cap = cap ? 2 * cap : 4;
+                    Avertissement *t = realloc(*sortie, cap * sizeof *t);
+                    if (!t) { jeton_liberer(&j); break; }
+                    *sortie = t;
+                }
+                (*sortie)[n].ligne = j.ligne;
+                (*sortie)[n].colonne = j.colonne;
+                (*sortie)[n].message = formater("Le texte « %s » perd l'espace devant « %c » : entre guillemets français, "
+                                                 "les espaces du bord ne comptent pas (§ 1.5). Pour la garder, écris "
+                                                 "\" %s\".", j.valeur, v[0], j.valeur);
+                n++;
+            }
+        }
+        jeton_liberer(&j);
+    }
+    lexeur_detruire(lx);
+    return n;
+}
+
+void avertissements_liberer(Avertissement *a, size_t n) {
+    for (size_t k = 0; k < n; k++) free(a[k].message);
+    free(a);
+}

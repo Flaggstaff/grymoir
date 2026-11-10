@@ -77,4 +77,15 @@ void jeton_liberer(Jeton *j);
 void lexeur_detruire(Lexeur *lx);
 const char *type_jeton_nom(TypeJeton t);
 
+/* Les avertissements (grammaire 3.20, § 1.5) : ce qui s'analyse, mais trahit sans doute l'intention. Aujourd'hui un seul :
+ * un texte entre guillemets français qui commence par « : », « ; », « ! » ou « ? » suivi d'un mot (« : Configuration. »)
+ * perd l'espace qui devait précéder ce signe. Rien n'est refusé. Forme littéraire seulement ; une source illisible n'en
+ * donne aucun (l'analyse le dira). */
+typedef struct {
+    int ligne, colonne;   /* du guillemet ouvrant */
+    char *message;
+} Avertissement;
+size_t avertissements_source(const char *source, size_t taille, Avertissement **sortie);
+void avertissements_liberer(Avertissement *a, size_t n);
+
 #endif

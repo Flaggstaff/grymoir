@@ -25,6 +25,7 @@
 
 extern "C" {
 #include "analyseur.h"
+#include "lexeur.h"
 #include "imprimeur.h"
 }
 
@@ -58,6 +59,12 @@ Diagnostic_atelier analyser_source(const QString &source, bool compacte, const Q
         }
     }
     diagnostic_liberer(&d);
+    if (!compacte) {
+        Avertissement *av = nullptr;
+        const size_t n = avertissements_source(octets.constData(), (size_t)octets.size(), &av);
+        for (size_t k = 0; k < n; k++) r.avertissements.append({QString::fromUtf8(av[k].message), av[k].ligne, av[k].colonne});
+        avertissements_liberer(av, n);
+    }
     programme_liberer(&programme);
     portee_detruire(portee);
     return r;
@@ -413,6 +420,23 @@ void Editeur::marquer_erreur() {
             marques.append(s);
         }
     }
+    // les avertissements : un pointillé de la couleur d'accent, du guillemet ouvrant à la fin du mot
+    for (const auto &e : diag.avertissements) {
+        const QTextBlock bloc = document()->findBlockByNumber(e.ligne - 1);
+        if (!bloc.isValid()) continue;
+        QTextEdit::ExtraSelection s;
+        s.format.setUnderlineStyle(QTextCharFormat::DotLine);
+        s.format.setUnderlineColor(Theme::courant().couleur("accent"));
+        const QString t = bloc.text();
+        const int debut = position_bloc(bloc, e.colonne);
+        int fin = t.indexOf(QChar(0xBB), debut);   // jusqu'au guillemet fermant
+        fin = fin < 0 ? (int)t.size() : fin + 1;
+        QTextCursor c(bloc);
+        c.setPosition(bloc.position() + debut);
+        c.setPosition(bloc.position() + fin, QTextCursor::KeepAnchor);
+        s.cursor = c;
+        marques.append(s);
+    }
     setExtraSelections(marques);
 }
 
@@ -435,6 +459,16 @@ bool Editeur::event(QEvent *e) {
             QToolTip::showText(h->globalPos(), diag.message, this);
             return true;
         }
+        QToolTip::hideText();
+    }
+    if (e->type() == QEvent::ToolTip && !diag.avertissements.isEmpty()) {   // un avertissement : son message au survol
+        auto *h = static_cast<QHelpEvent *>(e);
+        const QTextCursor c = cursorForPosition(viewport()->mapFrom(this, h->pos()));
+        for (const auto &a : diag.avertissements)
+            if (c.blockNumber() + 1 == a.ligne) {
+                QToolTip::showText(h->globalPos(), a.message, this);
+                return true;
+            }
         QToolTip::hideText();
     }
     return QPlainTextEdit::event(e);

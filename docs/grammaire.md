@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.19 de la spécification, révisée le 9 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.20 de la spécification, révisée le 10 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -50,6 +50,7 @@ Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4)
 
 - Délimité par `« »`, par `“ ”` (guillemets anglais, insérés par Word) ou par `" "`.
 - Les espaces placées à l'intérieur des guillemets français ne font pas partie du texte : `« Bonjour »` vaut `Bonjour`. Les autres guillemets conservent leurs espaces.
+- Collé par `suivi de` (§ 4.4), un texte entre guillemets français qui commence par `:`, `;`, `!` ou `?` perd l'espace qui devait précéder ce signe : `"Il manque l'IBAN" suivi de « : Configuration. »` donne `Il manque l'IBAN: Configuration.` Rien n'est refusé, mais `grym` (`lancer`, `compiler`, `exemples`, `scenarios`), l'atelier et l'aide à la saisie l'avertissent, avec la forme qui garde l'espace : `" : Configuration."`. Ne sont pas avertis : un signe seul (`« : »`, `« ; »`), souvent une donnée (le `<CALL:6>` d'un champ ADIF, un séparateur), à écrire `" : "` quand c'est de la prose ; un texte après `puis`, qui met lui-même une espace ; un texte qui ne suit rien.
 - Le guillemet `„` est refusé.
 - Un texte tient sur une ligne. Plusieurs lignes : le texte suivant (§ 4.7).
 
@@ -3201,3 +3202,4 @@ Pour rappeler un patient :
 | 3.17 | 2026-11-08 | § 16.20 : les utilisateurs. `Les utilisateurs se connectent.` demande un nom et un mot de passe à la place de la phrase, vérifiés contre l'entité `utilisateur` du programme ; le premier compte se crée s'il n'y en a aucun ; `l'utilisateur connecté` ; le journal porte son nom ; `GRYM_UTILISATEUR` et `GRYM_MOT_DE_PASSE_UTILISATEUR` pour connecter sans question. La console et l'atelier masquent un champ « mot de passe ». Forme compacte `_connexion`, `_utilisateur_connecté` |
 | 3.18 | 2026-11-08 | § 16.20 : `le service à plusieurs postes`, vrai dans une session de l'aiguilleur. Praxis s'en sert : monoposte par défaut, le multiposte se choisit dans la fiche du cabinet |
 | 3.19 | 2026-11-09 | Petits manques relevés en chemin. § 9.1 : `vrai`, `faux` et une condition entre parenthèses en argument d'un calcul. § 13.9, § 16.13 : `est parmi` hors d'un `dont` (ensemble, liste, liste calculée, champ multiple d'un objet, relation inverse). § 9.7 : `On voit l'erreur « … » dans l'écran …`, le refus attendu dans un scénario. § 16.6 : les conflits sur les champs multiples (élément par élément) et sur les suppressions ; deux `absent` sont la même valeur. Démarrage automatique : `--systemd` et `--tache` à côté de `--plist` (`docs/v2.md`, § 11) |
+| 3.20 | 2026-11-10 | § 1.5 : le premier avertissement, qui n'arrête rien : collé par `suivi de`, un texte entre guillemets français qui commence par `:`, `;`, `!` ou `?` perd l'espace devant ce signe (pas un signe seul, souvent une donnée ; rien après `puis`, qui met l'espace). Dit par `grym` sur la sortie d'erreur (`fichier:ligne:colonne : avertissement : …`, une fois par commande, fichiers utilisés compris), par l'aide à la saisie (sévérité 2) et par l'éditeur de l'atelier (pointillé, message au survol). Trouvé dans Praxis, huit fois (`d97ab3d`) |

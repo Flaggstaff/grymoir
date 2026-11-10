@@ -924,6 +924,11 @@ int main(int argc, char **argv) {
         const Diagnostic_atelier plusieurs = analyser_source(QString::fromUtf8("Le a vaut 1 +.\nLe b vaut 2.\nAfficher (3.\n"), false);
         VERIFIER(plusieurs.ligne == 1 && plusieurs.suivantes.size() == 1 && plusieurs.suivantes[0].ligne == 3);
         VERIFIER(analyser_source(QString::fromUtf8("Le a vaut 1.\n"), false).suivantes.isEmpty());
+        // les avertissements (grammaire 3.20) : le programme est juste, le texte collé perd son espace
+        const Diagnostic_atelier av = analyser_source(QString::fromUtf8("Afficher \"IBAN\" suivi de « : Configuration. ».\n"), false);
+        VERIFIER(av.message.isEmpty() && av.avertissements.size() == 1 && av.avertissements[0].ligne == 1
+                 && av.avertissements[0].colonne == 26 && av.avertissements[0].message.contains(QString::fromUtf8("perd l'espace")));
+        VERIFIER(analyser_source(QString::fromUtf8("Afficher \"mois\" puis « : 28 jours ».\n"), false).avertissements.isEmpty());
 
         // renommer partout (1er novembre 2026) : hors des textes et des remarques ; le pluriel ; la majuscule ; « anciennement »
         int n = 0;
