@@ -1,3 +1,16 @@
+# GrymoiR 3.2
+
+Publiée le 10 novembre 2026. Le langage passe à la grammaire 3.20.
+
+- **Le premier avertissement** (grammaire 3.20, § 1.5) : collé par `suivi de`, un texte entre guillemets français qui
+  commence par `:`, `;`, `!` ou `?` suivi d'un mot perd l'espace devant ce signe (`"IBAN" suivi de « : Configuration. »`
+  donne `IBAN: Configuration.`). Rien n'est refusé ; `grym` (`lancer`, `compiler`, `exemples`, `scenarios`), l'aide à
+  la saisie et l'éditeur de l'atelier le disent, avec la forme qui garde l'espace (`" : Configuration."`). Un signe
+  seul (`« : »`, `« ; »`), souvent une donnée, n'est pas averti.
+- **La page « Apprendre GrymoiR »** est refaite en grammaire 3.20.
+- Les corrections de la 3.1.1 et de la 3.1.2, publiées le même jour : les parties (mémoire), l'application fabriquée
+  sous Linux (Qt et modèle embarqués), le premier lancement sans console, les espaces des messages de Praxis.
+
 # GrymoiR 3.1.2
 
 Publiée le 10 novembre 2026, le jour de la 3.1. Des corrections de l'atelier, pas de nouveauté du langage.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GrymoiR 3.1.2 · le langage de programmation en français</title>
+<title>GrymoiR 3.2.0 · le langage de programmation en français</title>
 <meta name="description" content="GrymoiR : écrire des applications de gestion en français courant. Version 3.1 pour macOS, Linux et Windows, sous licence EUPL 1.2.">
 <style>
 :root { --fond: #fbfaf7; --texte: #1d1b16; --doux: #5d5a52; --carte: #ffffff; --bord: #e4e0d6; --accent: #7a3e12; --code: #f2efe7; color-scheme: light; }
@@ -33,7 +33,7 @@ footer { margin-top: 3rem; border-top: 1px solid var(--bord); padding-top: 1rem;
 </head>
 <body>
 <main>
-<h1>Grymoi<span>R</span> 3.1.2</h1>
+<h1>Grymoi<span>R</span> 3.2.0</h1>
 <p class="chapeau">Un langage de programmation en français courant, pour écrire des applications de gestion fiables : le langage, la base de données et l’application, dans un seul outil.</p>
 
 <pre>Un client, conservé, a :
@@ -58,37 +58,37 @@ Afficher le solde du client conservé dont le nom est « Atelier Dubois ».</pre
 <h2>Télécharger</h2>
 <div class="grille">
   <div class="carte"><h3>macOS</h3><p>GrymoiR.app à glisser dans Applications : l’atelier, l’outil <code>grym</code> et les exemples.</p>
-    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.2/GrymoiR-3.1.2-macos.dmg">GrymoiR-3.1.2-macos.dmg</a></div>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.2.0/GrymoiR-3.2.0-macos.dmg">GrymoiR-3.2.0-macos.dmg</a></div>
   <div class="carte"><h3>Windows</h3><p>Windows 10 (1903) ou 11. Installation sans droits d’administrateur.</p>
-    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.2/GrymoiR-3.1.2-windows.exe">GrymoiR-3.1.2-windows.exe</a></div>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.2.0/GrymoiR-3.2.0-windows.exe">GrymoiR-3.2.0-windows.exe</a></div>
   <div class="carte"><h3>Linux</h3><p>x86_64, distributions de 2024 et après. Un seul fichier à rendre exécutable.</p>
-    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.2/GrymoiR-3.1.2-linux-x86_64.AppImage">AppImage</a>
-    <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.2/grym-3.1.2-linux-x86_64">grym seul</a></div>
+    <a class="bouton" href="https://github.com/Flaggstaff/grymoir/releases/download/v3.2.0/GrymoiR-3.2.0-linux-x86_64.AppImage">AppImage</a>
+    <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.2.0/grym-3.2.0-linux-x86_64">grym seul</a></div>
 </div>
-<p class="doux">Empreintes : <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.1.2/SHA256SUMS.txt">SHA256SUMS.txt</a>. Toutes les versions : <a href="https://github.com/Flaggstaff/grymoir/releases">github.com/Flaggstaff/grymoir/releases</a>.</p>
+<p class="doux">Empreintes : <a href="https://github.com/Flaggstaff/grymoir/releases/download/v3.2.0/SHA256SUMS.txt">SHA256SUMS.txt</a>. Toutes les versions : <a href="https://github.com/Flaggstaff/grymoir/releases">github.com/Flaggstaff/grymoir/releases</a>.</p>
 
 <h2>Au premier lancement</h2>
 <p>Les paquets ne sont pas signés par un certificat payant, et le système le dit une fois :</p>
 <ul>
   <li><strong>macOS</strong> : glisser GrymoiR dans Applications, puis, une fois, dans le Terminal :<br><code>xattr -dr com.apple.quarantine /Applications/GrymoiR.app</code><br><span class="doux">Sans cette commande, macOS dit que GrymoiR « est endommagé » : c’est sa façon de refuser une application téléchargée qui n’est pas signée par Apple. Elle n’est pas abîmée ; la commande retire la marque « téléchargé d’internet », et GrymoiR s’ouvre normalement.</span></li>
   <li><strong>Windows</strong> : « Informations complémentaires », puis « Exécuter quand même ».</li>
-  <li><strong>Linux</strong> : <code>chmod +x GrymoiR-3.1.2-linux-x86_64.AppImage</code>, puis le lancer.</li>
+  <li><strong>Linux</strong> : <code>chmod +x GrymoiR-3.2.0-linux-x86_64.AppImage</code>, puis le lancer.</li>
 </ul>
 <p>L’atelier s’ouvre sur l’exemple « Amis du Tilleul », une petite association : ses membres, ses cotisations, ses écrans.</p>
 
-<h2>Ce qui est nouveau en 3.1</h2>
+<h2>Ce qui est nouveau en 3.2</h2>
 <ul>
-  <li>Apprendre GrymoiR dans le navigateur, avec le vrai moteur.</li>
-  <li>Plusieurs postes qui modifient la même liste ou suppriment le même objet : le second est averti au lieu d’écraser le travail du premier.</li>
-  <li>Le service d’un cabinet démarre tout seul sous Linux et Windows, comme sous macOS.</li>
-  <li>Des scénarios qui vérifient qu’un écran refuse ce qu’il doit refuser.</li>
+  <li>Sous Linux, une application fabriquée par l’atelier embarque Qt et la transcription : elle démarre sur une machine où rien n’est installé.</li>
+  <li>Un premier avertissement : un texte collé par <code>suivi de</code> qui perdrait l’espace devant ses deux-points est signalé, avec la forme qui la garde.</li>
+  <li>Au premier lancement d’une application, plus de console de l’atelier derrière la fenêtre du mot de passe.</li>
+  <li>Des corrections de l’analyse : les parties qui s’utilisent elles-mêmes ou s’imbriquent ne font plus tomber l’atelier.</li>
 </ul>
 <p><a href="https://github.com/Flaggstaff/grymoir/blob/main/docs/notes-de-version.md">Les notes de version complètes</a>, avec ce qui n’est pas encore fait.</p>
 
 <h2>Licence</h2>
 <p>GrymoiR est libre, sous licence publique de l’Union européenne (EUPL 1.2). Ce que tu écris en GrymoiR t’appartient, sous la licence de ton choix. <a href="https://github.com/Flaggstaff/grymoir">Le code source</a> est public.</p>
 
-<footer>GrymoiR, par Alain Thiémard (Flaggstaff), Bulle. Version 3.1.2, publiée le 10 novembre 2026.</footer>
+<footer>GrymoiR, par Alain Thiémard (Flaggstaff), Bulle. Version 3.2.0, publiée le 10 novembre 2026.</footer>
 </main>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.70, révisée le 10 novembre 2026.
+Version 1.71, révisée le 10 novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -188,6 +188,7 @@ Horizon post-v1, sans date :
 | W4 | `grym` sur le réseau d'un cabinet : TLS, certificats, adresse stable, frein par adresse, démarrage automatique, guide de déploiement (`docs/v2.md`, § 12 ; `docs/installation-multiposte.md`) ; jamais directement en public, sur internet | fait le 8 novembre 2026, sur un réseau local |
 | v3.0 | La première version publiée : l'atelier, `grym` et les exemples, pour macOS, Linux et Windows (`.github/workflows/publication.yml`), sous EUPL 1.2 ; langage à la grammaire 3.18 ; notes : `docs/notes-de-version.md` | publiée le 8 novembre 2026 |
 | v3.1 | Grammaire 3.19 (petits manques, conflits des champs multiples et des suppressions) ; démarrage automatique sous Linux et Windows ; apprendre GrymoiR dans le navigateur, avec le vrai moteur (`docs/site/apprendre.html`, `apprendre/LISEZMOI.md`) | publiée le 10 novembre 2026 |
+| v3.2 | Grammaire 3.20 (le premier avertissement : l'espace perdue des guillemets) ; sous Linux, l'application fabriquée embarque Qt et la transcription ; les corrections des 3.1.1 et 3.1.2 | publiée le 10 novembre 2026 |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -307,3 +308,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.68 | 2026-11-08 | Art. 11 : plusieurs sessions sur une base, et le réseau local en TLS seulement (`docs/v2.md`, § 11, § 12) ; le langage reste sans concurrence |
 | 1.69 | 2026-11-08 | Art. 12 : W3 et W4 faits (sessions, comptes, réseau local) ; v3.0, la première version publiée |
 | 1.70 | 2026-11-10 | Art. 12 : v3.1 |
+| 1.71 | 2026-11-10 | Art. 12 : v3.2 |
