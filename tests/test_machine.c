@@ -2975,6 +2975,36 @@ int main(void) {
     /* 2.56 : une partie inconnue ; une partie qui s'utilise elle-même */
     PROG("L'écran x montre :\n    la partie « rien »,\n    un bouton « OK ».", "~La partie « rien » n'est pas déclarée");
     PROG("La partie « a » montre :\n    la partie « a ».\nL'écran x montre :\n    la partie « a ».", "~La partie « a » s'utilise elle-même.");
+    /* 10 novembre 2026 (trouvé par outils/essais-par-mutation, puis par AddressSanitizer sur la correction) : un usage
+     * avant la partie qui s'utilise elle-même, et deux parties qui s'utilisent l'une l'autre, libéraient deux fois les
+     * jetons du premier usage (abandon de grym, de grym lsp et de l'atelier) ; au-delà de 64 parties, les suivantes
+     * passaient pour « pas déclarées » */
+    PROG("L'écran x montre :\n    la partie « a »,\n    le texte « fin ».\nLa partie « a » montre :\n    la partie « a ».",
+         "ERREUR 5:5 La partie « a » s'utilise elle-même.");
+    PROG("L'écran x montre :\n    la partie « a »,\n    le texte « fin ».\nLa partie « a » montre :\n    la partie « b ».\n"
+         "La partie « b » montre :\n    la partie « a ».", "~s'utilise elle-même.");
+    /* des parties imbriquées, déclarées avant l'écran : le corps de « a » se lisait après que son usage de « b » eut été
+     * libéré (lecture de mémoire libérée, puis une erreur fausse) */
+    PROG("La partie « b » montre :\n    le texte « y ».\nLa partie « a » montre :\n    le texte « x »,\n    la partie « b ».\n"
+         "L'écran x montre :\n    la partie « a »,\n    le texte « fin ».\nAfficher 1.", "1");
+    {
+        Chaine s70 = {0};
+        for (int k = 0; k < 70; k++) {
+            char *d = grym_formater("La partie « p%d » montre :\n    le texte « %d ».\n", k, k);
+            chaine_ajouter(&s70, d);
+            free(d);
+        }
+        chaine_ajouter(&s70, "L'écran x montre :\n");
+        for (int k = 0; k < 70; k++) {
+            char *u = grym_formater("    la partie « p%d »%s\n", k, k < 69 ? "," : ".");
+            chaine_ajouter(&s70, u);
+            free(u);
+        }
+        chaine_ajouter(&s70, "Afficher 1.");
+        char *src70 = chaine_rendre(&s70);
+        PROG(src70, "1");
+        free(src70);
+    }
     /* 2.55 : une action dans un écran ; un écran inconnu ; « l'écran » hors d'un écran, refusé */
     PROG("Pour remplir le nom, dans l'écran y :\n    Afficher 1.", "~L'écran « y » n'est pas déclaré");
     PROG("L'écran x montre :\n    un nom (texte).\nPour remplir le nom :\n    Le nom de l'écran devient « A ».",

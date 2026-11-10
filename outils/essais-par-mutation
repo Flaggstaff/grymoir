@@ -1,0 +1,129 @@
+#!/bin/sh
+# Essais par mutation (10 novembre 2026) : prend les programmes du dépôt, les abîme au hasard (mots ajoutés, morceaux
+# coupés, lignes doublées, retraits faussés, textes répétés) et fait lire chaque version abîmée par grym. Ce qui compte
+# ici n'est pas qu'il refuse (c'est le cas presque toujours) mais comment : un abandon, un plantage ou une analyse qui
+# ne finit pas est un défaut. Chaque trouvaille est gardée, puis réduite au plus petit programme qui la reproduit.
+#   outils/essais-par-mutation [secondes] [graine]          (60 secondes par défaut, graine 1)
+#   GRYM=/chemin/grym outils/essais-par-mutation 600        (un grym construit avec -fsanitize=address voit davantage)
+# Seules « grym formater » et « grym exemples » sont jouées : elles analysent sans exécuter le programme. Jamais
+# « lancer » : un programme abîmé pourrait écrire des fichiers, envoyer un courriel ou lancer une commande.
+# Ne vérifie rien d'autre et ne bloque aucune publication. Trouvailles : dans le dossier « mutations » du dossier courant.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="${GRYM:-$racine/grym}"
+[ -x "$grym" ] || { echo "essais-par-mutation : construis d'abord grym (make)."; exit 1; }
+command -v python3 > /dev/null || { echo "essais-par-mutation : python3 manque."; exit 1; }
+duree="${1:-60}"
+graine="${2:-1}"
+sortie="$(pwd)/mutations"
+mkdir -p "$sortie"
+python3 - "$racine" "$grym" "$duree" "$graine" "$sortie" <<'PY'
+import glob, hashlib, os, random, subprocess, sys, tempfile, time
+racine, grym, duree, graine, sortie = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
+random.seed(graine)
+corpus = []
+for motif in ("tests/balayage/*.grym", "exemples/*.grym", "projets/*/*.grym", "projets/*/*/*.grym", "docs/guide/*.grym"):
+    for chemin in glob.glob(os.path.join(racine, motif)):
+        try:
+            texte = open(chemin, encoding="utf-8").read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if 20 < len(texte) < 60000:
+            corpus.append(texte)
+if not corpus:
+    sys.exit("essais-par-mutation : aucun programme trouvé dans le dépôt.")
+# des morceaux du langage, pour que les mutations restent assez proches d'un programme pour passer le lexeur
+morceaux = ["Si", "Sinon", ":", ".", ",", "«", "»", "(", ")", "vaut", "devient", "Pour chaque", "parmi", "dont", "le",
+            "un", "une", "Quand on", "Ouvrir", "Essayer :", "En cas d'échec :", "Rendre", "conservé", "×", "÷", "−", "+",
+            "^", "est", "n'est pas", "et", "ou", "[", "]", '"', "'", "Scénario « x » :", "Vérifier que", "la table où",
+            "la liste", "suivi de", "le texte suivant :", "{", "}", "{{", "la partie « a »,", "La partie « a » montre :",
+            "\n", "\n    ", "\n        ", "\t", "99999999999999999999999999999999", "31.02.2026", "25:99",
+            "montre :", "Utiliser « x ».", "de", "d'", "Remarque :", "\ufeff", "\u00a0", "é"]
+
+def abimer(texte):
+    for _ in range(random.randint(1, 4)):
+        if len(texte) < 5:
+            texte = "Afficher 1 + 2."
+        geste = random.random()
+        if geste < 0.25:
+            i = random.randrange(len(texte) + 1)
+            texte = texte[:i] + " " + random.choice(morceaux) + " " + texte[i:]
+        elif geste < 0.45:
+            i = random.randrange(len(texte))
+            texte = texte[:i] + texte[i + random.randint(1, 30):]
+        elif geste < 0.6:
+            lignes = texte.split("\n")
+            lignes.insert(random.randrange(len(lignes)), random.choice(lignes))
+            texte = "\n".join(lignes)
+        elif geste < 0.7:
+            texte = texte[:random.randrange(len(texte) + 1)]
+        elif geste < 0.8:
+            lignes = texte.split("\n")
+            i = random.randrange(len(lignes))
+            lignes[i] = " " * random.randint(0, 9) + lignes[i].lstrip()
+            texte = "\n".join(lignes)
+        elif geste < 0.9:
+            mots = texte.split(" ")
+            a, b = random.randrange(len(mots)), random.randrange(len(mots))
+            mots[a], mots[b] = mots[b], mots[a]
+            texte = " ".join(mots)
+        else:
+            i = random.randrange(len(texte))
+            texte = texte[:i] + texte[i:i + random.randint(1, 40)] * random.randint(2, 60) + texte[i:]
+    return texte
+
+atelier = tempfile.mkdtemp()
+def defaut(texte, commande, delai):
+    """« abandon », « délai » ou None ; dans un dossier vide, refait à chaque essai"""
+    for f in os.listdir(atelier):
+        os.remove(os.path.join(atelier, f))
+    chemin = os.path.join(atelier, "m.grym")
+    with open(chemin, "w", encoding="utf-8", errors="surrogatepass") as f:
+        f.write(texte)
+    try:
+        r = subprocess.run([grym, commande, chemin], cwd=atelier, stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=delai)
+    except subprocess.TimeoutExpired:
+        return "délai"
+    if r.returncode < 0 or r.returncode >= 128 or b"Sanitizer" in r.stderr:
+        return "abandon"
+    return None
+
+def reduire(texte, commande, sorte, delai):
+    """le plus petit programme qui garde le défaut : lignes d'abord, puis caractères (delta debugging)"""
+    for separateur in ("\n", ""):
+        parts = texte.split("\n") if separateur else list(texte)
+        n = 2
+        while len(parts) >= 2:
+            pas = max(1, len(parts) // n)
+            for i in range(0, len(parts), pas):
+                essai = parts[:i] + parts[i + pas:]
+                if essai and defaut(separateur.join(essai), commande, delai) == sorte:
+                    parts, n = essai, max(n - 1, 2)
+                    break
+            else:
+                if pas == 1:
+                    break
+                n = min(n * 2, len(parts))
+        texte = separateur.join(parts)
+    return texte
+
+debut, essais, trouvailles = time.time(), 0, 0
+vus = set(os.listdir(sortie))
+while time.time() - debut < duree:
+    commande = random.choice(("formater", "exemples"))
+    texte = abimer(random.choice(corpus))
+    essais += 1
+    sorte = defaut(texte, commande, 10)
+    if not sorte:
+        continue
+    petit = reduire(texte, commande, sorte, 3 if sorte == "délai" else 10)
+    nom = "%s-%s-%s.grym" % (sorte, commande, hashlib.sha256(petit.encode("utf-8", "surrogatepass")).hexdigest()[:8])
+    if nom in vus:
+        continue
+    vus.add(nom)
+    trouvailles += 1
+    with open(os.path.join(sortie, nom), "w", encoding="utf-8", errors="surrogatepass") as f:
+        f.write(petit)
+    print("trouvé : %s (%d caractères) ; rejouer : grym %s %s" % (nom, len(petit), commande, os.path.join(sortie, nom)))
+print("%d programmes abîmés en %d s, %d trouvaille(s) nouvelle(s), dans %s" % (essais, duree, trouvailles, sortie))
+PY

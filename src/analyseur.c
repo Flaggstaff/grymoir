@@ -12203,10 +12203,14 @@ static int deplier_parties(Jeton **pj, size_t *pn, Diagnostic *diag) {
     for (int tour = 0; tour < 8; tour++) {
         Jeton *j = *pj;
         size_t n = *pn;
-        /* les déclarations : [corps, fin] de chaque nom */
-        const char *noms[64];
-        size_t corps[64], fins[64], nb = 0;
-        for (size_t p = 0; p + 5 < n && nb < 64; p++) {
+        /* les déclarations : [corps, fin] de chaque nom ; autant qu'il y en a (10 novembre 2026 : au-delà de 64, les
+         * suivantes passaient pour « pas déclarées ») */
+        size_t place = 0;
+        for (size_t p = 0; p + 1 < n; p++)
+            if (premier_de_sa_ligne(j, p) && j[p].colonne == 1 && est_mot(&j[p], "la") && est_mot(&j[p + 1], "partie")) place++;
+        const char **noms = grym_allouer((place + 1) * sizeof *noms);
+        size_t *corps = grym_allouer((place + 1) * sizeof *corps), *fins = grym_allouer((place + 1) * sizeof *fins), nb = 0;
+        for (size_t p = 0; p + 5 < n && nb < place; p++) {
             if (!premier_de_sa_ligne(j, p) || j[p].colonne != 1 || !est_mot(&j[p], "la") || !est_mot(&j[p + 1], "partie")
                 || j[p + 2].type != J_TEXTE || !est_mot(&j[p + 3], "montre") || j[p + 4].type != J_DEUX_POINTS) continue;
             size_t q = p + 5;
@@ -12222,18 +12226,36 @@ static int deplier_parties(Jeton **pj, size_t *pn, Diagnostic *diag) {
             if (!premier_de_sa_ligne(j, u) || j[u].colonne == 1 || !est_mot(&j[u], "la") || !est_mot(&j[u + 1], "partie")
                 || j[u + 2].type != J_TEXTE || (j[u + 3].type != J_VIRGULE && j[u + 3].type != J_POINT)) continue;
             int connue = 0;
-            for (size_t k = 0; k < nb; k++)
-                if (!strcmp(noms[k], j[u + 2].valeur)) { ajout += fins[k] - corps[k] + 1; usages++; connue = 1; }
+            for (size_t k = 0; k < nb; k++) {
+                if (strcmp(noms[k], j[u + 2].valeur) != 0) continue;
+                /* une partie qui s'utilise elle-même, directement ou par une autre, déjà dépliée : refusée ici, avant
+                 * qu'aucun jeton ne soit libéré (10 novembre 2026 : refusée pendant la copie, après un premier usage,
+                 * elle libérait deux fois les jetons de cet usage) */
+                if (u >= corps[k] && u <= fins[k]) {
+                    diag->message = grym_formater("La partie « %s » s'utilise elle-même.", noms[k]);
+                    diag->ligne = j[u].ligne;
+                    diag->colonne = j[u].colonne;
+                    free(noms); free(corps); free(fins);
+                    return 0;
+                }
+                ajout += fins[k] - corps[k] + 1; usages++; connue = 1;
+            }
             if (!connue) {
                 diag->message = grym_formater("La partie « %s » n'est pas déclarée : « La partie « %s » montre : », dans ce fichier.",
                                               j[u + 2].valeur, j[u + 2].valeur);
                 diag->ligne = j[u + 2].ligne;
                 diag->colonne = j[u + 2].colonne;
+                free(noms); free(corps); free(fins);
                 return 0;
             }
         }
-        if (!usages) return 1;
+        if (!usages) { free(noms); free(corps); free(fins); return 1; }
         Jeton *r = grym_allouer((n + ajout + 1) * sizeof *r);
+        /* les usages remplacés ne se libèrent qu'à la fin : un usage peut être dans le corps d'une autre partie, que la
+         * suite de la boucle recopie encore (10 novembre 2026 : des parties imbriquées, déclarées avant l'écran,
+         * lisaient des jetons déjà libérés) */
+        unsigned char *remplaces = grym_allouer(n + 1);
+        memset(remplaces, 0, n + 1);
         size_t m = 0;
         for (size_t u = 0; u < n; u++) {
             int remplace = 0;
@@ -12241,13 +12263,6 @@ static int deplier_parties(Jeton **pj, size_t *pn, Diagnostic *diag) {
                 && j[u + 2].type == J_TEXTE && (j[u + 3].type == J_VIRGULE || j[u + 3].type == J_POINT)) {
                 for (size_t k = 0; k < nb && !remplace; k++) {
                     if (strcmp(noms[k], j[u + 2].valeur) != 0) continue;
-                    if (u >= corps[k] && u <= fins[k]) {   /* une partie qui s'utilise elle-même */
-                        diag->message = grym_formater("La partie « %s » s'utilise elle-même.", noms[k]);
-                        diag->ligne = j[u].ligne;
-                        diag->colonne = j[u].colonne;
-                        free(r);
-                        return 0;
-                    }
                     const int decalage = j[u].retrait - j[corps[k]].retrait;
                     for (size_t c = corps[k]; c <= fins[k]; c++) {
                         Jeton x = j[c];
@@ -12260,13 +12275,18 @@ static int deplier_parties(Jeton **pj, size_t *pn, Diagnostic *diag) {
                 }
             }
             if (remplace) {
-                for (size_t c = u; c < u + 4; c++) free(j[c].valeur);
+                remplaces[u] = 1;
                 u += 3;
                 continue;
             }
             r[m++] = j[u];
         }
+        for (size_t u = 0; u < n; u++)
+            if (remplaces[u])
+                for (size_t c = u; c < u + 4; c++) free(j[c].valeur);
+        free(remplaces);
         free(j);
+        free(noms); free(corps); free(fins);
         *pj = r;
         *pn = m;
     }
