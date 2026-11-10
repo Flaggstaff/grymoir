@@ -20,7 +20,9 @@ if [ ! -x construction/grym-atelier ]; then
 fi
 if [ -z "${GRYM_SANS_ESSAIS:-}" ]; then
     echo "   essais…"
-    make -s test > /dev/null
+    # un échec montre ses dernières lignes, comme paquet-mac : dans l'intégration continue, la sortie cachée ne
+    # disait que « Error 1 » (10 novembre 2026, publication de la 3.2.0)
+    make -s test > /tmp/grymoir-paquet-essais.txt 2>&1 || { tail -n 40 /tmp/grymoir-paquet-essais.txt >&2; exit 1; }
 fi
 
 echo "2. L'image…"
