@@ -9,9 +9,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <windows.h>
-#else
+#elif !defined(__wasi__)
 #include <dlfcn.h>
 #endif
 
@@ -25,7 +25,21 @@ const char *natif_extension(void) {
 #endif
 }
 
-#ifdef _WIN32
+#if defined(__wasi__)
+/* WebAssembly (l'application pour apprendre, 9 novembre 2026) : une page web ne charge aucune bibliothèque native. */
+void *natif_ouvrir(const char *chemin, char **erreur) {
+    *erreur = grym_formater("« %s » ne se charge pas ici : une page web ne charge aucune bibliothèque native.", chemin);
+    return NULL;
+}
+
+void *natif_symbole(void *poignee, const char *nom) {
+    (void)poignee; (void)nom;
+    return NULL;
+}
+
+void natif_fermer(void *poignee) { (void)poignee; }
+
+#elif defined(_WIN32)
 void *natif_ouvrir(const char *chemin, char **erreur) {
     *erreur = NULL;
     int n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, chemin, -1, NULL, 0);

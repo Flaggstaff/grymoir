@@ -35,3 +35,5 @@ _essai_*_projet/
 
 # Mbed TLS, construit par make
 vendor/mbedtls/libmbedtls.a
+# L'application pour apprendre : le moteur WebAssembly, produit intermédiaire (la page docs/site/apprendre.html l'embarque)
+apprendre/grym.wasm

@@ -1,0 +1,6 @@
+#!/bin/sh
+# L'application pour apprendre (docs/site/apprendre.html, 9 novembre 2026) : son moteur et ses leçons, éprouvés dans
+# Node par apprendre/essayer.mjs. Sautée sans Node (la page se reconstruit avec wasi-sdk : apprendre/LISEZMOI.md).
+racine="$(cd "$(dirname "$0")/.." && pwd)"
+if ! command -v node > /dev/null 2>&1; then echo "apprendre : sauté (Node absent)"; exit 0; fi
+exec node "$racine/apprendre/essayer.mjs"

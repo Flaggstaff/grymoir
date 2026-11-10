@@ -123,8 +123,16 @@ void pbkdf2_sha256(const unsigned char *mdp, size_t nm, const unsigned char *sel
     free(premier);
 }
 
+#ifdef __wasi__
+int getentropy(void *tampon, size_t n);   /* wasi-libc ; la page la sert par crypto.getRandomValues (apprendre/moteur.js) */
+#endif
+
 int aleatoire_systeme(unsigned char *o, size_t n) {
-#ifdef _WIN32
+#if defined(__wasi__)
+    for (size_t i = 0; i < n; i += 256)   /* getentropy rend au plus 256 octets à la fois */
+        if (getentropy(o + i, n - i < 256 ? n - i : 256) != 0) return 0;
+    return 1;
+#elif defined(_WIN32)
     for (size_t i = 0; i < n; i += 4) {
         unsigned int r;
         if (rand_s(&r)) return 0;

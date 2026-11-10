@@ -50,7 +50,20 @@ void serie_liberer(char **noms, size_t n) {
     free(noms);
 }
 
-#ifdef _WIN32
+#if defined(__wasi__)
+/* WebAssembly (l'application pour apprendre, 9 novembre 2026) : une page n'a pas de port série. */
+size_t serie_ports(char ***noms) {
+    *noms = NULL;
+    return 0;
+}
+
+char *serie_echanger(const char *port, long bauds, const char *question, char **erreur) {
+    (void)bauds; (void)question;
+    *erreur = grym_formater("Le port « %s » n'existe pas ici : une page web n'a pas de port série.", port);
+    return NULL;
+}
+
+#elif defined(_WIN32)
 #include <winsock2.h>   /* avant windows.h, que winsock2.h exige (WSJT-X, plus bas) */
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -263,7 +276,10 @@ char *serie_echanger(const char *port, long bauds, const char *question, char **
  * nouveau, heure, rapport (32 bits signés), écart (double), décalage (32 bits), mode (un caractère), message, douteux,
  * hors antenne. */
 
-#ifdef _WIN32
+#if defined(__wasi__)
+typedef int Prise;
+#define PRISE_INVALIDE (-1)
+#elif defined(_WIN32)
 typedef SOCKET Prise;
 #define PRISE_INVALIDE INVALID_SOCKET
 #else
@@ -393,6 +409,13 @@ char *wsjtx_lire_datagramme(const unsigned char *d, size_t n) {
     return r;
 }
 
+#if defined(__wasi__)
+size_t wsjtx_decodages(long port, char ***decodages, char **erreur) {   /* une page n'écoute pas le réseau */
+    *decodages = NULL;
+    *erreur = grym_formater("WSJT-X ne s'écoute pas depuis une page web (port %ld).", port);
+    return 0;
+}
+#else
 typedef struct { long port; Prise p; } PriseWsjtx;
 static PriseWsjtx *prises;
 static size_t nb_prises;
@@ -448,3 +471,4 @@ size_t wsjtx_decodages(long port, char ***decodages, char **erreur) {
     }
     return n;
 }
+#endif

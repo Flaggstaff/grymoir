@@ -183,7 +183,7 @@ static MotVu *mots;
 static size_t nb_mots, cap_mots;   /* table à adressage ouvert, cap_mots puissance de deux */
 
 static size_t hacher(const char *m) {
-    size_t h = 1469598103934665603u;
+    size_t h = (size_t)1469598103934665603u;   /* tronqué là où size_t fait 32 bits (WebAssembly) : un autre hachage, aussi bon */
     for (; *m; m++) h = (h ^ (unsigned char)*m) * 1099511628211u;
     return h;
 }

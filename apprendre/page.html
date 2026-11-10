@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apprendre GrymoiR</title>
+<meta name="description" content="Apprendre GrymoiR, le langage de programmation en français : des leçons et des exercices, avec le vrai moteur exécuté dans la page.">
+<!-- Construite par apprendre/assembler.mjs depuis docs/guide.md et apprendre/exercices.md ; grammaire GRAMMAIRE_VERSION.
+     Polices : Atkinson Hyperlegible Next et Mono (SIL Open Font License 1.1, vendor/atkinson). -->
+<style>
+@font-face { font-family: "Atkinson Next"; src: url(data:font/ttf;base64,POLICE_NEXT_REGULIER) format("truetype"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Atkinson Next"; src: url(data:font/ttf;base64,POLICE_NEXT_ITALIQUE) format("truetype"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Atkinson Next"; src: url(data:font/ttf;base64,POLICE_NEXT_DEMIGRAS) format("truetype"); font-weight: 600; font-style: normal; }
+@font-face { font-family: "Atkinson Next"; src: url(data:font/ttf;base64,POLICE_NEXT_GRAS) format("truetype"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Atkinson Mono"; src: url(data:font/ttf;base64,POLICE_MONO_REGULIER) format("truetype"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Atkinson Mono"; src: url(data:font/ttf;base64,POLICE_MONO_DEMIGRAS) format("truetype"); font-weight: 600; font-style: normal; }
+
+/* Les jetons de l'atelier (src/atelier/theme/grymoir-jetons.json), accent bleu */
+:root {
+  color-scheme: light;
+  --fond: #F5EFE6; --surface: #FFFCF7; --surface-alt: #EEE5D8; --bordure: #86776A; --separateur: #E0D5C6;
+  --texte: #2B221B; --texte-2: #675A4D; --danger: #B42328; --danger-doux: #F9EBE6; --survol: #F6F0E8;
+  --accent: #1F5AC7; --accent-survol: #1B4DAB; --sur-accent: #FFFFFF; --accent-doux: #D7DFEE;
+  --reussi: #2E6612; --reussi-doux: #E4EFDC;
+  --s-construction: #7A2A8C; --s-nombre: #08646D; --s-texte: #2E6612; --s-date: #8F4400; --s-remarque: #675A4D; --s-erreur: #B42328;
+  --police: "Atkinson Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --code: "Atkinson Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fond: #1B1613; --surface: #241E1A; --surface-alt: #2F2822; --bordure: #8E8174; --separateur: #40372F;
+    --texte: #F2EAE0; --texte-2: #C3B6A7; --danger: #FF7F75; --danger-doux: #472E29; --survol: #2A231E;
+    --accent: #86AEFF; --accent-survol: #9CBDFF; --sur-accent: #1B1613; --accent-doux: #2B3550;
+    --reussi: #A2D47F; --reussi-doux: #2A3522;
+    --s-construction: #DBA3EA; --s-nombre: #63CFD8; --s-texte: #A2D47F; --s-date: #F3AE70; --s-remarque: #C3B6A7; --s-erreur: #FF7F75;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.55 var(--police); }
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, textarea { font-family: var(--code); }
+
+.cadre { display: grid; grid-template-columns: 16rem minmax(0, 1fr) minmax(0, 1.15fr); height: 100vh; }
+@media (max-width: 1100px) { .cadre { grid-template-columns: 14rem minmax(0, 1fr); } .etabli { grid-column: 2; } .lecon { border-right: 0; } }
+@media (max-width: 720px) {
+  .cadre { display: block; height: auto; }
+  .sommaire { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--separateur); }
+  .sommaire nav, .sommaire .pied { display: none; } .sommaire.ouvert nav, .sommaire.ouvert .pied { display: block; }
+  .lecon, .etabli { height: auto; overflow: visible; }
+}
+
+/* Le sommaire */
+.sommaire { border-right: 1px solid var(--separateur); overflow-y: auto; padding: 1.25rem 0.75rem 2rem; background: var(--surface-alt); }
+.marque { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; padding: 0 .5rem 1rem; }
+.marque h1 { font-size: 1.35rem; line-height: 1.2; margin: 0; font-weight: 700; }
+.marque h1 small { display: block; font-size: .8rem; font-weight: 400; color: var(--texte-2); }
+.basculer { display: none; background: none; border: 1px solid var(--bordure); border-radius: 8px; color: var(--texte); padding: .2rem .6rem; cursor: pointer; }
+@media (max-width: 720px) { .basculer { display: inline-block; } }
+.sommaire details { margin: 0 0 .25rem; }
+.sommaire summary { cursor: pointer; padding: .35rem .5rem; border-radius: 6px; font-weight: 600; font-size: .95rem; list-style-position: inside; }
+.sommaire summary:hover { background: var(--survol); }
+.sommaire ol { list-style: none; margin: .1rem 0 .5rem; padding: 0; }
+.sommaire a { display: grid; grid-template-columns: 1.1rem 1fr; gap: .2rem; padding: .25rem .5rem .25rem .75rem; border-radius: 6px;
+  color: var(--texte); text-decoration: none; font-size: .9rem; line-height: 1.35; }
+.sommaire a:hover { background: var(--survol); }
+.sommaire a[aria-current="page"] { background: var(--accent-doux); }
+.sommaire a .etat { color: var(--reussi); font-weight: 700; }
+.sommaire .pied { padding: 1rem .5rem 0; font-size: .8rem; color: var(--texte-2); }
+.sommaire .pied a { display: inline; padding: 0; color: var(--accent); text-decoration: underline; }
+
+/* La leçon */
+.lecon { overflow-y: auto; padding: 2rem 2.25rem 4rem; border-right: 1px solid var(--separateur); }
+.lecon article { max-width: 34rem; }
+.lecon .chapitre { color: var(--texte-2); font-size: .95rem; margin: 0 0 .2rem; }
+.lecon h2 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 1.25rem; font-weight: 700; }
+.lecon p, .lecon ul { margin: 0 0 1rem; }
+.lecon ul { padding-left: 1.2rem; }
+.lecon li { margin-bottom: .4rem; }
+.lecon code { font-size: .92em; background: var(--surface-alt); padding: .05em .3em; border-radius: 4px; }
+.lecon pre { margin: 0 0 1rem; padding: .75rem 1rem; border-radius: 8px; overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+.lecon pre.extrait { background: var(--surface); border: 1px solid var(--separateur); }
+.lecon pre.sortie-guide { background: var(--surface-alt); border-left: 3px solid var(--texte-2); color: var(--texte-2); }
+.lecon .renvoi { color: var(--texte-2); font-size: .95rem; }
+.lecon details { margin: 0 0 .75rem; }
+.lecon details summary { cursor: pointer; }
+.lecon details pre { white-space: pre-wrap; font-size: .8rem; max-height: 20rem; overflow-y: auto; background: var(--surface-alt); }
+.lecon .suite { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--separateur); }
+.lecon .suite a { color: var(--accent); text-decoration: none; font-weight: 600; max-width: 48%; }
+.lecon .suite a:hover { text-decoration: underline; }
+
+/* L'établi */
+.etabli { display: flex; flex-direction: column; gap: .75rem; padding: 1.25rem 1.5rem 1.5rem; overflow-y: auto; background: var(--fond); }
+.etabli > * { flex-shrink: 0; }
+.etabli.vide { justify-content: center; color: var(--texte-2); }
+.preambule summary { cursor: pointer; color: var(--texte-2); font-size: .9rem; }
+.preambule pre { margin: .5rem 0 0; max-height: 14rem; overflow: auto; padding: .6rem .8rem; border-radius: 8px;
+  background: var(--surface-alt); font-size: .85rem; line-height: 1.5; }
+.editeur { position: relative; border: 1px solid var(--bordure); border-radius: 12px; background: var(--surface); min-height: 12rem; }
+.editeur:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.editeur pre, .editeur textarea { margin: 0; padding: .85rem 1rem; font-size: 15px; line-height: 22px; tab-size: 4;
+  white-space: pre; overflow: auto; letter-spacing: 0; font-variant-ligatures: none; }
+.editeur pre { position: absolute; inset: 0; pointer-events: none; color: var(--texte); overflow: hidden; }
+.editeur textarea { position: relative; display: block; width: 100%; min-height: 12rem; resize: vertical; border: 0; outline: 0;
+  background: transparent; color: transparent; caret-color: var(--texte); }
+.editeur textarea::selection { background: var(--accent-doux); color: transparent; }
+.s-c { color: var(--s-construction); font-weight: 600; } .s-k { color: var(--s-construction); }
+.s-n { color: var(--s-nombre); } .s-t { color: var(--s-texte); } .s-d { color: var(--s-date); }
+.s-r { color: var(--s-remarque); font-style: italic; } .s-e { color: var(--s-erreur); text-decoration: underline wavy; }
+.s-ligne-erreur, .s-ligne-lecon { display: inline-block; min-width: calc(100% + 2rem); margin: 0 -1rem; padding: 0 1rem; }
+.s-ligne-erreur { background: var(--danger-doux); }
+.s-ligne-lecon { background: var(--accent-doux); }
+
+.commandes { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.bouton { border: 1px solid var(--bordure); background: var(--surface); color: var(--texte); border-radius: 8px; padding: .35rem .9rem;
+  min-height: 2.25rem; cursor: pointer; }
+.bouton:hover { background: var(--survol); }
+.bouton.principal { background: var(--accent); border-color: var(--accent); color: var(--sur-accent); font-weight: 600; }
+.bouton.principal:hover { background: var(--accent-survol); }
+.bouton:disabled { opacity: .55; cursor: default; }
+.commandes .astuce { margin-left: auto; color: var(--texte-2); font-size: .85rem; }
+.reponses label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: .25rem; }
+.reponses textarea { width: 100%; min-height: 3.5rem; resize: vertical; border: 1px solid var(--bordure); border-radius: 8px;
+  background: var(--surface); color: var(--texte); padding: .5rem .75rem; font-size: 14px; line-height: 20px; }
+.reponses p { margin: .25rem 0 0; font-size: .85rem; color: var(--texte-2); }
+
+.resultat { border-radius: 12px; background: var(--surface-alt); min-height: 6rem; }
+.resultat .titre { padding: .5rem 1rem 0; font-size: .85rem; color: var(--texte-2); }
+.resultat pre { margin: 0; padding: .4rem 1rem .9rem; font-size: 14px; line-height: 20px; white-space: pre-wrap; word-break: break-word; }
+.resultat .erreur { margin: 0 1rem .9rem; padding: .6rem .8rem; border-radius: 8px; background: var(--danger-doux); color: var(--texte);
+  border-left: 3px solid var(--danger); }
+.resultat .erreur button { background: none; border: 0; padding: 0; color: var(--danger); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.verdict { padding: .6rem .9rem; border-radius: 8px; font-weight: 600; }
+.verdict.oui { background: var(--reussi-doux); color: var(--texte); border-left: 3px solid var(--reussi); }
+.verdict.non { background: var(--surface-alt); color: var(--texte); border-left: 3px solid var(--bordure); font-weight: 400; }
+.verdict.non code { font-family: var(--code); }
+.panne { margin: 2rem; padding: 1rem 1.25rem; border-radius: 12px; background: var(--danger-doux); border-left: 3px solid var(--danger); }
+@media (prefers-reduced-motion: no-preference) { .verdict.oui { animation: apparait .25s ease-out; } }
+@keyframes apparait { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="cadre">
+  <aside class="sommaire" id="sommaire">
+    <div class="marque">
+      <h1>GrymoiR <small>Apprendre, grammaire GRAMMAIRE_VERSION</small></h1>
+      <button class="basculer" id="basculer" aria-expanded="false" aria-controls="sommaire">Sommaire</button>
+    </div>
+    <nav id="nav" aria-label="Leçons"></nav>
+    <p class="pied">Le langage, l’atelier et le guide complet : <a href="https://github.com/Flaggstaff/grymoir">github.com/Flaggstaff/grymoir</a>.</p>
+  </aside>
+  <main class="lecon" id="lecon"><article id="article"></article></main>
+  <section class="etabli" id="etabli" aria-label="Ton programme"></section>
+</div>
+
+<script id="moteur-source" type="text/plain">/*MOTEUR_JS*/</script>
+<script>
+"use strict";
+const DONNEES = "DONNEES";
+const WASM_GZ = "WASM_GZ_BASE64";
+const DELAI_MS = 5000;   // au-delà, le programme est arrêté (une boucle sans fin fige sinon le moteur)
+
+// ---------- Les deux moteurs : l'un exécute, l'autre colore ; chacun dans un Worker ----------
+const sourceWorker = document.getElementById('moteur-source').textContent + `
+let m = null;
+onmessage = (e) => {
+  const d = e.data;
+  if (d.octets) { try { m = creerMoteur(d.octets); postMessage({ pret: true }); } catch (x) { postMessage({ panne: String(x) }); } return; }
+  try {
+    if (d.quoi === 'lancer') postMessage({ id: d.id, r: m.lancer(d.programme, d.reponses) });
+    else if (d.quoi === 'formater') postMessage({ id: d.id, r: m.formater(d.programme) });
+    else if (d.quoi === 'colorer') postMessage({ id: d.id, c: m.colorer(d.programme) });
+  } catch (x) { postMessage({ id: d.id, panne: String(x) }); }
+};`;
+const urlWorker = URL.createObjectURL(new Blob([sourceWorker], { type: 'text/javascript' }));
+let octetsMoteur = null;
+
+async function decompresser() {
+  const brut = Uint8Array.from(atob(WASM_GZ), (c) => c.charCodeAt(0));
+  const flux = new Blob([brut]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(flux).arrayBuffer());
+}
+
+class Moteur {
+  constructor() { this.attentes = new Map(); this.suivant = 1; this.demarrer(); }
+  demarrer() {
+    this.w = new Worker(urlWorker);
+    this.pret = new Promise((ok, ko) => {
+      this.w.onmessage = (e) => {
+        if (e.data.pret) { ok(); return; }
+        if (e.data.panne && e.data.id === undefined) { ko(new Error(e.data.panne)); return; }
+        const a = this.attentes.get(e.data.id);
+        if (!a) return;
+        this.attentes.delete(e.data.id);
+        clearTimeout(a.minuterie);
+        e.data.panne ? a.ko(new Error(e.data.panne)) : a.ok(e.data);
+      };
+      this.w.onerror = (e) => ko(e);
+    });
+    this.w.postMessage({ octets: octetsMoteur });
+  }
+  demander(message, delai) {
+    return this.pret.then(() => new Promise((ok, ko) => {
+      const id = this.suivant++;
+      const a = { ok, ko };
+      if (delai) a.minuterie = setTimeout(() => {   // trop long : on arrête tout et on repart d'un moteur neuf
+        this.w.terminate();
+        this.attentes.forEach((x) => { clearTimeout(x.minuterie); x.ko(new Error('delai')); });
+        this.attentes.clear();
+        this.demarrer();
+      }, delai);
+      this.attentes.set(id, a);
+      this.w.postMessage({ ...message, id });
+    }));
+  }
+}
+let executant = null, coloriste = null;
+
+// ---------- Les leçons ----------
+const lecons = DONNEES.lecons;
+const parId = new Map(lecons.map((l, k) => [l.id, k]));
+const garder = (cle, valeur) => { try { localStorage.setItem('grymoir-apprendre:' + cle, JSON.stringify(valeur)); } catch (_) {} };
+const relire = (cle, defaut) => { try { const v = localStorage.getItem('grymoir-apprendre:' + cle); return v === null ? defaut : JSON.parse(v); } catch (_) { return defaut; } };
+const reussies = new Set(relire('reussies', []));
+const echapper = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function construireSommaire() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  let groupe = null, liste = null;
+  lecons.forEach((l) => {
+    if (!groupe || groupe.dataset.chapitre !== l.chapitre) {
+      groupe = document.createElement('details');
+      groupe.dataset.chapitre = l.chapitre;
+      groupe.innerHTML = `<summary>${echapper(l.chapitre)}</summary>`;
+      liste = document.createElement('ol');
+      groupe.appendChild(liste);
+      nav.appendChild(groupe);
+    }
+    const li = document.createElement('li');
+    const fait = reussies.has(l.id);
+    li.innerHTML = `<a href="#${l.id}"><span class="etat" aria-label="${fait ? 'réussi' : ''}">${fait ? '✓' : ''}</span><span>${echapper(l.titre)}</span></a>`;
+    liste.appendChild(li);
+  });
+}
+
+function lignesDe(t) { return t ? t.replace(/\n$/, '').split('\n').length : 0; }
+
+// La sortie attendue est-elle dans la sortie réelle, lignes dans l'ordre ? Rend la première ligne qui manque, ou null.
+function manquante(reelle, attendue) {
+  const a = attendue.split('\n').filter((l) => l.length);
+  let i = 0;
+  for (const l of reelle.split('\n')) if (i < a.length && l === a[i]) i++;
+  return i === a.length ? null : a[i];
+}
+
+// ---------- La coloration ----------
+const CLASSES = { c: 's-c', k: 's-k', n: 's-n', t: 's-t', d: 's-d', r: 's-r', m: '', e: 's-e', o: '' };
+// Le texte coloré, ligne par ligne ; lignesLecon : les numéros (à partir de 1) des lignes que la leçon présente
+function htmlColore(texte, sortes, ligneErreur, lignesLecon) {
+  const points = Array.from(texte);
+  const lignes = [];
+  let html = '', courant = null, morceau = '';
+  const vider = () => { if (morceau) html += courant && CLASSES[courant] ? `<span class="${CLASSES[courant]}">${echapper(morceau)}</span>` : echapper(morceau); morceau = ''; };
+  for (let k = 0; k <= points.length; k++) {
+    const p = points[k];
+    if (p === '\n' || p === undefined) { vider(); courant = null; lignes.push(html); html = ''; continue; }
+    const s = sortes && sortes[k] && sortes[k] !== '.' && sortes[k] !== '\n' ? sortes[k] : null;
+    if (s !== courant) { vider(); courant = s; }
+    morceau += p;
+  }
+  return lignes.map((l, k) => {
+    const n = k + 1;
+    const classe = n === ligneErreur ? 's-ligne-erreur' : lignesLecon && lignesLecon.has(n) ? 's-ligne-lecon' : '';
+    return classe ? `<span class="${classe}">${l || ' '}</span>` : l;
+  }).join('\n') + '\n';
+}
+// Les lignes du texte où se trouvent les extraits de la leçon (au retrait près, lignes vides sautées, comme test_guide)
+function lignesDesExtraits(texte, extraits) {
+  const r = new Set();
+  if (!extraits || !extraits.length) return r;
+  const lignes = texte.split('\n').map((l, k) => ({ t: l.trim(), n: k + 1 })).filter((x) => x.t);
+  for (const e of extraits) {
+    for (let i = 0; i + e.length <= lignes.length; i++) {
+      let q = 0;
+      while (q < e.length && lignes[i + q].t === e[q]) q++;
+      if (q === e.length) { for (let j = 0; j < e.length; j++) r.add(lignes[i + j].n); break; }
+    }
+  }
+  return r;
+}
+async function colorer(texte) {
+  const t = texte.normalize('NFC');
+  if (t !== texte) return null;   // le lexeur compte sur la source normalisée : sans couleur plutôt que mal colorée
+  try { return (await coloriste.demander({ quoi: 'colorer', programme: t })).c; } catch (_) { return null; }
+}
+
+// ---------- L'établi ----------
+let lecon = null, etat = null;
+
+function afficherLecon(id) {
+  const k = parId.has(id) ? parId.get(id) : 0;
+  lecon = lecons[k];
+  document.title = `${lecon.titre} · Apprendre GrymoiR`;
+  const precedente = lecons[k - 1], suivante = lecons[k + 1];
+  document.getElementById('article').innerHTML =
+    `<p class="chapitre">${echapper(lecon.chapitre)}</p><h2>${echapper(lecon.titre)}</h2>${lecon.html}` +
+    `<nav class="suite" aria-label="Leçons voisines">${precedente ? `<a href="#${precedente.id}">‹ ${echapper(precedente.titre)}</a>` : '<span></span>'}` +
+    `${suivante ? `<a href="#${suivante.id}">${echapper(suivante.titre)} ›</a>` : ''}</nav>`;
+  document.getElementById('lecon').scrollTop = 0;
+  document.querySelectorAll('#nav a').forEach((a) => {
+    const ici = a.getAttribute('href') === '#' + lecon.id;
+    a.toggleAttribute('aria-current', false);
+    if (ici) { a.setAttribute('aria-current', 'page'); a.closest('details').open = true; }
+  });
+  construireEtabli();
+  garder('derniere', lecon.id);
+}
+
+function construireEtabli() {
+  const e = document.getElementById('etabli');
+  e.classList.remove('vide');
+  if (!lecon.lancable) {
+    e.classList.add('vide');
+    e.innerHTML = lecon.raison === 'ecrans'
+      ? '<p>Ce programme ouvre des écrans : il se lance dans l’atelier GrymoiR, pas dans cette page.</p>'
+      : lecon.raison === 'plusieurs'
+        ? '<p>Ce programme tient en plusieurs fichiers (<code>Utiliser « … ».</code>) : il se lance dans l’atelier GrymoiR.</p>'
+        : lecon.raison === 'lecture' ? '' : '<p>Cette leçon se lit : elle n’a pas de code à lancer.</p>';
+    return;
+  }
+  const cleCode = 'code:' + (lecon.programme || lecon.id);
+  const code = relire(cleCode, lecon.code);
+  const reponses = relire('reponses:' + lecon.id, lecon.reponses);
+  const pre = lecon.preambule;
+  e.innerHTML = `
+    ${pre ? `<details class="preambule"><summary>Le début du programme du chapitre, déjà en place (${lignesDe(pre)} lignes)</summary><pre id="preambule"></pre></details>` : ''}
+    <div class="editeur"><pre id="couleurs" aria-hidden="true"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Ton programme"></textarea></div>
+    <div class="commandes">
+      <button class="bouton principal" id="lancer">Lancer</button>
+      <button class="bouton" id="formater">Mettre en forme</button>
+      <button class="bouton" id="recommencer">Recommencer</button>
+      ${lecon.solution ? '<button class="bouton" id="solution">Voir une solution</button>' : ''}
+      <span class="astuce">Ctrl+Entrée lance</span>
+    </div>
+    <div class="reponses" id="zone-reponses" ${/réponse/.test(code + pre) || reponses ? '' : 'hidden'}>
+      <label for="reponses">Réponses aux questions, une par ligne</label>
+      <textarea id="reponses" spellcheck="false"></textarea>
+      <p>La page ne peut pas attendre ton clavier : chaque question reçoit la ligne suivante.</p>
+    </div>
+    <div class="resultat" aria-live="polite"><p class="titre">Sortie</p><pre id="sortie">Lance le programme pour voir ce qu’il affiche.</pre><div id="erreur"></div></div>
+    <div id="verdict"></div>`;
+  const ta = document.getElementById('code');
+  ta.value = code;
+  document.getElementById('reponses').value = reponses;
+  etat = { ligneErreur: 0, version: 0 };
+  if (pre) colorer(pre).then((s) => { const p = document.getElementById('preambule'); if (p) p.innerHTML = htmlColore(pre, s, 0, null); });
+  ajusterEditeur();
+  rafraichirCouleurs();
+  montrerExtraits();
+  ta.addEventListener('input', () => { etat.ligneErreur = 0; garder(cleCode, ta.value); ajusterEditeur(); rafraichirCouleurs(); });
+  ta.addEventListener('scroll', () => { const c = document.getElementById('couleurs'); c.scrollTop = ta.scrollTop; c.scrollLeft = ta.scrollLeft; });
+  ta.addEventListener('keydown', toucheEditeur);
+  document.getElementById('reponses').addEventListener('input', (ev) => garder('reponses:' + lecon.id, ev.target.value));
+  document.getElementById('lancer').addEventListener('click', lancer);
+  document.getElementById('formater').addEventListener('click', formater);
+  document.getElementById('recommencer').addEventListener('click', () => {
+    ta.value = lecon.code; document.getElementById('reponses').value = lecon.reponses;
+    garder(cleCode, lecon.code); garder('reponses:' + lecon.id, lecon.reponses);
+    etat.ligneErreur = 0; ajusterEditeur(); rafraichirCouleurs();
+    document.getElementById('sortie').textContent = 'Lance le programme pour voir ce qu’il affiche.';
+    document.getElementById('erreur').innerHTML = ''; document.getElementById('verdict').innerHTML = '';
+  });
+  const bs = document.getElementById('solution');
+  if (bs) bs.addEventListener('click', () => {
+    ta.value = lecon.solution; garder(cleCode, ta.value); etat.ligneErreur = 0; ajusterEditeur(); rafraichirCouleurs();
+  });
+}
+
+// L'établi défile jusqu'aux lignes que la leçon présente
+function montrerExtraits() {
+  const ta = document.getElementById('code');
+  const l = lignesDesExtraits(ta.value, lecon.extraits);
+  const e = document.getElementById('etabli');
+  if (!l.size) { e.scrollTop = 0; return; }
+  const premiere = Math.min(...l);
+  const editeur = ta.parentElement;
+  e.scrollTop = Math.max(0, editeur.offsetTop + (premiere - 1) * 22 - 48);
+}
+
+function ajusterEditeur() {
+  const ta = document.getElementById('code');
+  ta.style.height = 'auto';
+  ta.style.height = Math.max(ta.scrollHeight + 2, 192) + 'px';
+}
+
+async function rafraichirCouleurs() {
+  const ta = document.getElementById('code');
+  if (!ta) return;
+  const v = ++etat.version, texte = ta.value;
+  const c = document.getElementById('couleurs');
+  const lecon_l = lignesDesExtraits(texte, lecon.extraits);
+  c.innerHTML = htmlColore(texte, null, etat.ligneErreur, lecon_l);   // tout de suite, sans couleur ; les couleurs suivent
+  const s = await colorer(texte);
+  if (v !== etat.version || !document.getElementById('couleurs')) return;
+  document.getElementById('couleurs').innerHTML = htmlColore(texte, s, etat.ligneErreur, lignesDesExtraits(ta.value === texte ? texte : ta.value, lecon.extraits));
+}
+
+// Les gestes de l'éditeur, comme dans l'atelier : Tab, retour à la ligne indenté, guillemets français
+function toucheEditeur(ev) {
+  const ta = ev.target;
+  const debut = ta.selectionStart, fin = ta.selectionEnd, v = ta.value;
+  const inserer = (texte, curseur) => {
+    ta.setRangeText(texte, debut, fin, 'end');
+    if (curseur !== undefined) ta.selectionStart = ta.selectionEnd = debut + curseur;
+    ta.dispatchEvent(new Event('input'));
+  };
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') { ev.preventDefault(); lancer(); return; }
+  if (ev.key === 'Tab' && !ev.shiftKey && debut === fin) { ev.preventDefault(); inserer('    '); return; }
+  if (ev.key === 'Enter' && !ev.ctrlKey && !ev.metaKey) {
+    const ligne = v.slice(v.lastIndexOf('\n', debut - 1) + 1, debut);
+    let retrait = (/^ */.exec(ligne) || [''])[0];
+    if (/:\s*$/.test(ligne)) retrait += '    ';
+    ev.preventDefault(); inserer('\n' + retrait); return;
+  }
+  if (ev.key === '"' && debut === fin) { ev.preventDefault(); inserer('«  »', 2); return; }
+}
+
+function issueVersSortie(r, decalage) {
+  const sortie = document.getElementById('sortie'), erreur = document.getElementById('erreur');
+  sortie.textContent = r.sortie || (r.ok ? '(rien n’a été affiché)' : '');
+  sortie.hidden = !r.ok && !r.sortie;
+  erreur.innerHTML = '';
+  etat.ligneErreur = 0;
+  if (!r.ok) {
+    const ligne = r.ligne ? r.ligne - decalage : 0;
+    let ou = '';
+    if (ligne > 0) { ou = `<button id="aller">Ligne ${ligne}, colonne ${r.colonne}</button> : `; etat.ligneErreur = ligne; }
+    else if (r.ligne > 0) ou = `Dans le début du programme du chapitre, ligne ${r.ligne} : `;
+    erreur.innerHTML = `<div class="erreur">${ou}${echapper(r.message)}</div>`;
+    const b = document.getElementById('aller');
+    if (b) b.addEventListener('click', () => allerA(ligne, r.colonne));
+  }
+  rafraichirCouleurs();
+}
+
+function allerA(ligne, colonne) {
+  const ta = document.getElementById('code');
+  const lignes = ta.value.split('\n');
+  let pos = 0;
+  for (let k = 0; k < ligne - 1 && k < lignes.length; k++) pos += lignes[k].length + 1;
+  pos += Math.max(0, Math.min((lignes[ligne - 1] || '').length, colonne - 1));
+  ta.focus();
+  ta.setSelectionRange(pos, pos);
+}
+
+async function lancer() {
+  const bouton = document.getElementById('lancer');
+  if (!bouton || bouton.disabled) return;
+  const ta = document.getElementById('code');
+  const pre = lecon.preambule ? lecon.preambule + '\n' : '';
+  const decalage = lignesDe(lecon.preambule);
+  bouton.disabled = true;
+  document.getElementById('sortie').textContent = '…';
+  document.getElementById('sortie').hidden = false;
+  document.getElementById('verdict').innerHTML = '';
+  try {
+    const { r } = await executant.demander({ quoi: 'lancer', programme: pre + ta.value, reponses: document.getElementById('reponses').value }, DELAI_MS);
+    issueVersSortie(r, decalage);
+    juger(r);
+  } catch (x) {
+    document.getElementById('sortie').textContent = '';
+    document.getElementById('erreur').innerHTML = x.message === 'delai'
+      ? `<div class="erreur">Ton programme tournait encore après ${DELAI_MS / 1000} secondes : la page l’a arrêté. Une boucle qui ne finit pas ? Vérifie la condition de ton <code>Tant que</code>.</div>`
+      : `<div class="erreur">Le moteur s’est arrêté : ${echapper(x.message)}</div>`;
+  } finally { bouton.disabled = false; }
+}
+
+function juger(r) {
+  const v = document.getElementById('verdict');
+  if (!lecon.attendu) { v.innerHTML = ''; return; }
+  const manque = r.ok ? manquante(r.sortie, lecon.attendu) : lecon.attendu.split('\n')[0];
+  if (r.ok && manque === null) {
+    v.innerHTML = `<p class="verdict oui">${lecon.exercice ? 'Réussi : ta sortie contient ce qui était demandé.' : 'Ta sortie contient ce que le guide annonce.'}</p>`;
+    if (!reussies.has(lecon.id)) { reussies.add(lecon.id); garder('reussies', [...reussies]); construireSommaire(); marquerCourante(); }
+  } else if (r.ok) {
+    v.innerHTML = `<p class="verdict non">Pas encore : la ligne <code>${echapper(manque)}</code> n’apparaît pas dans ta sortie.</p>`;
+  } else v.innerHTML = '';
+}
+function marquerCourante() {
+  document.querySelectorAll('#nav a').forEach((a) => {
+    if (a.getAttribute('href') === '#' + lecon.id) { a.setAttribute('aria-current', 'page'); a.closest('details').open = true; }
+  });
+}
+
+async function formater() {
+  const ta = document.getElementById('code');
+  try {
+    const { r } = await executant.demander({ quoi: 'formater', programme: ta.value }, DELAI_MS);
+    if (r.ok) { ta.value = r.sortie; ta.dispatchEvent(new Event('input')); document.getElementById('erreur').innerHTML = ''; }
+    else issueVersSortie({ ...r, sortie: document.getElementById('sortie').textContent }, 0);
+  } catch (_) {}
+}
+
+// ---------- Le départ ----------
+document.getElementById('basculer').addEventListener('click', (ev) => {
+  const s = document.getElementById('sommaire');
+  s.classList.toggle('ouvert');
+  ev.target.setAttribute('aria-expanded', s.classList.contains('ouvert'));
+});
+window.addEventListener('hashchange', () => afficherLecon(location.hash.slice(1)));
+
+(async () => {
+  construireSommaire();
+  try {
+    if (typeof DecompressionStream === 'undefined') throw new Error('ce navigateur ne sait pas décompresser le moteur (DecompressionStream)');
+    octetsMoteur = await decompresser();
+    executant = new Moteur();
+    coloriste = new Moteur();
+    await Promise.all([executant.pret, coloriste.pret]);
+  } catch (x) {
+    document.getElementById('etabli').innerHTML = `<div class="panne">Le moteur GrymoiR ne démarre pas dans ce navigateur : ${echapper(x.message || String(x))}. `
+      + `Essaie une version récente de Firefox, Chrome, Edge ou Safari.</div>`;
+    afficherLecon(location.hash.slice(1) || relire('derniere', lecons[0].id));
+    document.getElementById('etabli').innerHTML = `<div class="panne">Le moteur GrymoiR ne démarre pas dans ce navigateur : ${echapper(x.message || String(x))}.</div>`;
+    return;
+  }
+  afficherLecon(location.hash.slice(1) || relire('derniere', lecons[0].id));
+})();
+</script>
+</body>
+</html>

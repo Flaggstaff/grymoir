@@ -7,7 +7,7 @@
 #include "interface.h"
 
 #include <stdlib.h>
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__wasi__)
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -82,7 +82,15 @@ Interface console_interface(Console *c) {
 
 /* ---------- La commande (3.04, grammaire § 15.10) ---------- */
 
-#ifdef _WIN32
+#if defined(__wasi__)
+/* WebAssembly (l'application pour apprendre, 9 novembre 2026) : une page web ne lance aucun programme. */
+int console_commande(void *contexte, const char *programme, const char *const *arguments, size_t nb, char **sortie,
+                     size_t *taille, char **erreurs, int *code, char **erreur) {
+    (void)contexte; (void)arguments; (void)nb; (void)sortie; (void)taille; (void)erreurs; (void)code;
+    *erreur = grym_formater("La commande « %s » ne peut pas tourner ici : une page web ne lance aucun programme.", programme);
+    return 0;
+}
+#elif defined(_WIN32)
 #include <windows.h>
 
 /* Windows (8 novembre 2026) : CreateProcessW, sans shell ; la ligne de commande se cite selon les règles de la

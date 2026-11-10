@@ -1,0 +1,39 @@
+#!/bin/sh
+# Construit l'application pour apprendre GrymoiR (9 novembre 2026) : le cœur de grym compilé en WebAssembly, puis la page
+# autonome apprendre/GrymoiR-apprendre.html, qui embarque le moteur et les leçons tirées de docs/guide.md.
+# Il faut wasi-sdk (https://github.com/WebAssembly/wasi-sdk, version 25 éprouvée) : WASI_SDK=/chemin/vers/wasi-sdk.
+# Usage : depuis la racine du dépôt, WASI_SDK=… sh apprendre/construire
+set -eu
+racine="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$racine"
+: "${WASI_SDK:?Indique wasi-sdk : WASI_SDK=/chemin/vers/wasi-sdk sh apprendre/construire}"
+CC="$WASI_SDK/bin/clang --target=wasm32-wasip1"
+obj="$(mktemp -d)"
+trap 'rm -rf "$obj"' EXIT
+# Les émulations de WASI : le drapeau d'interruption (signal), et ce que SQLite demande (mman, getpid, horloges)
+EMUL="-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN -D_WASI_EMULATED_GETPID -D_WASI_EMULATED_PROCESS_CLOCKS"
+# SQLite3MC prévoit WebAssembly derrière __WASM__ (getentropy) ; Argon2 sans fils d'exécution ; pas de WAL ni de mmap
+SQLITE="-D__WASM__ -DARGON2_NO_THREADS -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
+ -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_OMIT_WAL \
+ -DSQLITE_MAX_MMAP_SIZE=0 -DSQLITE3MC_OMIT_AES_HARDWARE_SUPPORT"
+if [ ! -f "$racine/apprendre/.sqlite3.wasm.o" ] || [ vendor/sqlite/sqlite3.c -nt "$racine/apprendre/.sqlite3.wasm.o" ]; then
+    echo "SQLite (une minute environ)…"
+    $CC -std=c99 -O2 -w $SQLITE $EMUL -c vendor/sqlite/sqlite3.c -o "$racine/apprendre/.sqlite3.wasm.o"
+fi
+SOURCES="apprendre/moteur.c src/natif.c src/json.c src/morse.c src/serie.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c
+ vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c
+ src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c src/lexeur.c src/date.c src/texte.c
+ src/teinte.c"
+for f in $SOURCES; do
+    $CC -std=c99 -O2 $EMUL -isystem vendor/sqlite -Isrc -c "$f" -o "$obj/$(echo "$f" | tr / _).o"
+done
+$CC -O2 -mexec-model=reactor -Wl,--strip-all -Wl,-z,stack-size=1048576 -o apprendre/grym.wasm "$obj"/*.o \
+    "$racine/apprendre/.sqlite3.wasm.o" -lwasi-emulated-signal -lwasi-emulated-mman -lwasi-emulated-getpid \
+    -lwasi-emulated-process-clocks
+echo "apprendre/grym.wasm : $(wc -c < apprendre/grym.wasm) octets"
+if command -v node > /dev/null 2>&1; then
+    node apprendre/assembler.mjs
+else
+    echo "Node absent : la page n'est pas assemblée (node apprendre/assembler.mjs)." >&2
+    exit 1
+fi

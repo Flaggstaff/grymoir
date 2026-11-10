@@ -296,6 +296,13 @@ struct Machine {
 
 volatile sig_atomic_t grym_interruption = 0;
 
+/* Un rang démesuré (plus de 15 chiffres), ramené à un entier que la suite manie sans débordement : un long fait
+ * 32 bits sous Windows et en WebAssembly, 64 ailleurs (9 novembre 2026 ; avant, la constante y devenait négative). */
+#if LONG_MAX > 2147483647L
+#define RANG_ENORME 999999999999999L
+#else
+#define RANG_ENORME 999999999L
+#endif
 #define APPELS_MAX 1000   /* profondeur d'appels : au-delà, « Trop d'appels imbriqués » */
 
 /* Tirage au hasard (grammaire, § 3.6) : xorshift64*, semé au premier tirage par l'horloge, ou par la variable
@@ -8482,7 +8489,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 } else {
                     char *c = dec_canonique(&k->nombre);
                     const char *point = strchr(c, '.');
-                    e[q] = (point ? (size_t)(point - c) : strlen(c)) > 15 ? 999999999999999L : strtol(c, NULL, 10);
+                    e[q] = (point ? (size_t)(point - c) : strlen(c)) > 15 ? RANG_ENORME : strtol(c, NULL, 10);
                     free(c);
                 }
                 dec_liberer(&pl);
