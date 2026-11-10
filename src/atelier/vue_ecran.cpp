@@ -687,9 +687,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 auto *ind = new QLabel(e.indication);
                 ind->setObjectName("indication");
                 ind->setWordWrap(true);
-                QFont f = ind->font();
-                f.setPointSizeF(f.pointSizeF() * 0.9);
-                ind->setFont(f);
+                const QFont f = ind->font();   // la taille passe par la feuille de style, en pixels comme le thème : un
+                                               // setPointSizeF ici recevait -0,9 et Qt le signalait (10 novembre 2026)
                 QPalette pal = ind->palette();
                 QColor c = pal.color(QPalette::WindowText);
                 c.setAlphaF(0.7);

@@ -1472,6 +1472,29 @@ int main(int argc, char **argv) {
         VERIFIER(fil && fil->isVisible());     // le programme fini : le fil revient, avec son dernier mot
     }
 
+    // Une application fabriquée (10 novembre 2026) : avant son premier écran (le mot de passe de la base, les migrations),
+    // ni le fil ni les boutons de l'atelier ; la première ligne affichée les montre, pour un programme sans écran
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Afficher « bonjour ».\n");
+        }
+        Execution e(prog);
+        e.ajuster_au_premier_ecran();
+        e.show();
+        e.demarrer();
+        QTextBrowser *fil = e.findChild<QTextBrowser *>();
+        VERIFIER(fil && !fil->isVisible());
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && fil && !fil->toPlainText().contains("bonjour")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QApplication::processEvents();
+        VERIFIER(fil && fil->toPlainText().contains("bonjour") && fil->isVisible());
+    }
+
     // L'éditeur (24 octobre 2026) : le bloc du curseur, la déclaration de premier niveau avec ses remarques de tête
     {
         Editeur ed;

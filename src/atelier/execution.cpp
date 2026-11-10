@@ -1278,7 +1278,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     veille->start(150);
 }
 
-void Execution::demarrer() { travail.start(); }
+void Execution::demarrer() {
+    ranger();
+    travail.start();
+}
 
 // Le micro, à l'ouverture d'un programme qui en a besoin (§ 15.7). macOS ne demande qu'une fois : jamais décidé, la
 // question part tout de suite ; déjà refusé, on dit où le rendre, avec un bouton qui ouvre la bonne page des réglages.
@@ -1336,6 +1339,7 @@ Execution::~Execution() {
 }
 
 void Execution::ecrire(const QString &t, bool erreur) {
+    const bool premiere = fil->document()->isEmpty();
     QTextCursor c(fil->document());
     c.movePosition(QTextCursor::End);
     QTextCharFormat format;
@@ -1344,6 +1348,7 @@ void Execution::ecrire(const QString &t, bool erreur) {
     c.insertText(t, format);
     fil->setTextCursor(c);
     fil->ensureCursorVisible();
+    if (premiere) ranger();
 }
 
 void Execution::poser() {
@@ -1874,8 +1879,12 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
 
 void Execution::ranger() {
     const bool ecran = vue_ecran && !fini;
-    fil->setVisible(!ecran || console);
-    bas->setVisible(!ecran || console || attente);
+    // une application fabriquée, avant son premier écran (le mot de passe de la base, les migrations) : une fenêtre
+    // vide plutôt que le fil et les boutons de l'atelier (10 novembre 2026) ; une ligne affichée, une question, la fin
+    // ou Ctrl+J les montrent (un programme sans écran garde ainsi son fil dès sa première ligne)
+    const bool avant_le_premier = ajuster_fenetre && !vue_ecran && !fini && !attente && fil->document()->isEmpty();
+    fil->setVisible((!ecran && !avant_le_premier) || console);
+    bas->setVisible((!ecran && !avant_le_premier) || console || attente);
 }
 
 void Execution::effacer_erreurs_zones() {

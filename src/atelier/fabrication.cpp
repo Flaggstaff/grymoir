@@ -17,7 +17,7 @@
 
 QString programme_d_application(QString *nom, QString *principal) {
     const QString a = QCoreApplication::applicationDirPath();
-    for (const QString &d : {a + "/../Resources/Programme", a + "/Programme"}) {
+    for (const QString &d : {a + "/../Resources/Programme", a + "/Programme", a + "/../Programme"}) {   // le dernier : Linux, avec Qt
         QFile f(d + "/application.txt");
         if (!f.open(QIODevice::ReadOnly)) continue;
         for (const QString &l : QString::fromUtf8(f.readAll()).split('\n')) {
@@ -217,21 +217,55 @@ QString fabriquer_application(const QString &projet, const QString &principal, c
         return QString();
     return paquet;
 #elif defined(Q_OS_LINUX)
+    // Depuis l'AppImage de GrymoiR (ou son contenu extrait), l'atelier tourne dans usr/bin, son Qt dans usr/lib et
+    // usr/plugins, le modèle dans usr/share/grymoir/modeles : l'application reprend tout, et tourne sans Qt installé,
+    // avec la transcription, comme sous macOS (10 novembre 2026 : l'archive ne contenait que l'atelier et le programme,
+    // et ne démarrait nulle part sans Qt 6 installé, sans modèle). Depuis un atelier construit sur la machine, le Qt
+    // du système reste requis, et l'atelier le dit.
     const QString paquet = QDir(destination).filePath(nom + "-linux.tar.gz");
     if (QFileInfo::exists(paquet)) { *erreur = QString("« %1 » existe déjà : il n'est jamais écrasé.").arg(paquet); return QString(); }
     const QString dossier = travail.filePath(nom);
     QDir().mkpath(dossier);
     const QString exe = QCoreApplication::applicationFilePath();
-    if (!QFile::copy(exe, dossier + "/grym-atelier")) { *erreur = "Le lanceur ne peut pas être recopié."; return QString(); }
-    QFile(dossier + "/grym-atelier").setPermissions(QFile(exe).permissions());
-    if (!preparer_programme(projet, principal, nom, dossier + "/Programme", erreur)) return QString();
+    const QDir ici(QCoreApplication::applicationDirPath());
+    const bool avec_qt = QFileInfo(ici.filePath("../lib/libQt6Core.so.6")).isFile();
+    const QString bin = avec_qt ? dossier + "/usr/bin" : dossier;
+    QDir().mkpath(bin);
+    if (!QFile::copy(exe, bin + "/grym-atelier")) { *erreur = "Le lanceur ne peut pas être recopié."; return QString(); }
+    QFile(bin + "/grym-atelier").setPermissions(QFile(exe).permissions());
+    if (avec_qt) {
+        if (QFileInfo(ici.filePath("qt.conf")).isFile() && !QFile::copy(ici.filePath("qt.conf"), bin + "/qt.conf")) {
+            *erreur = "qt.conf ne peut pas être recopié.";
+            return QString();
+        }
+        for (const char *d : {"lib", "plugins"})
+            if (QFileInfo(ici.filePath(QString("../") + d)).isDir() && !copier(ici.filePath(QString("../") + d), dossier + "/usr/" + d, erreur))
+                return QString();
+    }
+    // le modèle de transcription : dans toute application, qu'elle transcrive ou non (§ 15.8, 22 octobre 2026)
+    const QString source_modele = modele_de_transcription();
+    if (source_modele.isEmpty()) {
+        *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin) : toute application l'embarque.";
+        return QString();
+    }
+    const QString modeles = avec_qt ? dossier + "/usr/share/grymoir/modeles" : dossier + "/modeles";
+    QDir().mkpath(modeles);
+    if (!QFile::copy(source_modele, modeles + "/" + QFileInfo(source_modele).fileName())) {
+        *erreur = "Le modèle de transcription ne se copie pas dans l'application.";
+        return QString();
+    }
+    if (!preparer_programme(projet, principal, nom, avec_qt ? dossier + "/usr/Programme" : dossier + "/Programme", erreur))
+        return QString();
     QFile lanceur(dossier + "/" + nom);   // on double-clique ce script, qui démarre l'application
     lanceur.open(QIODevice::WriteOnly);
-    lanceur.write("#!/bin/sh\nexec \"$(dirname \"$0\")/grym-atelier\" \"$@\"\n");
+    lanceur.write(avec_qt ? "#!/bin/sh\nexec \"$(dirname \"$0\")/usr/bin/grym-atelier\" \"$@\"\n"
+                          : "#!/bin/sh\nexec \"$(dirname \"$0\")/grym-atelier\" \"$@\"\n");
     lanceur.close();
     lanceur.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner | QFile::ReadGroup | QFile::ExeGroup
                            | QFile::ReadOther | QFile::ExeOther);
-    *remarque = "L'application utilise le Qt 6 installé sur la machine Linux qui la reçoit.";
+    if (!avec_qt)
+        *remarque = "L'atelier n'a pas été lancé depuis l'AppImage de GrymoiR : l'application utilisera le Qt 6 installé "
+                    "sur la machine Linux qui la reçoit. Fabrique-la depuis l'AppImage pour qu'elle l'embarque.";
     if (!outil("tar", {"-czf", paquet, "-C", travail.path(), nom}, erreur)) return QString();
     return paquet;
 #else

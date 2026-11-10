@@ -163,8 +163,9 @@ void Agenda::paintEvent(QPaintEvent *) {
     p.setPen(t.couleur("separateur"));
     for (int c = 0; c <= jours_.size(); c++) p.drawLine(colonne_x(c), 0, colonne_x(c), bas);
     // les créneaux libres : dans chaque plage, ce qu'aucun objet n'occupe, d'un quart d'heure au moins
-    QFont petite = f;
-    petite.setPointSizeF(qMax(8.0, f.pointSizeF() - 1));
+    QFont petite = f;   // un cran plus petit ; le thème donne ses polices en pixels, où pointSizeF() vaut -1 (10 novembre 2026)
+    if (f.pixelSize() > 0) petite.setPixelSize(qMax(10, f.pixelSize() - 1));
+    else petite.setPointSizeF(qMax(8.0, f.pointSizeF() - 1));
     petite.setItalic(true);
     p.setFont(petite);
     p.setPen(t.couleur("texte-2"));
