@@ -1,0 +1,46 @@
+#!/bin/sh
+# Le démarrage automatique (8 et 9 novembre 2026, docs/v2.md, § 11) : « grym servir … --plist », « --systemd », « --tache »
+# écrivent le fichier qui relance le service à l'ouverture de session, avec des chemins absolus et sans navigateur.
+# Les chemins physiques (pwd -P), ceux que grym écrit après realpath : sous macOS, mktemp rend /var/folders/…, et /var
+# est un lien vers /private/var (10 novembre 2026)
+racine=$(cd "$(dirname "$0")/.." && pwd -P)
+grym="$racine/grym"
+d=$(cd "$(mktemp -d)" && pwd -P)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+mkdir "mon cabinet"
+printf 'Afficher 1.\n' > "mon cabinet/Praxis.grym"
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+# launchd
+"$grym" servir "mon cabinet/Praxis.grym" --reseau "mon cabinet" --plist > plist.txt 2>&1
+verifier "$?" "0" "--plist réussit"
+verifier "$(grep -c '<string>ch.grymoir.Praxis.grym</string>' plist.txt)" "1" "plist : l'étiquette"
+verifier "$(grep -c "<string>$d/mon cabinet/Praxis.grym</string>" plist.txt)" "1" "plist : le programme en chemin absolu"
+verifier "$(grep -c "<string>$d/mon cabinet</string>" plist.txt)" "1" "plist : la valeur de --reseau en chemin absolu"
+verifier "$(grep -c '<string>--sans-navigateur</string>' plist.txt)" "1" "plist : sans navigateur"
+verifier "$(grep -c '<string>--plist</string>' plist.txt)" "0" "plist : l'option elle-même n'y est pas"
+verifier "$(grep -c '<key>KeepAlive</key>' plist.txt)" "1" "plist : gardé en vie"
+# systemd
+"$grym" servir "mon cabinet/Praxis.grym" --reseau "mon cabinet" --sessions --systemd > unite.txt 2>&1
+verifier "$?" "0" "--systemd réussit"
+verifier "$(grep -c '^\[Unit\]$' unite.txt) $(grep -c '^\[Service\]$' unite.txt) $(grep -c '^\[Install\]$' unite.txt)" "1 1 1" "systemd : les trois sections"
+verifier "$(grep -c "^ExecStart=\"$grym\" servir \"$d/mon cabinet/Praxis.grym\" \"--reseau\" \"$d/mon cabinet\" \"--sessions\" \"--sans-navigateur\"$" unite.txt)" "1" "systemd : la commande, chaque argument cité, chemins absolus"
+verifier "$(grep -c '^Restart=always$' unite.txt)" "1" "systemd : relancé toujours"
+verifier "$(grep -c '^WantedBy=default.target$' unite.txt)" "1" "systemd : à l'ouverture de session"
+verifier "$(grep -c -- '--systemd' unite.txt)" "0" "systemd : l'option elle-même n'y est pas"
+# tâche planifiée Windows : le XML se produit partout, les chemins restent ceux du système courant
+"$grym" servir "mon cabinet/Praxis.grym" --port 8443 --tache > tache.txt 2>&1
+verifier "$?" "0" "--tache réussit"
+verifier "$(grep -c '<LogonTrigger>' tache.txt)" "1" "tâche : à l'ouverture de session"
+verifier "$(grep -c '<RestartOnFailure>' tache.txt)" "1" "tâche : relancée sur échec"
+verifier "$(grep -c '<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>' tache.txt)" "1" "tâche : sans limite de durée"
+verifier "$(grep -c "<Command>$grym</Command>" tache.txt)" "1" "tâche : grym en chemin absolu"
+verifier "$(grep -c "<Arguments>servir &quot;$d/mon cabinet/Praxis.grym&quot; --port 8443 --sans-navigateur</Arguments>" tache.txt)" "1" "tâche : les arguments, le chemin à espace cité, les guillemets protégés"
+verifier "$(grep -c -- '--tache' tache.txt)" "0" "tâche : l'option elle-même n'y est pas"
+# un programme introuvable
+"$grym" servir absent.grym --systemd > /dev/null 2> err.txt
+verifier "$?" "1" "un programme introuvable est refusé"
+verifier "$(cat err.txt)" "--systemd : le chemin de grym ou du programme ne se résout pas." "le message"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

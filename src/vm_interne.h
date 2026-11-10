@@ -89,6 +89,8 @@ typedef struct Objet {
     Valeur *vus;              /* 3.16 : les valeurs lues avant une question, quand un autre programme a écrit pendant
                                  l'attente ; NULL sinon. Un lien y est son identifiant (jours), sans pointeur. */
     unsigned char *vus_definis;
+    Valeur *lies;             /* 3.19 : les identifiants de chaque champ multiple, relevés juste avant une question (une liste
+                                 par champ, V_LISTE sans valeurs) ; NULL sinon. Deviennent des « vus » si un autre a écrit. */
     struct Objet *suivant;
 } Objet;
 

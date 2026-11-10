@@ -1346,6 +1346,24 @@ static void expression(Impression *im, const Noeud *n) {
                 aj(im, " ");
                 preposition(im, "de", objet);
             }
+        } else if (n->forme == 8) {   /* la droite de « parmi » (3.19) : « les genres de o », « les œuvres de bach » ;
+                                         en compact « _les genres _de o » */
+            const char *pl = n->op == 'M' ? n->texte3 : NULL;
+            for (size_t k = 0; k < im->nb_pluriels && !pl; k++)
+                if (strcmp(im->pluriels[k].feminin, n->texte) == 0) pl = im->pluriels[k].masculin;
+            char *p = pl ? grym_dupliquer(pl) : grym_formater("%ss", n->texte);
+            if (im->compact) {
+                aj(im, "_les ");
+                ecrire_nom(im, p, 0);
+                aj(im, " _de ");
+                expression(im, objet);
+            } else {
+                aj(im, "les ");
+                aj(im, p);
+                aj(im, " ");
+                preposition(im, "de", objet);
+            }
+            free(p);
         } else if (n->forme == 2) {   /* « le nombre de clients conservés », « le nombre d'œuvres de bach » */
             if (im->compact) {
                 aj(im, "_nombre_de ");
@@ -2524,6 +2542,13 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, " dans l'écran ");
             aj_sigles(im, n->texte3);
             aj(im, ".\n");
+            return;
+        }
+        if (n->forme == 9) {   /* « On voit l'erreur « … » dans l'écran E. » ; « _on_voit « … » _écran E » (3.19) */
+            aj(im, c ? "_on_voit " : "On voit l'erreur ");
+            ecrire_texte(im, n->texte);
+            if (c) { aj(im, " _écran "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
+            else { aj(im, " dans l'écran "); aj_sigles(im, n->texte3); aj(im, ".\n"); }
             return;
         }
         if (n->forme >= 5) { aj(im, c ? COMP[n->forme] : LIT[n->forme]); aj(im, c ? "\n" : ".\n"); return; }   /* 3.09 */

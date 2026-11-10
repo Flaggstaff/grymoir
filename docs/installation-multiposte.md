@@ -134,6 +134,30 @@ l'aide de `security`, dont le code est publié par Apple : « Specify -w as the 
 only the password on stdout » (https://opensource.apple.com/source/Security/Security-57740.51.3/SecurityTool/security.c.auto.html).
 Non éprouvé sur un Mac au 8 novembre 2026 : à essayer avant de l'installer chez un cabinet.
 
+**Sous Linux** (9 novembre 2026), `--systemd` à la place de `--plist`, le mot de passe rangé par `secret-tool` :
+
+```
+grym servir ~/Praxis/Praxis.grym --reseau ~/Cabinet --trousseau "GrymoiR Praxis-N" --systemd \
+    > ~/.config/systemd/user/grymoir-praxis.service
+systemctl --user daemon-reload
+systemctl --user enable --now grymoir-praxis.service
+loginctl enable-linger "$USER"
+```
+
+La dernière ligne garde le service même sans session ouverte (loginctl(1)). Ses messages : `journalctl --user -u grymoir-praxis`.
+
+**Sous Windows** (9 novembre 2026), `--tache`, puis l'import dans le Planificateur de tâches :
+
+```
+grym.exe servir C:\Praxis\Praxis.grym --reseau C:\Cabinet --trousseau "GrymoiR Praxis-N" --tache > praxis.xml
+schtasks /Create /TN "GrymoiR Praxis" /XML praxis.xml
+```
+
+Sources : systemd.service(5), systemd.unit(5), loginctl(1) (pages de manuel de systemd, freedesktop.org) ; Microsoft,
+« Task Scheduler Schema » (https://learn.microsoft.com/windows/win32/taskschd/task-scheduler-schema) et « schtasks create »
+(https://learn.microsoft.com/windows-server/administration/windows-commands/schtasks-create). Le fichier produit est vérifié
+par `tests/demarrage` ; le démarrage réel n'a été éprouvé ni sous Linux ni sous Windows au 9 novembre 2026.
+
 ## 7. Depuis l'extérieur
 
 Jamais directement par internet : le service ne s'y montre pas, et ne doit pas s'y montrer. Pour travailler hors du
@@ -146,7 +170,7 @@ même adresse. Le choix et le réglage du VPN dépendent du routeur du cabinet :
   L'application et le service ouverts en même temps sur la même base n'ont pas encore été éprouvés sur un Mac.
 - **Un poste principal sous Windows** : le service y tourne (`grym.exe`, mêmes commandes ; le mot de passe des données se
   range par `cmdkey /generic:"GrymoiR Praxis-N" /user:grymoir /pass` et se lit par `--trousseau`), mais il n'a été
-  éprouvé que sous Wine ; `--plist` est propre à macOS. Un poste Windows se connecte par son navigateur, après avoir
+  éprouvé que sous Wine ; son démarrage automatique passe par `--tache` (§ 6), non éprouvé. Un poste Windows se connecte par son navigateur, après avoir
   installé l'autorité (magasin de certificats de Windows).
 
 Le détail technique : `docs/v2.md`, § 11 (les sessions) et § 12 (le réseau).

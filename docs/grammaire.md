@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.18 de la spécification, révisée le 8 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.19 de la spécification, révisée le 9 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -677,6 +677,7 @@ La valeur absolue d'un nombre :
 
 - Appel : `le carré de 7`, `la moyenne de 4 et de 6`, `le carré du prix` (contraction, § 5.2). L'article est facultatif ; s'il est écrit, il s'accorde avec le genre du calcul.
 - Un argument se lie plus fort que les opérateurs : `le carré de 3 + 1` vaut 10. Pour passer une somme, parenthésez : `le carré de (3 + 1)`.
+- *(3.19)* Un argument peut être `vrai`, `faux` ou une condition entre parenthèses, comme pour une action (§ 9.2) : `l'inverse de vrai`, `l'inverse de (faux)`, `l'inverse de (x > 2)`. Avant la 3.19, ces trois formes étaient refusées (« « vrai » inattendu »).
 - `et` suivi de `de`, `d'` ou `du` continue la liste des arguments ; sinon c'est le `et` logique.
 - Un calcul en bloc se termine par une phrase `Rendre` au premier niveau de son bloc.
 
@@ -779,6 +780,7 @@ Scénario « une relance se crée » :
   `On écrit` va dans une zone ; `On choisit` une valeur d'une zone à choix, ou un objet conservé d'une liste de l'écran ; `On clique sur « B »` ; `On ferme l'écran`. Chaque geste nomme son écran : il est joué quand cet écran attend, dans l'ordre écrit ; un écran qui ouvre un autre écran reçoit ses gestes à son tour. Quand il n'y a plus de geste, l'écran se ferme seul.
   - **Un geste impossible arrête le scénario**, à sa ligne : un bouton inactif ou caché (« Geste de la ligne 28 : « Enregistrer » est inactif dans l'écran de saisie : le geste ne peut pas se faire. »), une zone en lecture seule, un choix hors de la liste, un objet qu'aucune liste ne montre, un geste destiné à un autre écran que celui qui attend. Un geste préparé qu'aucun écran ne reçoit est une erreur aussi. Une erreur qu'un événement montre dans l'écran (`Refuser`) arrête le scénario, avec son message.
   - Un bouton inconnu se signale dès l'analyse. Un geste hors d'un scénario est refusé.
+  - **Le refus attendu** *(3.19)* : `On voit l'erreur « Pas de Zut » dans l'écran de saisie.`, juste après le geste qui doit être refusé. L'erreur que l'écran montre (un `Refuser`, une zone obligatoire vide) doit **contenir** ce texte ; elle est alors consommée et le scénario continue. Trois échecs, à sa ligne : un autre message (« Geste de la ligne 26 : l'écran de saisie a montré « Pas de Zut ici. », pas « Autre chose ». »), aucune erreur (« … n'a montré aucune erreur ; « Pas de Zut » était attendue. ») ; une erreur sans `On voit l'erreur` arrête le scénario comme avant. En forme compacte : `_on_voit « Pas de Zut » _écran de_saisie`.
   - En forme compacte : `_on_écrit X _dans nom _écran de_saisie`, `_on_choisit X [_dans pays] _écran …`, `_on_clique « B » _écran …`, `_on_ferme _écran …`.
 - **L'agenda** *(3.12)* : `On choisit le créneau du 05.11.2026 à 10:30 dans l'écran du calendrier.` est un clic dans la grille, hors des objets (`Quand on choisit un créneau`) ; `On déplace la séance au 06.11.2026 à 14:15 dans l'écran du calendrier.` glisse un objet de l'agenda et le dépose (`Quand on déplace une séance`). Le jour et l'heure sont des expressions (`à aujourd'hui à 15:30`). Un écran sans agenda, ou un objet que l'agenda ne montre pas, arrête le scénario. En forme compacte : `_on_créneau 05.11.2026 ; 10:30 _écran …`, `_on_déplace s ; 06.11.2026 ; 14:15 _écran …`.
 - **L'état de départ** *(3.12)* : les créations de premier niveau du programme (`La grille de l'agenda vaut …`, `La pièce en cours vaut absent.`) s'exécutent avant chaque scénario, dans l'ordre écrit : un écran ou une action qui les lit les trouve. Les autres phrases du programme (afficher, ouvrir, appeler) ne s'exécutent pas, et ses variables restent invisibles au scénario.
@@ -1127,6 +1129,7 @@ Afficher le nombre d'invités puis les couleurs jointes par « , ».
 ```
 
 - Un ensemble regroupe des valeurs, sans doublon, dans l'ordre où elles sont arrivées : textes, nombres, dates, objets, mélangés au besoin. Il se nomme au pluriel, avec `les`, et se crée avec `valent` : une liste d'éléments séparés par des virgules et un `et`, ou `un ensemble vide`.
+- *(3.19)* `est parmi` et `n'est pas parmi` s'écrivent dans toute condition, plus seulement dans un `dont` : un ensemble, une liste (§ 13.10), une liste calculée (`les lignes de t`, `les documents sortis`, `les clés des tarifs`), le champ multiple d'un objet (`baroque est parmi les genres de m`, § 16.13) et la relation inverse (`m est parmi les œuvres de baroque`, § 16.10). Un champ multiple sans son objet est refusé : « « genres » est un champ multiple : de quel objet ? « est parmi les genres de p ». » ; une valeur qui n'est pas un objet aussi, à l'exécution : « « parmi » cherche un objet dans ces objets, pas un nombre. » En forme compacte : `_les genres _de m _contient x`, `_lignes t _contient x`, `_les œuvres _de baroque _contient m`.
 - Il reprend le vocabulaire du champ multiple (§ 16.13) : `gagnent`, `perdent`, `parmi`, `Pour chaque … parmi les …`, `le nombre de …`. Gagner une valeur déjà présente, ou perdre une valeur absente, ne change rien. Deux valeurs sont la même si elles sont égales comme pour `=` : `2` et `2,0` ne font qu'un ; deux objets, s'ils sont le même objet.
 - `Les autres valent les couleurs.` copie : changer l'un ne change pas l'autre. `Les invités deviennent …` remplace tout le contenu.
 - `Pour chaque invité parmi les invités :` parcourt l'ensemble tel qu'il était au début de la boucle, comme une recherche (§ 16.4) ; le nom de l'élément est en lecture seule.
@@ -1696,7 +1699,9 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - Le conflit se juge **champ par champ** : deux personnes qui changent deux champs différents d'un même patient ne se gênent pas ; une valeur réécrite à l'identique n'est pas un conflit.
 - Il ne vaut que pour l'écriture qui suit la question : la question suivante montre l'état nouveau, et ce qu'on y voit devient la référence.
 - Nos propres écritures, avant ou après une question, ne sont jamais un conflit.
-- Un champ multiple (`gagnent`, `perdent`, § 16.13) et une suppression ne se vérifient pas encore.
+- *(3.19)* **Un champ multiple** (`gagnent`, `perdent`, § 16.13) se juge **élément par élément** : les identifiants liés se relèvent juste avant la question. Gagner un élément que l'autre a retiré entre-temps, ou perdre un élément qu'il a ajouté, défait son travail : `conflit`. Gagner un élément qu'il a aussi ajouté, ou perdre un élément qu'il a aussi retiré, ne change rien : pas de conflit, comme une valeur réécrite à l'identique.
+- *(3.19)* **Une suppression** : `Supprimer` un objet dont l'autre a changé un champ, simple ou multiple, est un conflit (« Le patient a changé dans la base depuis sa lecture … Relis-le avant de le supprimer. ») ; écrire un champ d'un objet que l'autre a mis à la corbeille aussi (« Le patient a été supprimé depuis sa lecture … Rétablis-le d'abord, ou laisse-le. »). Supprimer un objet que l'autre a déjà supprimé reste le refus ordinaire (« Ce patient est déjà supprimé … »).
+- *(3.19)* Deux champs facultatifs vides sont la même valeur : avant la 3.19, un champ `absent` lu avant la question comptait comme changé.
 - Dans un bloc `Essayer` ouvert pendant la question, les objets ne se relisent pas (comme avant la 3.16) : il n'y a donc pas de conflit à constater.
 
 ### 16.7 Migrations
@@ -1873,7 +1878,7 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 - Le singulier se déduit : chaque mot perd son `s` ou son `x` final, jusqu'au premier complément (`genres` → `genre`, `pièces jointes` → `pièce jointe`, `numéros de téléphone` → `numéro de téléphone`). Un singulier irrégulier se déclare entre parenthèses, avant le type : `des travaux (travail) (tâche)`. Un nom sans `s` ni `x` final exige ce singulier.
 - C'est un ensemble : gagner deux fois un même objet ne le compte qu'une fois ; perdre un objet que l'ensemble ne contient pas n'est pas une erreur.
 - Un champ multiple n'est ni `, facultatif` (un ensemble vide suffit), ni `, unique`, n'a pas de valeur de départ et ne « disparaît » avec rien : chacune de ces mentions est une erreur, avec son message.
-- `les genres de o` n'est pas une valeur : ni `Afficher`, ni un nom, ni un champ ne le reçoivent. Le champ vit dans cinq tournures : `gagnent`, `perdent`, `Pour chaque genre de o`, `le nombre de genres de o`, `dont … est parmi les genres`.
+- `les genres de o` n'est pas une valeur : ni `Afficher`, ni un nom, ni un champ ne le reçoivent. Le champ vit dans six tournures : `gagnent`, `perdent`, `Pour chaque genre de o`, `le nombre de genres de o`, `dont … est parmi les genres` et, depuis la 3.19, `Si baroque est parmi les genres de o` (§ 13.9).
 - Gagner et perdre sont des effets de bord, réservés aux actions. L'objet qui gagne doit être conservé ; l'objet gagné aussi, et hors de la corbeille. Un objet à la fois : `gagnent baroque et fugue` entrerait en conflit avec le `et` logique.
 - `gagnent` et `perdent` ne sont pas réservés : `Les` en tête de phrase suffit à annoncer la tournure.
 - Lecture par le champ : `Pour chaque interprète de o` (au singulier ; l'objet du tour s'appelle `interprète`, son genre se fixe au premier article), `le nombre d'interprètes de o` (au pluriel). `dont` et `, par` s'y ajoutent comme ailleurs (§ 16.4). Sans tri, l'ordre de conservation des objets.
@@ -3195,3 +3200,4 @@ Pour rappeler un patient :
 | 3.16 | 2026-11-07 | § 16.6 : plusieurs programmes sur une base. Un champ écrit après une question, alors qu'un autre programme l'a changé pendant l'attente, est refusé (sorte `conflit`, § 18.2), champ par champ, au lieu d'écraser l'autre écriture. Première étape du client-serveur (S1) |
 | 3.17 | 2026-11-08 | § 16.20 : les utilisateurs. `Les utilisateurs se connectent.` demande un nom et un mot de passe à la place de la phrase, vérifiés contre l'entité `utilisateur` du programme ; le premier compte se crée s'il n'y en a aucun ; `l'utilisateur connecté` ; le journal porte son nom ; `GRYM_UTILISATEUR` et `GRYM_MOT_DE_PASSE_UTILISATEUR` pour connecter sans question. La console et l'atelier masquent un champ « mot de passe ». Forme compacte `_connexion`, `_utilisateur_connecté` |
 | 3.18 | 2026-11-08 | § 16.20 : `le service à plusieurs postes`, vrai dans une session de l'aiguilleur. Praxis s'en sert : monoposte par défaut, le multiposte se choisit dans la fiche du cabinet |
+| 3.19 | 2026-11-09 | Petits manques relevés en chemin. § 9.1 : `vrai`, `faux` et une condition entre parenthèses en argument d'un calcul. § 13.9, § 16.13 : `est parmi` hors d'un `dont` (ensemble, liste, liste calculée, champ multiple d'un objet, relation inverse). § 9.7 : `On voit l'erreur « … » dans l'écran …`, le refus attendu dans un scénario. § 16.6 : les conflits sur les champs multiples (élément par élément) et sur les suppressions ; deux `absent` sont la même valeur. Démarrage automatique : `--systemd` et `--tache` à côté de `--plist` (`docs/v2.md`, § 11) |

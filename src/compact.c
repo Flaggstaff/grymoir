@@ -193,9 +193,56 @@ static size_t fin_simple(const Reecriture *r, size_t k, size_t f) {
     return k + 1;
 }
 
+/* L'index d'un « _contient » à la profondeur 0 dans [d, f), ou f : « x _contient y » se réécrit « y est parmi les x »
+ * quand x n'est pas un simple nom (ce cas et celui des clés d'une table ont leurs règles plus bas). */
+static size_t contient_general(const Reecriture *r, size_t d, size_t f) {
+    if (d >= f || r->e[d].type == J_CROCHETS || est_cle(&r->e[d], "clés") || est_cle(&r->e[d], "valeurs")) return f;
+    int p = 0;
+    for (size_t k = d; k < f; k++) {
+        if (r->e[k].type == J_PAR_OUV) p++;
+        else if (r->e[k].type == J_PAR_FERM) p--;
+        else if (p == 0 && est_cle(&r->e[k], "contient")) return k;
+        else if (p == 0 && r->e[k].type == J_MOT_CLE
+                 && (!strcmp(r->e[k].valeur, "et") || !strcmp(r->e[k].valeur, "ou") || !strcmp(r->e[k].valeur, "non")
+                     || !strcmp(r->e[k].valeur, "dont"))) return f;   /* « _dont genres _contient x » a sa règle */
+    }
+    return f;
+}
+
+/* La fin de la droite d'un « _contient » : avant « _et » ou « _ou » à la profondeur 0. */
+static size_t fin_droite(const Reecriture *r, size_t d, size_t f) {
+    int p = 0;
+    size_t e = d;
+    while (e < f && !(p == 0 && r->e[e].type == J_MOT_CLE && (!strcmp(r->e[e].valeur, "et") || !strcmp(r->e[e].valeur, "ou")))) {
+        if (r->e[e].type == J_PAR_OUV) p++;
+        else if (r->e[e].type == J_PAR_FERM) p--;
+        e++;
+    }
+    return e;
+}
+
 static void expression(Reecriture *r, size_t d, size_t f) {
+    {   /* « _les genres _de o _contient x », « _lignes t _contient x » → « x est parmi les genres de o » (3.19) */
+        const size_t c = contient_general(r, d, f);
+        if (c < f) {
+            const size_t e = fin_droite(r, c + 1, f);
+            expression(r, c + 1, e);
+            mot(r, "est", &r->e[c]);
+            mot(r, "parmi", &r->e[c]);
+            /* « les » : la gauche l'écrit elle-même (« _les », « _lignes », « _documents_sortis », « _trier ») */
+            expression(r, d, c);
+            if (e < f) expression(r, e, f);
+            return;
+        }
+    }
     for (size_t k = d; k < f && !r->echec; k++) {
         const Jeton *t = &r->e[k];
+        if (est_cle(t, "les") && k + 1 < f && r->e[k + 1].type == J_CROCHETS) {   /* _les genres _de o : « les genres de o » (3.19) */
+            mot(r, "les", t);
+            copier(r, &r->e[k + 1]);
+            k++;
+            continue;
+        }
         if (t->type == J_CROCHETS || t->type == J_PAR_OUV) {
             /* facture.client.nom → nom de client de facture (§ 13.3) */
             size_t b = fin_simple(r, k, f), q = b, nb = 0;
@@ -1238,6 +1285,19 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                         mot(r, "pas", &r->e[v]);
                         if (!est_cle(&r->e[v], "inclut")) mot(r, "par", &r->e[v]);
                         expression(r, v + 1, fin);
+                        k = fin;
+                        continue;
+                    }
+                }
+                if (!op && k + 2 < fin) {   /* _non (_les genres _de o _contient x) → x n'est pas parmi les genres de o (3.19) */
+                    const size_t c = contient_general(r, k + 2, fin);
+                    if (c < fin) {
+                        expression(r, c + 1, fin_droite(r, c + 1, fin));
+                        emettre(r, J_ELISION, "n", &r->e[c], 1);
+                        mot(r, "est", &r->e[c]);
+                        mot(r, "pas", &r->e[c]);
+                        mot(r, "parmi", &r->e[c]);
+                        expression(r, k + 2, c);
                         k = fin;
                         continue;
                     }
@@ -3422,6 +3482,21 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_ELISION, "l", &r->e[ke], 1);
             mot(r, "écran", &r->e[ke]);
             copier(r, &r->e[ke + 1]);
+            point(r, f);
+        } else if (!strcmp(c, "on_voit")) {   /* _on_voit « … » _écran E → On voit l'erreur « … » dans l'écran E. (3.19) */
+            if (f != d + 4 || r->e[d + 1].type != J_TEXTE || !est_cle(&r->e[d + 2], "écran") || r->e[d + 3].type != J_CROCHETS) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _on_voit « Remplis « Nom » » _écran de_saisie »."));
+                return;
+            }
+            mot(r, "on", t);
+            mot(r, "voit", t);
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "erreur", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "dans", &r->e[d + 2]);
+            emettre(r, J_ELISION, "l", &r->e[d + 2], 1);
+            mot(r, "écran", &r->e[d + 2]);
+            copier(r, &r->e[d + 3]);
             point(r, f);
         } else if (!strcmp(c, "on_confirme") || !strcmp(c, "on_renonce")) {   /* → On confirme. On renonce. (3.09) */
             mot(r, "on", t);

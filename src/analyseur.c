@@ -1284,6 +1284,8 @@ static Noeud *geste(Analyse *a, const Jeton *t);
 
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
+static int groupe_logique(Analyse *a);
+static Noeud *element_logique(Analyse *a);
 static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
     Noeud *n = noeud_creer(N_APPEL, premier->ligne, premier->colonne, premier->debut);
     n->texte = grym_dupliquer(s->nom);
@@ -1309,7 +1311,13 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
         } else {
             break;
         }
-        Noeud *arg = unaire(a);
+        /* « l'inverse de vrai », « de (faux) », « de (x > 2) » (3.19) : un argument logique, comme pour une action
+         * (§ 9.2) ; avant, unaire() refusait « vrai » et « faux » */
+        Noeud *arg;
+        if (est_mot(cour(a), "vrai") || est_mot(cour(a), "faux")) {
+            arg = feuille(N_BOOLEEN, cour(a));
+            avancer(a);
+        } else arg = cour(a)->type == J_PAR_OUV && groupe_logique(a) ? element_logique(a) : unaire(a);
         a->article_force = ART_AUCUN;
         if (!arg) { noeud_liberer(n); return NULL; }
         noeud_ajouter(n, arg);
@@ -4202,6 +4210,56 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
         noeud_ajouter(n, sujet);
         noeud_ajouter(n, e);
         n->fin = e->fin;
+        return n;
+    }
+    if (!r && est_mot(t, "parmi") && !a->dont && est_mot(voir(a, 1), "les")) {
+        /* hors d'un « dont » (3.19) : « Si baroque est parmi les genres de o » (le champ multiple, § 16.13), « Si o est
+         * parmi les œuvres de baroque » (la relation inverse, § 16.10), « Si « deux » est parmi les lignes de t » (une
+         * liste calculée, § 13.10). La droite est une recherche de forme 8 (la liste des objets liés), ou l'expression. */
+        size_t de = 0, de2 = 0;
+        const char *champ = NULL, *sg = NULL;
+        Classe *e = multiple_de(a, a->i + 2, 1, &de, &champ, &sg);
+        if (a->echec) { noeud_liberer(sujet); return NULL; }
+        Classe *ent = e ? entite_de(a, a->i + 2, 1, &de2) : NULL;
+        if (e && ent && !(ent == e && de2 == de)) e = NULL;   /* « les œuvres de … » : l'entité l'emporte, comme au § 16.10 */
+        Noeud *droite = NULL;
+        if (e) {
+            char *garde = grym_dupliquer(champ);
+            Noeud *objet = objet_de(a, NULL, de);
+            if (objet) droite = chercher(a, t, e, 0, 0, objet);
+            if (droite) { droite->forme = 8; droite->op = 'M'; droite->texte3 = garde; } else free(garde);
+        } else if ((e = entite_de(a, a->i + 2, 1, &de)) != NULL) {
+            Noeud *objet = objet_de(a, e, de);
+            if (objet) droite = chercher(a, t, e, 0, 0, objet);
+            if (droite) { droite->forme = 8; droite->op = 'I'; }
+        } else {
+            {   /* « parmi les amis », sans « de … » : un champ multiple sans son objet */
+                size_t d = a->i + 2, f = d;
+                if (d < a->n && a->j[d].type == J_CROCHETS) f = d + 1;
+                else while (f < a->n && mot_de_nom(a, f)) f++;
+                for (size_t q = f; q > d; q--) {
+                    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, q);
+                    const char *type = NULL, *pl = NULL;
+                    const int connu = multiple_connu(a->portee, nom, 0, &type, &pl) && !visible(a, nom);
+                    free(nom);
+                    if (connu) {
+                        noeud_liberer(sujet);
+                        return erreur(a, &a->j[d], grym_formater("« %s » est un champ multiple : de quel objet ? « est parmi les %s de p ».", pl, pl));
+                    }
+                }
+            }
+            avancer(a);   /* parmi : « les lignes de t », « les documents sortis »… lus comme une expression */
+            droite = base(a);
+        }
+        if (!droite) { noeud_liberer(sujet); return NULL; }
+        Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
+        n->op = 'm';
+        n->negation = negation;
+        n->op_ligne = t->ligne;
+        n->op_colonne = t->colonne;
+        noeud_ajouter(n, sujet);
+        noeud_ajouter(n, droite);
+        n->fin = droite->fin;
         return n;
     }
     if (!r && est_mot(t, "parmi")) {
@@ -11127,8 +11185,9 @@ static Noeud *geste(Analyse *a, const Jeton *t) {
     if (!a->scenario) return erreur(a, t, grym_dupliquer("Un geste (« On clique sur … ») s'écrit dans un scénario (§ 9.7)."));
     const Jeton *verbe = voir(a, 1);
     const int creneau = est_mot(verbe, "choisit") && est_mot(voir(a, 2), "le") && est_mot(voir(a, 3), "créneau");
-    const int forme = creneau ? 7 : est_mot(verbe, "déplace") ? 8 : est_mot(verbe, "écrit") ? 1 : est_mot(verbe, "choisit") ? 2
-                    : est_mot(verbe, "clique") ? 3 : est_mot(verbe, "ferme") ? 4 : est_mot(verbe, "confirme") ? 5 : 6;
+    const int forme = creneau ? 7 : est_mot(verbe, "déplace") ? 8 : est_mot(verbe, "voit") ? 9 : est_mot(verbe, "écrit") ? 1
+                    : est_mot(verbe, "choisit") ? 2 : est_mot(verbe, "clique") ? 3 : est_mot(verbe, "ferme") ? 4
+                    : est_mot(verbe, "confirme") ? 5 : 6;
     Noeud *n = noeud_creer(P_GESTE, t->ligne, t->colonne, t->debut);
     n->forme = forme;
     a->i += 2;
@@ -11165,6 +11224,23 @@ static Noeud *geste(Analyse *a, const Jeton *t) {
         if (!e) { free(nom); noeud_liberer(n); return NULL; }
         n->texte3 = nom;
         a->i = f;
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
+    if (forme == 9) {   /* « On voit l'erreur « … » dans l'écran E. » (3.19) : le refus attendu du geste qui précède */
+        if (voir(a, 2)->type != J_TEXTE || !est_mot(voir(a, 3), "dans")) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« On voit l'erreur « … » dans l'écran … » attendu."));
+        }
+        n->texte = grym_dupliquer(voir(a, 2)->valeur);
+        a->i += 4;
+        size_t fe;
+        char *ne = NULL;
+        EcranConnu *ec = ecran_nomme(a, a->i, &fe, &ne);
+        if (!ec) { free(ne); noeud_liberer(n); return NULL; }
+        n->texte3 = ne;
+        a->i = fe;
         if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
         n->fin = fin_jeton(&a->j[a->i - 1]);
         return n;
@@ -11488,8 +11564,9 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "scénario") && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_DEUX_POINTS) return scenario(a, t, colonne);   /* § 9.7 */
     if (est_mot(t, "on") && (est_mot(voir(a, 1), "écrit") || est_mot(voir(a, 1), "choisit") || est_mot(voir(a, 1), "clique")
                              || est_mot(voir(a, 1), "ferme") || est_mot(voir(a, 1), "confirme") || est_mot(voir(a, 1), "renonce")
-                             || est_mot(voir(a, 1), "déplace")))
-        return geste(a, t);   /* 3.08 */
+                             || est_mot(voir(a, 1), "déplace")
+                             || (est_mot(voir(a, 1), "voit") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "erreur"))))
+        return geste(a, t);   /* 3.08 ; « On voit l'erreur « … » » (3.19) */
     if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "que") && !visible(a, "vérifier que")) {   /* § 9.7 */
         if (!a->scenario) return erreur(a, t, grym_dupliquer("« Vérifier que … » s'écrit dans un scénario (§ 9.7)."));
         a->i += 2;

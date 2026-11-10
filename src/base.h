@@ -138,6 +138,7 @@ int base_verifier_copie(const unsigned char *o, size_t n, char **erreur);
 
 /* L'objet d'identifiant id est-il dans la corbeille ? */
 int base_est_supprime(Base *b, long id);
+size_t base_lies(Base *b, const Objet *o, size_t k, long **ids);   /* les identifiants d'un champ multiple, triés (3.19) */
 
 /* Le journal des changements des entités journalisées (2.85) : une ligne, dans la transaction ; les lignes d'un objet ou de
  * toute la base, les plus récentes d'abord (sept textes chacune : moment UTC, entité, désignation, champ, avant, après,

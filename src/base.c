@@ -2560,6 +2560,36 @@ int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, 
     return ok;
 }
 
+/* Les identifiants que le champ multiple k de l'objet désigne, triés (3.19 : l'instantané d'un champ multiple, § 16.6).
+ * Rend leur nombre ; *ids est à libérer. */
+size_t base_lies(Base *b, const Objet *o, size_t k, long **ids) {
+    const ClasseVM *c = o->classe;
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT b FROM ");
+    ajouter_liaison(&sql, c->proprietaires[k]->nom, c->champs[k]);
+    chaine_ajouter(&sql, " WHERE a = ?1 ORDER BY b");
+    char *texte = chaine_rendre(&sql);
+    sqlite3_stmt *st = NULL;
+    size_t n = 0, cap = 0;
+    *ids = NULL;
+    if (preparer(b, texte, &st) == SQLITE_OK) {
+        sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
+        while (sqlite3_step(st) == SQLITE_ROW) {
+            if (n == cap) {
+                cap = cap ? 2 * cap : 8;
+                long *t = grym_allouer(cap * sizeof *t);
+                if (n) memcpy(t, *ids, n * sizeof *t);
+                free(*ids);
+                *ids = t;
+            }
+            (*ids)[n++] = (long)sqlite3_column_int64(st, 0);
+        }
+    }
+    free(texte);
+    rendre(b, st);
+    return n;
+}
+
 /* ---------------------------------------------------------------- */
 /* Supprimer, rétablir (grammaire, § 16.12)                         */
 /* ---------------------------------------------------------------- */

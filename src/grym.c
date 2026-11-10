@@ -515,69 +515,162 @@ static void poser_env(const char *nom, const char *valeur) {
 #endif
 }
 
-/* « --plist » (8 novembre 2026) : le fichier d'un agent launchd qui relance la même commande à l'ouverture de session et
- * la garde en vie (Apple, « Creating Launch Daemons and Agents ») ; à poser dans ~/Library/LaunchAgents. Les chemins
- * deviennent absolus : launchd ne part pas du dossier courant. */
+/* Le démarrage automatique (8 novembre et 9 novembre 2026, docs/v2.md, § 11) : « --plist » écrit l'agent launchd de macOS,
+ * « --systemd » l'unité utilisateur de systemd (Linux), « --tache » la tâche planifiée de Windows. Chacun relance la même
+ * commande à l'ouverture de session et la garde en vie. Les chemins deviennent absolus : aucun des trois ne part du
+ * dossier courant. Sources : Apple, « Creating Launch Daemons and Agents » ; systemd.service(5), systemd.unit(5) et
+ * loginctl(1) ; Microsoft, « Task Scheduler Schema » (learn.microsoft.com/windows/win32/taskschd/task-scheduler-schema). */
 static void xml(const char *s) {
     for (; *s; s++) {
         if (*s == '&') fputs("&amp;", stdout);
         else if (*s == '<') fputs("&lt;", stdout);
         else if (*s == '>') fputs("&gt;", stdout);
+        else if (*s == '"') fputs("&quot;", stdout);
         else putchar(*s);
     }
 }
 
-static int plist(int argc, char **argv) {
-    char *grym = NULL, *prog = NULL;
-#ifndef _WIN32
-    grym = realpath(argv[0], NULL);
-    prog = realpath(argv[2], NULL);
+/* Le chemin absolu de grym lui-même, ou NULL. */
+static char *chemin_de_grym(const char *argv0) {
+#ifdef _WIN32
+    char tampon[MAX_PATH];
+    const DWORD n = GetModuleFileNameA(NULL, tampon, MAX_PATH);
+    (void)argv0;
+    return n > 0 && n < MAX_PATH ? grym_dupliquer(tampon) : NULL;
+#else
+    return realpath(argv0, NULL);
 #endif
+}
+
+/* La valeur de l'option k est-elle un chemin (rendu absolu dans le fichier de démarrage) ? */
+static int option_de_chemin(char **argv, int k) {
+    return k > 3 && (strcmp(argv[k - 1], "--reseau") == 0 || strcmp(argv[k - 1], "--base") == 0
+                     || strcmp(argv[k - 1], "--ecriture") == 0);
+}
+
+/* Les options de la commande à relancer, l'option de démarrage retirée, les chemins absolus : dans le tableau donné,
+ * à libérer par l'appelant ; rend leur nombre. */
+static int options_de_demarrage(int argc, char **argv, const char *forme, char **options) {
+    int n = 0;
+    for (int k = 3; k < argc; k++) {
+        if (strcmp(argv[k], forme) == 0) continue;
+        char *absolu = option_de_chemin(argv, k) ? chemin_absolu(argv[k]) : NULL;
+        options[n++] = absolu ? absolu : grym_dupliquer(argv[k]);
+    }
+    options[n++] = grym_dupliquer("--sans-navigateur");
+    return n;
+}
+
+/* « ch.grymoir.Praxis.grym » : l'étiquette du service, en lettres, chiffres et points. */
+static char *etiquette_de(const char *nom) {
+    char *etiquette = grym_formater("ch.grymoir.%s", nom);
+    for (char *p = etiquette; *p; p++)
+        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '.')) *p = '-';
+    return etiquette;
+}
+
+/* Un argument d'une ligne de commande systemd : entre guillemets doubles, « \ » et « " » protégés (systemd.service(5),
+ * « Command lines »). */
+static void argument_systemd(const char *s) {
+    putchar('"');
+    for (; *s; s++) {
+        if (*s == '"' || *s == '\\') putchar('\\');
+        putchar(*s);
+    }
+    putchar('"');
+}
+
+/* Un argument d'une ligne de commande Windows, ajouté à la chaîne : entre guillemets doubles s'il contient un espace, les
+ * guillemets intérieurs précédés d'une barre oblique inverse (Microsoft, « Parsing C command-line arguments »). */
+static void argument_windows(Chaine *c, const char *s) {
+    const int citer = strchr(s, ' ') != NULL || !*s;
+    if (citer) chaine_ajouter(c, "\"");
+    for (; *s; s++) {
+        if (*s == '"') chaine_ajouter(c, "\\");
+        { char u[2] = { *s, 0 }; chaine_ajouter(c, u); }
+    }
+    if (citer) chaine_ajouter(c, "\"");
+}
+
+static int demarrage(int argc, char **argv, const char *forme) {
+    char *grym = chemin_de_grym(argv[0]), *prog = chemin_absolu(argv[2]);
     if (!grym || !prog) {
-        fputs("--plist : le chemin de grym ou du programme ne se résout pas.\n", stderr);
+        fprintf(stderr, "%s : le chemin de grym ou du programme ne se résout pas.\n", forme);
         free(grym);
         free(prog);
         return EXIT_FAILURE;
     }
-    const char *nom = strrchr(prog, '/') ? strrchr(prog, '/') + 1 : prog;
-    char *etiquette = grym_formater("ch.grymoir.%s", nom);
-    for (char *p = etiquette; *p; p++)
-        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '.')) *p = '-';
-    const char *home = getenv("HOME") ? getenv("HOME") : "/tmp";
-    printf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-           "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
-           "<plist version=\"1.0\">\n<dict>\n    <key>Label</key>\n    <string>");
-    xml(etiquette);
-    printf("</string>\n    <key>ProgramArguments</key>\n    <array>\n        <string>");
-    xml(grym);
-    printf("</string>\n        <string>servir</string>\n        <string>");
-    xml(prog);
-    printf("</string>\n");
-    for (int k = 3; k < argc; k++) {
-        if (strcmp(argv[k], "--plist") == 0) continue;
-        char *absolu = NULL;
-#ifndef _WIN32
-        /* la valeur d'une option de chemin : absolue */
-        if (k > 3 && (strcmp(argv[k - 1], "--reseau") == 0 || strcmp(argv[k - 1], "--base") == 0
-                      || strcmp(argv[k - 1], "--ecriture") == 0))
-            absolu = realpath(argv[k], NULL);
-#endif
-        printf("        <string>");
-        xml(absolu ? absolu : argv[k]);
-        printf("</string>\n");
-        free(absolu);
+    const char *nom = prog;
+    for (const char *p = prog; *p; p++) if (*p == '/' || *p == '\\') nom = p + 1;
+    char *etiquette = etiquette_de(nom);
+    char *options[64];
+    const int n = argc - 3 + 1 <= 64 ? options_de_demarrage(argc, argv, forme, options) : 0;
+    if (!n) {
+        fprintf(stderr, "%s : trop d'options.\n", forme);
+        free(etiquette); free(grym); free(prog);
+        return EXIT_FAILURE;
     }
-    printf("        <string>--sans-navigateur</string>\n    </array>\n"
-           "    <key>RunAtLoad</key>\n    <true/>\n    <key>KeepAlive</key>\n    <true/>\n"
-           "    <key>StandardOutPath</key>\n    <string>");
-    xml(home);
-    printf("/Library/Logs/GrymoiR-");
-    xml(nom);
-    printf(".log</string>\n    <key>StandardErrorPath</key>\n    <string>");
-    xml(home);
-    printf("/Library/Logs/GrymoiR-");
-    xml(nom);
-    printf(".log</string>\n</dict>\n</plist>\n");
+    const char *home = getenv("HOME") ? getenv("HOME") : "/tmp";
+    if (strcmp(forme, "--plist") == 0) {
+        printf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+               "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+               "<plist version=\"1.0\">\n<dict>\n    <key>Label</key>\n    <string>");
+        xml(etiquette);
+        printf("</string>\n    <key>ProgramArguments</key>\n    <array>\n        <string>");
+        xml(grym);
+        printf("</string>\n        <string>servir</string>\n        <string>");
+        xml(prog);
+        printf("</string>\n");
+        for (int k = 0; k < n; k++) {
+            printf("        <string>");
+            xml(options[k]);
+            printf("</string>\n");
+        }
+        printf("    </array>\n    <key>RunAtLoad</key>\n    <true/>\n    <key>KeepAlive</key>\n    <true/>\n"
+               "    <key>StandardOutPath</key>\n    <string>");
+        xml(home);
+        printf("/Library/Logs/GrymoiR-");
+        xml(nom);
+        printf(".log</string>\n    <key>StandardErrorPath</key>\n    <string>");
+        xml(home);
+        printf("/Library/Logs/GrymoiR-");
+        xml(nom);
+        printf(".log</string>\n</dict>\n</plist>\n");
+    } else if (strcmp(forme, "--systemd") == 0) {
+        /* une unité de l'utilisateur (~/.config/systemd/user/), relancée toujours ; le journal, par journalctl --user */
+        printf("[Unit]\nDescription=GrymoiR, le service %s\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=", nom);
+        argument_systemd(grym);
+        printf(" servir ");
+        argument_systemd(prog);
+        for (int k = 0; k < n; k++) { putchar(' '); argument_systemd(options[k]); }
+        printf("\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=default.target\n");
+    } else {
+        /* une tâche planifiée, à importer par « schtasks /Create /TN nom /XML fichier » ; déclenchée à l'ouverture de
+         * session, relancée sur échec (RestartOnFailure), sans limite de durée (PT0S) */
+        printf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+               "<Task version=\"1.2\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">\n"
+               "  <RegistrationInfo>\n    <Description>GrymoiR, le service ");
+        xml(nom);
+        printf("</Description>\n  </RegistrationInfo>\n  <Triggers>\n    <LogonTrigger>\n      <Enabled>true</Enabled>\n"
+               "    </LogonTrigger>\n  </Triggers>\n  <Settings>\n    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>\n"
+               "    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>\n"
+               "    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>\n"
+               "    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>\n    <StartWhenAvailable>true</StartWhenAvailable>\n"
+               "    <RestartOnFailure>\n      <Interval>PT1M</Interval>\n      <Count>999</Count>\n    </RestartOnFailure>\n"
+               "  </Settings>\n  <Actions Context=\"Author\">\n    <Exec>\n      <Command>");
+        xml(grym);
+        printf("</Command>\n      <Arguments>servir ");
+        {   /* la ligne d'arguments, citée pour Windows, puis protégée pour le XML */
+            Chaine c = {0};
+            argument_windows(&c, prog);
+            for (int k = 0; k < n; k++) { chaine_ajouter(&c, " "); argument_windows(&c, options[k]); }
+            char *ligne = chaine_rendre(&c);
+            xml(ligne);
+            free(ligne);
+        }
+        printf("</Arguments>\n    </Exec>\n  </Actions>\n</Task>\n");
+    }
+    for (int k = 0; k < n; k++) free(options[k]);
     free(etiquette);
     free(grym);
     free(prog);
@@ -839,7 +932,8 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "scenarios") == 0) return scenarios(argv[2]);   /* § 9.7 */
     if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
         for (int k = 3; k < argc; k++)
-            if (strcmp(argv[k], "--plist") == 0) return plist(argc, argv);   /* le démarrage automatique (§ 11) */
+            if (strcmp(argv[k], "--plist") == 0 || strcmp(argv[k], "--systemd") == 0 || strcmp(argv[k], "--tache") == 0)
+                return demarrage(argc, argv, argv[k]);   /* le démarrage automatique (docs/v2.md, § 11) */
         int port = 0, navigateur = 1, bon = 1, sessions = 0, inactivite = 30;
         const char *reseau = NULL;   /* le dossier des certificats : sur le réseau local, en TLS (docs/v2.md, § 12) */
         const char *base = NULL, *ecriture = NULL;   /* la base, le dossier d'écriture imposés (docs/v2.md, § 11) */
@@ -917,7 +1011,8 @@ int main(int argc, char **argv) {
             "    [--reseau dossier]                sur le réseau local, en TLS, avec ses certificats (§ 12)\n"
             "    [--base f.grymd] [--ecriture d]   la base et le dossier d'écriture d'une application fabriquée\n"
             "    [--trousseau nom]                 le mot de passe de la base, pris dans le trousseau du système\n"
-            "    [--plist]                         l'agent launchd qui démarre ce service à l'ouverture de session\n"
+            "    [--plist] [--systemd] [--tache]   le fichier qui démarre ce service à l'ouverture de session :\n"
+            "                                      launchd (macOS), systemd (Linux), tâche planifiée (Windows)\n"
             "    [--port N] [--sans-navigateur]\n"
             "  grym certificat dossier cabinet nom…  l'autorité du cabinet et le certificat du serveur (§ 12)\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"

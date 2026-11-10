@@ -242,7 +242,8 @@ static void chercher(Compilation *c, const Noeud *n) {
     /* modes 0 à 2 ; 3 à 5 : les mêmes, dans la corbeille (§ 16.12) ; 6 : somme du champ texte2, 7 : dans la corbeille ;
      * 8, 9 : moyenne ; a, b : plus grand ; c, d : plus petit ; e, f : l'objet au plus grand (ou petit) champ texte2 */
     static const char AGREGATS[] = "68ace";
-    const char mode = n->forme >= 3 ? (char)(AGREGATS[n->forme - 3] + (n->negation ? 1 : 0))
+    const char mode = n->forme == 8 ? '0'   /* la liste des objets liés, droite de « parmi » (3.19) */
+                    : n->forme >= 3 ? (char)(AGREGATS[n->forme - 3] + (n->negation ? 1 : 0))
                                     : (char)('0' + n->forme + (n->negation ? 3 : 0));
     snprintf(t, sizeof t, "\x1f%c\x1f", mode);
     chaine_ajouter(&d, t);

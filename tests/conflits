@@ -2,6 +2,8 @@
 # Les conflits entre sessions (grammaire 3.16, § 16.6, 7 novembre 2026) : deux programmes sur la même base. A lit un
 # patient, pose une question ; pendant l'attente, B modifie le patient. Quand A écrit ensuite un champ que B a changé,
 # l'écriture est refusée (sorte « conflit ») au lieu d'écraser celle de B ; un autre champ s'écrit sans faute.
+# 3.19 (9 novembre 2026) : les champs multiples (gagner un élément que B a retiré, perdre un élément que B a ajouté) et les
+# suppressions (supprimer un objet que B a changé ; écrire un objet que B a mis à la corbeille).
 racine=$(cd "$(dirname "$0")/.." && pwd)
 grym="$racine/grym"
 d=$(mktemp -d)
@@ -9,21 +11,24 @@ trap 'rm -rf "$d"' EXIT
 cd "$d" || exit 1
 total=0; echecs=0
 verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
-decl='Un patient, conservé, a :
+decl='Un genre, conservé, a :
+    un nom (texte), unique.
+Un patient, conservé, a :
     un nom (texte), unique,
     une ville (texte),
     un parrain (patient), facultatif,
-    un solde (nombre).'
+    un solde (nombre),
+    des genres (genre).'
 initialiser() {
     rm -f p.grymd*
-    printf '%s\nLe p vaut un nouveau patient :\n    Le nom vaut « Ana ».\n    La ville vaut « Bulle ».\n    Le solde vaut 10.\nConserver le p.\nLe b vaut un nouveau patient :\n    Le nom vaut « Ben ».\n    La ville vaut « Riaz ».\n    Le solde vaut 0.\nConserver le b.\n' "$decl" > p.grym
+    printf '%s\nLe g vaut un nouveau genre :\n    Le nom vaut « a ».\nConserver le g.\nLe h vaut un nouveau genre :\n    Le nom vaut « b ».\nConserver le h.\nLe p vaut un nouveau patient :\n    Le nom vaut « Ana ».\n    La ville vaut « Bulle ».\n    Le solde vaut 10.\nConserver le p.\nLes genres de p gagnent g.\nLe b vaut un nouveau patient :\n    Le nom vaut « Ben ».\n    La ville vaut « Riaz ».\n    Le solde vaut 0.\nConserver le b.\n' "$decl" > p.grym
     "$grym" lancer p.grym > /dev/null 2>&1 < /dev/null
 }
 # A : lit Ana, attend, puis écrit « $1 » ; B, pendant l'attente : « $2 ». La sortie de A, sans la question.
 deux() {
     initialiser
-    printf '%s\nLe p vaut le patient conservé dont le nom est « Ana ».\nAfficher la ville de p.\nLa r vaut la réponse à « ok ? ».\nEssayer :\n    %s\n    Afficher « écrit ».\nEn cas d'"'"'échec de conflit :\n    Afficher la sorte de l'"'"'échec.\n' "$decl" "$1" > a.grym
-    printf '%s\nLe q vaut le patient conservé dont le nom est « Ana ».\n%s\n' "$decl" "$2" > b.grym
+    printf '%s\nLe p vaut le patient conservé dont le nom est « Ana ».\nLe g vaut le genre conservé dont le nom est « a ».\nLe h vaut le genre conservé dont le nom est « b ».\nAfficher la ville de p.\nLa r vaut la réponse à « ok ? ».\nEssayer :\n    %s\n    Afficher « écrit ».\nEn cas d'"'"'échec de conflit :\n    Afficher la sorte de l'"'"'échec.\n' "$decl" "$1" > a.grym
+    printf '%s\nLe q vaut le patient conservé dont le nom est « Ana ».\nLe g vaut le genre conservé dont le nom est « a ».\nLe h vaut le genre conservé dont le nom est « b ».\n%s\n' "$decl" "$2" > b.grym
     cp a.grym p.grym
     "$grym" compiler p.grym > /dev/null 2>&1 && mv p.grymb a.grymb
     cp b.grym p.grym
@@ -43,6 +48,19 @@ verifier "$(cat sortieB.txt)" "" "B a écrit pendant que A attendait"
 verifier "$(deux 'Le solde de p devient 5.' 'La ville de q devient « Romont ».')" "Bulleécrit" "un autre champ : écrit"
 verifier "$(deux 'Le parrain de p devient le patient conservé dont le nom est « Ben ».' 'Le parrain de q devient le patient conservé dont le nom est « Ben ».')" "Bulleconflit" "un lien posé ailleurs pendant que A le voyait absent"
 verifier "$(deux 'La ville de p devient « Fribourg ».' 'La ville de q devient « Bulle ».')" "Bulleécrit" "une valeur réécrite à l'identique : pas de conflit"
+# les champs multiples (3.19) : le conflit se juge sur l'élément
+verifier "$(deux 'Les genres de p gagnent g.' 'Les genres de q perdent g.')" "Bulleconflit" "gagner un élément que B a retiré : conflit"
+verifier "$(deux 'Les genres de p perdent h.' 'Les genres de q gagnent h.')" "Bulleconflit" "perdre un élément que B a ajouté : conflit"
+verifier "$(deux 'Les genres de p gagnent h.' 'Les genres de q gagnent h.')" "Bulleécrit" "gagner un élément que B a aussi ajouté : identique, pas de conflit"
+verifier "$(deux 'Les genres de p perdent g.' 'Les genres de q perdent g.')" "Bulleécrit" "perdre un élément que B a aussi retiré : identique"
+verifier "$(deux 'Les genres de p gagnent h.' 'La ville de q devient « Romont ».')" "Bulleécrit" "le champ multiple, B a changé un autre champ : écrit"
+verifier "$(deux 'Les genres de p gagnent h.' 'Le nom de g devient « z ».')" "Bulleécrit" "B a changé un autre objet : écrit"
+# les suppressions (3.19)
+verifier "$(deux 'Supprimer le p.' 'La ville de q devient « Romont ».')" "Bulleconflit" "supprimer un objet dont B a changé un champ : conflit"
+verifier "$(deux 'Supprimer le p.' 'Les genres de q gagnent h.')" "Bulleconflit" "supprimer un objet dont B a changé un champ multiple : conflit"
+verifier "$(deux 'Supprimer le p.' 'Le nom de g devient « z ».')" "Bulleécrit" "supprimer un objet que B n'a pas touché : supprimé"
+verifier "$(deux 'La ville de p devient « Fribourg ».' 'Supprimer le q.')" "Bulleconflit" "écrire un objet que B a mis à la corbeille : conflit"
+verifier "$(deux 'Supprimer le p.' 'Supprimer le q.' | grep -c 'déjà supprimé')" "1" "supprimer un objet que B a déjà supprimé : le refus ordinaire"
 # sans autre écrivain, nos propres écritures, avant et après les questions, ne sont jamais un conflit
 initialiser
 printf '%s\nLe p vaut le patient conservé dont le nom est « Ana ».\nLa ville de p devient « Marly ».\nLa r vaut la réponse à « ? ».\nLa ville de p devient « Fribourg ».\nLa s vaut la réponse à « ? ».\nLa ville de p devient « Bulle ».\nAfficher la ville de p.\n' "$decl" > p.grym

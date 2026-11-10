@@ -861,7 +861,7 @@ int main(void) {
     VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nAfficher le amis de p.",
        3, 13, "« amis » est un champ multiple, pas une valeur : il se lit avec « Pour chaque ami de … »");
     VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nSi p est parmi les amis, afficher 1.",
-       3, 10, "« parmi » ne s'emploie encore que dans une condition « dont »");
+       3, 20, "« amis » est un champ multiple : de quel objet ? « est parmi les amis de p ».");
     VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nLes noms de p gagnent 2.",
        3, 5, "Champ multiple attendu après « Les »");
     VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nLes amis de p gagnent 2.",

@@ -538,7 +538,8 @@ static char *texte_valeur(const Machine *m, const Valeur *v);
 /* ---------- Les gestes d'un scénario (§ 9.7, 3.08) ---------- */
 
 typedef struct Geste {
-    int sorte;      /* 1 écrire, 2 choisir, 3 cliquer, 4 fermer, 5 confirmer, 6 renoncer, 7 un créneau, 8 déplacer (3.12) */
+    int sorte;      /* 1 écrire, 2 choisir, 3 cliquer, 4 fermer, 5 confirmer, 6 renoncer, 7 un créneau, 8 déplacer (3.12),
+                       9 voir l'erreur attendue (3.19) */
     char *quand;    /* un créneau, un déplacement : « JJ.MM.AAAA|HH:MM » (3.12) */
     char *ecran;    /* le nom déclaré de l'écran */
     char *element;  /* la zone (écrire, choisir une valeur), le bouton (cliquer), ou NULL (choisir un objet, fermer) */
@@ -608,6 +609,22 @@ static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
     e->choisies = h->choisies;
     e->nb_choisies = ec && ec->n < 64 ? ec->n : 64;
     if (h->erreur_ecran) {
+        /* « On voit l'erreur « … » » juste après le geste refusé (3.19) : l'erreur attendue, qui contient ce texte, est
+         * consommée et le scénario continue ; sinon, l'erreur arrête le scénario */
+        const Geste *att = ec && m->geste_prochain < m->nb_gestes ? &m->gestes[m->geste_prochain] : NULL;
+        if (att && att->sorte == 9 && ec->nom && strcmp(ec->nom, att->ecran) == 0) {
+            m->geste_prochain++;
+            if (strstr(h->erreur_ecran, att->element ? att->element : "")) {
+                free(h->erreur_ecran);
+                h->erreur_ecran = NULL;
+                return sim_attendre(c, sortie, e);
+            }
+            char *x = grym_formater("Geste de la ligne %d : l'écran %s a montré « %s », pas « %s ».", att->ligne, ec->nom,
+                                    h->erreur_ecran, att->element ? att->element : "");
+            free(h->erreur_ecran);
+            h->erreur_ecran = NULL;
+            return sim_refuser(m, x);
+        }
         char *x = grym_formater("L'écran %s a montré une erreur : %s", ec && ec->nom ? ec->nom : "", h->erreur_ecran);
         free(h->erreur_ecran);
         h->erreur_ecran = NULL;
@@ -615,6 +632,11 @@ static Issue sim_attendre(void *c, Chaine *sortie, Evenement *e) {
     }
     if (!ec || m->geste_prochain >= m->nb_gestes) return ISSUE_REPONDU;   /* plus de geste : l'écran se ferme */
     const Geste *g = &m->gestes[m->geste_prochain];
+    if (g->sorte == 9) {   /* une erreur attendue qui n'est pas venue (3.19) */
+        m->geste_prochain++;
+        return sim_refuser(m, grym_formater("Geste de la ligne %d : l'écran %s n'a montré aucune erreur ; « %s » était attendue.",
+                                            g->ligne, ec->nom ? ec->nom : g->ecran, g->element ? g->element : ""));
+    }
     if (g->sorte == 5 || g->sorte == 6) {   /* une réponse sans question (3.09) */
         m->geste_prochain++;
         return sim_refuser(m, grym_formater("Geste de la ligne %d : « On %s » ne répond à aucune question : il suit le clic d'un "
@@ -2583,7 +2605,9 @@ static Formule *choisir_version_depuis(Machine *m, const char *nom, const Valeur
 /* ---------------------------------------------------------------- */
 
 /* Avant de lire une ligne : ce qui précède est validé, la base est rendue, chaque essai repart d'ici (§ 17, § 18). */
+static void relever_lies(Machine *m);
 static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
+    relever_lies(m);
     char *probleme = valider_jusqu_ici(m, sortie);
     if (probleme) return probleme;
     m->question_posee = 1;
@@ -2597,7 +2621,51 @@ static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
     return NULL;
 }
 
+static int valeurs_identiques(const Valeur *a, const Valeur *b);
+static Valeur ensemble_vide(void);
+
+static void oublier_lies(Objet *o) {
+    if (!o->lies) return;
+    for (size_t k = 0; k < o->classe->nb_champs; k++)
+        if (o->classe->uniques[k] & 8) valeur_liberer(&o->lies[k]);
+    free(o->lies);
+    o->lies = NULL;
+}
+
+/* Les identifiants d'un champ multiple, en liste sans valeurs (3.19). */
+static Valeur liste_des_lies(Machine *m, Objet *o, size_t k) {
+    long *ids = NULL;
+    size_t n = base_lies(m->base, o, k, &ids);
+    Valeur l = ensemble_vide();
+    l.type = V_LISTE;
+    free(l.liste->valeurs);
+    l.liste->valeurs = NULL;
+    l.liste->ids = ids;
+    l.liste->n = n;
+    l.liste->classes = grym_allouer((n ? n : 1) * sizeof *l.liste->classes);   /* libérés par valeur_liberer */
+    memset(l.liste->classes, 0, (n ? n : 1) * sizeof *l.liste->classes);
+    return l;
+}
+
+/* Avant la question (3.19) : les champs multiples des objets lus n'ont pas de copie en mémoire ; leurs identifiants se
+ * relèvent maintenant, pour savoir après coup ce que l'utilisateur a vu. */
+static void relever_lies(Machine *m) {
+    if (!m->base) return;
+    for (Objet *o = m->tas; o; o = o->suivant) {
+        if (o->id <= 0 || o->a_charger) continue;
+        const ClasseVM *c = o->classe;
+        int multiples = 0;
+        for (size_t k = 0; k < c->nb_champs && !multiples; k++) multiples = (c->uniques[k] & 8) != 0;
+        if (!multiples) continue;
+        oublier_lies(o);
+        o->lies = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *o->lies);
+        for (size_t k = 0; k < c->nb_champs; k++)
+            if (c->uniques[k] & 8) o->lies[k] = liste_des_lies(m, o, k);
+    }
+}
+
 static void oublier_vus(Objet *o) {
+    oublier_lies(o);
     if (!o->vus) return;
     for (size_t k = 0; k < o->classe->nb_champs; k++)
         if (o->vus_definis[k]) valeur_liberer(&o->vus[k]);
@@ -2607,12 +2675,47 @@ static void oublier_vus(Objet *o) {
     o->vus_definis = NULL;
 }
 
+/* Une valeur vue avant la question et la valeur actuelle du champ : la même ? Un lien vu est son identifiant (jours) ;
+ * deux absents sont pareils (3.19 : un champ facultatif vide ne fait pas conflit). */
+static int vu_pareil(const Valeur *vu, const Valeur *la) {
+    if (vu->type == V_ABSENT || la->type == V_ABSENT) return vu->type == la->type;
+    if (vu->type == V_OBJET) return la->type == V_OBJET && la->objet && la->objet->id == vu->jours;
+    return valeurs_identiques(vu, la);
+}
+
+/* L'objet, rechargé, diffère-t-il de ce que l'utilisateur a vu (3.19) ? Champs simples et champs multiples. */
+static int objet_change_depuis_les_vues(Machine *m, Objet *o) {
+    for (size_t k = 0; k < o->classe->nb_champs; k++) {
+        if (!o->vus_definis[k]) continue;
+        const Valeur *vu = &o->vus[k];
+        if (o->classe->uniques[k] & 8) {
+            long *ids = NULL;
+            size_t n = base_lies(m->base, o, k, &ids);
+            int pareil = vu->liste && n == vu->liste->n;
+            for (size_t q = 0; pareil && q < n; q++) pareil = ids[q] == vu->liste->ids[q];
+            free(ids);
+            if (!pareil) return 1;
+            continue;
+        }
+        const Valeur *la = o->definis[k] ? &o->champs[k] : NULL;
+        if (!la ? 0 : vu_pareil(vu, la)) continue;
+        return 1;
+    }
+    return 0;
+}
+
 /* Après la ligne lue : le verrou de la base reprend, avec les points de reprise des essais. */
 static char *fermer_attente(Machine *m) {
     char *probleme = NULL;
     if (m->base && !base_commencer(m->base, &probleme)) return probleme;
-    /* ce qui a été vu avant la question précédente ne compte plus : cette question-ci a montré l'état d'alors */
-    for (Objet *o = m->tas; o; o = o->suivant) oublier_vus(o);
+    /* ce qui a été vu avant la question précédente ne compte plus : cette question-ci a montré l'état d'alors ; les
+     * identifiants relevés juste avant cette question-ci (lies) restent pour la suite */
+    for (Objet *o = m->tas; o; o = o->suivant) {
+        Valeur *lies = o->lies;
+        o->lies = NULL;
+        oublier_vus(o);
+        o->lies = lies;
+    }
     if (base_changee_ailleurs(m->base) && !m->nb_essais) {
         /* un autre programme (l'atelier, une autre fenêtre, une autre session : 3.16) a écrit pendant l'attente : les
          * objets déjà lus se relisent au prochain accès, au lieu de montrer ce que la base ne contient plus
@@ -2625,6 +2728,12 @@ static char *fermer_attente(Machine *m) {
             o->vus_definis = grym_allouer(nc);
             memset(o->vus_definis, 0, nc);
             for (size_t k = 0; k < o->classe->nb_champs; k++) {
+                if (o->classe->uniques[k] & 8) {   /* un champ multiple (3.19) : les identifiants relevés avant la question */
+                    if (!o->lies) continue;
+                    o->vus[k] = o->lies[k];   /* passe aux vues, sans copie */
+                    o->vus_definis[k] = 1;
+                    continue;
+                }
                 if (!o->definis[k]) continue;
                 o->vus[k] = o->champs[k];   /* la valeur passe aux vues, sans copie */
                 if (o->vus[k].type == V_OBJET) {   /* un lien : son identifiant, l'objet pouvant être ramassé */
@@ -2635,8 +2744,11 @@ static char *fermer_attente(Machine *m) {
                 o->definis[k] = 0;
             }
             o->a_charger = 1;
+            free(o->lies);   /* ses listes sont passées aux vues */
+            o->lies = NULL;
         }
     }
+    for (Objet *o = m->tas; o; o = o->suivant) oublier_lies(o);   /* rien d'écrit ailleurs : les relevés ne servent plus */
     for (size_t k = 0; m->base && k < m->nb_essais && !probleme; k++) base_point(m->base, k + 1, &probleme);
     return probleme;
 }
@@ -6471,8 +6583,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     && base_retablir(m->base, v.objet, m->classes, m->nb_classes, &probleme))
                     journaliser(m, v.objet, NULL, NULL, "rétabli", &probleme);
             } else if (charger(m, v.objet, &probleme)) {   /* l'objet reste en mémoire, avec ses valeurs */
+                if (v.objet->vus && objet_change_depuis_les_vues(m, v.objet)) {   /* 3.19 : l'autre l'a modifié pendant la question */
+                    m->sorte_fixee = "conflit";
+                    char *qui = article_classe(v.objet->classe);
+                    qui[0] = (char)(qui[0] - 32);
+                    probleme = grym_formater("%s a changé dans la base depuis sa lecture : un autre programme ou une autre session "
+                                             "l'a modifié%s entre-temps. Relis-%s avant de %s supprimer.", qui,
+                                             v.objet->classe->feminin ? "e" : "", v.objet->classe->feminin ? "la" : "le",
+                                             v.objet->classe->feminin ? "la" : "le");
+                    free(qui);
+                }
                 /* simple : mis de côté ; définitive : effacé, et ceux qui disparaissent avec lui (§ 16.12) */
-                journaliser(m, v.objet, NULL, NULL, code == I_SUPPRIMER_DEFINITIVEMENT ? "effacé" : "supprimé", &probleme);
+                if (!probleme)
+                    journaliser(m, v.objet, NULL, NULL, code == I_SUPPRIMER_DEFINITIVEMENT ? "effacé" : "supprimé", &probleme);
                 if (!probleme)
                     base_supprimer(m->base, m, v.objet, m->classes, m->nb_classes, code == I_SUPPRIMER_DEFINITIVEMENT,
                                    &probleme);
@@ -8477,12 +8600,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, e);
             break;
         }
-        case I_PARMI: {   /* « m est parmi les élus » */
+        case I_PARMI: {   /* « m est parmi les élus » ; une liste (§ 13.10) ; les objets liés, « les genres de o » (3.19) */
             Valeur e = depiler(&pile), x = depiler(&pile);
             char *mp = NULL;
+            int r = 0;
             if (x.type == V_ABSENT) mp = message_absent(&x);
-            else if (e.type != V_ENSEMBLE) mp = grym_formater("« parmi » cherche dans un ensemble, pas dans %s.", nom_type(e.type));
-            int r = mp ? 0 : ensemble_rang(&e, &x) >= 0;
+            else if (e.type == V_LISTE && e.liste && !e.liste->valeurs) {   /* une recherche : des identifiants */
+                if (x.type != V_OBJET) mp = grym_formater("« parmi » cherche un objet dans ces objets, pas %s.", nom_type(x.type));
+                else if (x.objet->id)
+                    for (size_t k = 0; k < e.liste->n && !r; k++) r = e.liste->ids[k] == x.objet->id;
+            } else if (e.type != V_ENSEMBLE && e.type != V_LISTE)
+                mp = grym_formater("« parmi » cherche dans un ensemble, pas dans %s.", nom_type(e.type));
+            else r = ensemble_rang(&e, &x) >= 0;
             valeur_liberer(&x);
             valeur_liberer(&e);
             if (mp) { ok = echouer(diag, b, debut, mp); break; }
@@ -9039,7 +9168,26 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             } else if (v.type == V_ABSENT) {
                 probleme = message_absent(&v);
             } else if ((probleme = verifier_type_champ(m, champ, ob.objet->classe->types[k], &v, 0, NULL)) == NULL) {
-                if (base_gagner(m->base, ob.objet, (size_t)k, &v, code == I_PERDRE, &probleme) && journal_actif(m, ob.objet)) {
+                if (ob.objet->vus && ob.objet->vus_definis[k] && v.type == V_OBJET && v.objet->id) {
+                    /* 3.19 : une autre session a écrit pendant la question. L'élément x : était-il vu dans le champ, y
+                     * est-il encore ? Gagner un x que l'autre a retiré, perdre un x que l'autre a ajouté, c'est défaire
+                     * son travail : conflit. Les autres cas s'écrivent, comme une valeur réécrite à l'identique. */
+                    const Liste *vu = ob.objet->vus[k].liste;
+                    int etait = 0, est = 0;
+                    for (size_t q = 0; vu && q < vu->n && !etait; q++) etait = vu->ids[q] == v.objet->id;
+                    long *ids = NULL;
+                    size_t n = base_lies(m->base, ob.objet, (size_t)k, &ids);
+                    for (size_t q = 0; q < n && !est; q++) est = ids[q] == v.objet->id;
+                    free(ids);
+                    if (code == I_GAGNER ? (etait && !est) : (!etait && est)) {
+                        m->sorte_fixee = "conflit";
+                        probleme = grym_formater("« %s » a changé dans la base depuis sa lecture : un autre programme ou une autre "
+                                                 "session l'a modifié entre-temps. Relis-le pour voir sa valeur actuelle, puis "
+                                                 "recommence.", champ);
+                    }
+                }
+                if (probleme) {
+                } else if (base_gagner(m->base, ob.objet, (size_t)k, &v, code == I_PERDRE, &probleme) && journal_actif(m, ob.objet)) {
                     char *x = v.type == V_OBJET ? designation_journal(m, v.objet) : texte_valeur(m, &v);   /* 2.85 */
                     char *signe = grym_formater("%s%s", code == I_PERDRE ? "−" : "+", champ);   /* « +genres » : un ajout */
                     journaliser(m, ob.objet, signe, NULL, x, &probleme);
@@ -9283,13 +9431,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                                      (o->classe->uniques[k] & 2) != 0 || zone_d_ecran, o->classe->valeurs[k]);
                 if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
             }
+            if (code == I_ECRIRE_CHAMP && o->vus && base_est_supprime(m->base, o->id)) {
+                /* 3.19 : l'autre session a supprimé l'objet pendant la question : on n'écrit pas dans la corbeille */
+                m->sorte_fixee = "conflit";
+                char *qui = article_classe(o->classe);
+                qui[0] = (char)(qui[0] - 32);
+                ok = echouer(diag, b, debut, grym_formater("%s a été supprimé%s depuis sa lecture : un autre programme ou une autre "
+                                                           "session l'a mis%s à la corbeille entre-temps. Rétablis-%s d'abord, ou "
+                                                           "laisse-%s.", qui, o->classe->feminin ? "e" : "",
+                                                           o->classe->feminin ? "e" : "", o->classe->feminin ? "la" : "le",
+                                                           o->classe->feminin ? "la" : "le"));
+                free(qui);
+                break;
+            }
             if (code == I_ECRIRE_CHAMP && o->vus && o->vus_definis[k]) {
                 /* 3.16 : une autre session a écrit pendant la question ; ce champ-ci a-t-il changé depuis qu'on l'a vu ? */
                 const Valeur *vu = &o->vus[k], *la = o->definis[k] ? &o->champs[k] : NULL;
-                const int pareil = !la ? 0
-                                 : vu->type == V_OBJET ? la->type == V_OBJET && la->objet && la->objet->id == vu->jours
-                                 : valeurs_identiques(vu, la);
-                if (!pareil) {
+                if (!la || !vu_pareil(vu, la)) {
                     m->sorte_fixee = "conflit";
                     ok = echouer(diag, b, debut, grym_formater(
                         "« %s » a changé dans la base depuis sa lecture : un autre programme ou une autre session l'a "
