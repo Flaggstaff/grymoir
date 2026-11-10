@@ -1,3 +1,17 @@
+# GrymoiR 3.1.2
+
+Publiée le 10 novembre 2026, le jour de la 3.1. Des corrections de l'atelier, pas de nouveauté du langage.
+
+- **Corrigé** : sous Linux, une application fabriquée depuis l'AppImage ne contenait que l'atelier et le programme, et
+  ne démarrait sur aucune machine sans Qt 6 installé. Elle embarque désormais Qt et le modèle de transcription, comme
+  sous macOS (`docs/atelier.md`, § 8).
+- **Corrigé** : avant son premier écran (le mot de passe de la base), une application fabriquée montrait le fil et les
+  boutons de l'atelier. La fenêtre reste vide jusqu'au premier écran, à une ligne affichée ou à une question.
+- **Corrigé** : Qt signalait une taille de police négative à chaque écran qui porte une indication ; les créneaux
+  libres de l'agenda gardent la taille de leur texte, à un pixel près.
+- **Praxis** : huit messages collaient leur deux-points ou leur point-virgule au mot d'avant (« QR-factures:
+  Configuration », « Sexe : M;N° AVS » sur le justificatif).
+
 # GrymoiR 3.1.1
 
 Publiée le 10 novembre 2026, le jour de la 3.1. Des corrections, pas de nouveauté du langage.
