@@ -538,7 +538,7 @@ La ligne d'identité d'un patient :
     Le n vaut « ».
     Si le sexe du patient est présent, le n devient "Sexe : " suivi du sexe du patient.
     Si le numéro AVS du patient est présent :
-        Si le n ≠ « », le n devient le n suivi de « ; ».
+        Si le n ≠ « », le n devient le n suivi de " ; ".
         Le n devient le n suivi de "N° AVS : " suivi du numéro AVS du patient.
     Rendre le n.
 
@@ -546,7 +546,7 @@ La ligne du cas d'un patient :
     Le n vaut « ».
     Si le numéro de cas du patient est présent, le n devient "Cas N° " suivi du numéro de cas du patient.
     Si le diagnostic du patient est présent :
-        Si le n ≠ « », le n devient le n suivi de « ; ».
+        Si le n ≠ « », le n devient le n suivi de " ; ".
         Le n devient le n suivi de "Diagnostic : " suivi du diagnostic du patient.
     Rendre le n.
 
@@ -744,7 +744,7 @@ L'état de sauvegarde d'un cabinet et d'un jour et d'un échec :
     Si échec est présent, rendre "La sauvegarde automatique a échoué : " suivi d'échec.
     Si la dernière sauvegarde du cabinet est absente, rendre « Aucune sauvegarde encore : Configuration, puis Sauvegardes. ».
     L'écart vaut le nombre de jours entre la dernière sauvegarde du cabinet et jour.
-    Si l'écart > 7, rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « : il est temps d'en refaire une. ».
+    Si l'écart > 7, rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de " : il est temps d'en refaire une.".
     Rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « . ».
 
 Remarque : l'alerte de l'accueil : l'état des sauvegardes, puis, sans dossier, qu'aucune copie ne se fait d'elle-même.
@@ -775,7 +775,7 @@ L'inachevé d'un cabinet :
         Si la liste ≠ « », la liste devient la liste suivi de ", ".
         La liste devient la liste suivi de « ses soins et leurs tarifs ».
     Si la liste = « », rendre « ».
-    Rendre "Le cabinet attend encore " suivi de la liste suivi de « : Configuration. ».
+    Rendre "Le cabinet attend encore " suivi de la liste suivi de " : Configuration.".
 
 Remarque : les séances prévues dont le jour est passé : à dire faites, annulées ou absences ; l'accueil les rappelle.
 L'alerte des passées d'un jour :

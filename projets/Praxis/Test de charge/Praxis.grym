@@ -1837,7 +1837,7 @@ Pour régler une séance et un moyen :
     Si moyen = « espèces », la manière devient « payée en espèces ».
     Si moyen = « Twint », la manière devient « payée par Twint ».
     Si moyen = « virement », la manière devient « payée par virement ».
-    Signaler le nom du patient de la séance suivi de « , » puis la date de la séance suivi de « : » puis la manière suivi de « . ».
+    Signaler le nom du patient de la séance suivi de « , » puis la date de la séance suivi de " :" puis la manière suivi de « . ».
 
 Remarque : un virement compte au jour où l'argent est arrivé (31 octobre 2026), qui décide de l'année des comptes : saisi le 4 janvier,
 Remarque : un virement du 29 décembre reste dans l'ancienne année ; vide : aujourd'hui.
@@ -2847,7 +2847,7 @@ Quand on clique sur « Fermer » dans l'écran du journal :
 
 Quand on clique sur « Attestation annuelle » dans l'écran du patient :
     Ouvrir le document d'attestation.
-    Signaler "Attestation " suivi de l'année des comptes suivi de « : une autre année se choisit dans la Comptabilité. ».
+    Signaler "Attestation " suivi de l'année des comptes suivi de " : une autre année se choisit dans la Comptabilité.".
 
 Quand on clique sur « Fermer » dans l'écran d'inscription :
     Fermer l'écran.
@@ -2920,21 +2920,21 @@ Quand on clique sur « Faite » dans l'écran des prévues :
     Si le statut de la séance choisie de l'écran ≠ « prévue », refuser « Seule une séance prévue se dit faite, annulée ou absente ; les autres se modifient dans leur fiche. ».
     Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « faite ».
-    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de « : faite. ».
+    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de " : faite.".
 
 Quand on clique sur « Annulée » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Si le statut de la séance choisie de l'écran ≠ « prévue », refuser « Seule une séance prévue se dit faite, annulée ou absente ; les autres se modifient dans leur fiche. ».
     Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « annulée ».
-    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de « : annulée. ».
+    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de " : annulée.".
 
 Quand on clique sur « Absence » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Si le statut de la séance choisie de l'écran ≠ « prévue », refuser « Seule une séance prévue se dit faite, annulée ou absente ; les autres se modifient dans leur fiche. ».
     Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « absence ».
-    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de « : notée absente. ».
+    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de " : notée absente.".
 
 Quand on clique sur « Fermer » dans l'écran des prévues :
     Fermer l'écran.
