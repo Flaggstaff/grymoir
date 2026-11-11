@@ -352,6 +352,10 @@ static void fermer(Serveur *s, const char *uri) {
         }
 }
 
+/* La version annoncée au client (3.23 : celle de grym, au lieu de « 0.4 » écrit en dur). */
+static const char *version_annoncee = "0.4";
+void lsp_version(const char *version) { if (version) version_annoncee = version; }
+
 int lsp_servir(FILE *entree, FILE *sortie) {
     Serveur s = { sortie, NULL, 0, 0 };
     int code = 1;
@@ -373,10 +377,12 @@ int lsp_servir(FILE *entree, FILE *sortie) {
         if (!methode) {
             /* réponse du client à une requête du serveur : le serveur n'en envoie pas */
         } else if (strcmp(methode, "initialize") == 0) {
-            repondre(&s, id, "{\"capabilities\":{\"textDocumentSync\":1,"
-                             "\"completionProvider\":{\"triggerCharacters\":[\" \",\"'\"]},"
-                             "\"documentFormattingProvider\":true},"
-                             "\"serverInfo\":{\"name\":\"grym\",\"version\":\"0.4\"}}");
+            char *init = grym_formater("{\"capabilities\":{\"textDocumentSync\":1,"
+                                       "\"completionProvider\":{\"triggerCharacters\":[\" \",\"'\"]},"
+                                       "\"documentFormattingProvider\":true},"
+                                       "\"serverInfo\":{\"name\":\"grym\",\"version\":\"%s\"}}", version_annoncee);
+            repondre(&s, id, init);
+            free(init);
         } else if (strcmp(methode, "shutdown") == 0) {
             s.arret_demande = 1;
             repondre(&s, id, "null");

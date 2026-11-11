@@ -2,6 +2,17 @@
 
 Publiée le 10 novembre 2026. Le langage passe à la grammaire 3.20.
 
+**Republiée le 11 novembre 2026, sous le même numéro** (les liens de téléchargement ne changent pas ; les empreintes,
+si) : grammaire 3.23.
+
+- **La date d'un scénario** (3.21) : `On est le 15.03.2027.` fixe `aujourd'hui` pour la suite du scénario.
+- **Un bouton qui ferme son écran** (3.22) : `un bouton « Fermer », qui ferme l'écran`, sans événement à écrire.
+- **Corrigé** : un chemin de `dont` très long (« le nom de l'état de l'état … ») gelait l'analyse ; borné.
+- **La grammaire en ordre** (3.23) : l'EBNF réparée et complétée, les paragraphes à leur place ; `grym lsp` annonce
+  la version de `grym`.
+- **Pour le mainteneur** : `outils/essais-du-serveur` ; `make test` ne laisse plus de copies d'essai à la racine.
+- **Praxis** : 51 boutons « qui ferment l'écran », les scénarios à date fixe.
+
 - **Le premier avertissement** (grammaire 3.20, § 1.5) : collé par `suivi de`, un texte entre guillemets français qui
   commence par `:`, `;`, `!` ou `?` suivi d'un mot perd l'espace devant ce signe (`"IBAN" suivi de « : Configuration. »`
   donne `IBAN: Configuration.`). Rien n'est refusé ; `grym` (`lancer`, `compiler`, `exemples`, `scenarios`), l'aide à

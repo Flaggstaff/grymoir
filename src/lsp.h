@@ -9,5 +9,7 @@
 /* Sert les requêtes lues sur `entree`, répond sur `sortie`, jusqu'à « exit ».
  * Renvoie 0 si « shutdown » a précédé « exit », 1 sinon (code de sortie du protocole). */
 int lsp_servir(FILE *entree, FILE *sortie);
+/* La version que le serveur annonce (« serverInfo ») : celle de grym, posée avant lsp_servir ; « 0.4 » sinon. */
+void lsp_version(const char *version);
 
 #endif

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.22 de la spécification, révisée le 11 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.23 de la spécification, révisée le 11 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -527,19 +527,51 @@ unité        = "jour" | "jours" | "semaine" | "semaines" | "mois" | "an" | "ans
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
-base         = nombre | texte | date | "aujourd'hui" | fichier | nouveau | champ
+base         = nombre | texte | date | heure | "aujourd'hui" | "maintenant" | fichier | nouveau | champ
+             | liste | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
 fichier      = "le" "fichier" ( texte | "(" expression ")" ) ;
 enregistrer  = "Enregistrer" expression "dans" valeur "." ;
 gagner       = "Les" nom de base ( "gagnent" | "perdent" ) expression "." ;   (* nom : un champ multiple, § 16.13 *)
 multiple     = "des" nom [ "(" nom ")" ] "(" nom ")" ;                          (* dans une entité : singulier, type *)
-             | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
 nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom [ "saisi" | "saisie" ] ;   (* § 19 *)
 champ        = [ article ] nom de base ;          (* nom : un champ déclaré dans une classe *)
 arguments    = de unaire { "et" de unaire } ;   (* seulement après le nom d'un calcul *)
 article      = "le" | "la" | "l'" ;
+
+(* Ajouts de la 3.22 : un résumé des phrases venues depuis la 1.0 ; le détail fait foi, au paragraphe cité. *)
+phrase       = … | entité | écran | quand | ouvrir | fermer | exemple | scénario | geste | vérifier
+             | gagner | enregistrer | conserver | supprimer | refuser ;
+entité       = un nom "," ( "conservé" | "conservée" ) "," "a" ":" champ-décl { "," champ-décl } "." ;   (* § 16.1 *)
+champ-décl   = un nom "(" type ")" { "," option-champ } | multiple ;
+option-champ = "unique" | "facultatif" | "facultative" | valeur "au" "départ" | … ;          (* § 16.2 à § 16.20 *)
+conserver    = "Conserver" expression "." ;                                                     (* § 16.3 *)
+supprimer    = "Supprimer" expression [ "définitivement" ] "." ;                                (* § 16.9 *)
+refuser      = "Refuser" texte "." | "Si" valeur "," "refuser" texte "." ;                     (* § 18.3 *)
+liste        = "la" "liste" élément-liste { "et" élément-liste } ;                              (* § 13.10 *)
+écran        = "L'écran" nom [ "," option-écran ] "montre" ":" élément-écran { "," élément-écran } "." ;   (* § 22.1 *)
+élément-écran = un nom "(" type ")" { "," option-zone }
+             | "un" "bouton" texte { "," option-bouton }
+             | "le" "texte" texte | "la" "liste" "des" nom "conservés" [ "dont" valeur ] [ "," "avec" … ]
+             | "la" "partie" texte | … ;                                                         (* § 22.1 à § 22.27 *)
+option-bouton = "principal" | "destructif" | "en" "tuile" | "actif" "si" valeur | "visible" "si" valeur
+             | "à" "confirmer" "par" texte [ "si" "l'écran" "est" "modifié" | "en" "tapant" texte ]
+             | "au" "clavier" texte | "qui" "ferme" "l'écran" | … ;                             (* § 22.23 : 3.22 *)
+quand        = "Quand" "on" ( "clique" "sur" texte | "choisit" un nom | "ouvre" | "ferme" | … )
+               "dans" "l'écran" nom ":" bloc-indenté ;                                           (* § 22.2 *)
+ouvrir       = "Ouvrir" ( "l'écran" nom | "la" "fiche" de expression | "le" "document" de nom ) "." ;   (* § 22.3 *)
+fermer       = "Fermer" "l'écran" "." ;
+exemple      = "Exemple" ":" expression "donne" expression "." ;                                (* § 9.6 *)
+scénario     = "Scénario" texte ":" bloc-indenté ;                                              (* § 9.7 *)
+geste        = "On" ( "écrit" | "choisit" ) expression "dans" … "l'écran" nom "."
+             | "On" "clique" "sur" texte "dans" "l'écran" nom "." | "On" "ferme" "l'écran" nom "."
+             | "On" ( "confirme" | "renonce" ) "." | "On" "voit" "l'erreur" texte "dans" "l'écran" nom "."
+             | "On" "est" "le" ( date | "(" expression ")" ) "." | … ;                          (* § 9.7 : 3.08 à 3.21 *)
+vérifier     = "Vérifier" "que" valeur "." ;                                                     (* § 9.7 *)
 ```
 
 Limites de cette notation :
+
+- Les ajouts de la 3.22 résument : `…` marque les formes laissées au paragraphe cité, qui fait foi.
 
 - `nom` se résout par plus longue correspondance parmi les noms déclarés (§ 2.2), ce que l'EBNF n'exprime pas.
 - `"n'" "est" "pas"` : l'élision et `pas` vont ensemble ; `n'est` sans `pas` est une erreur.
@@ -1366,9 +1398,6 @@ Si maintenant > 12:00, afficher « Bon après-midi ».
 - Les unités `minute`, `minutes`, `heure`, `heures` après un nombre, comme `jours` ou `mois`, ne réservent rien ailleurs.
 - En forme compacte : `8:05 + 15 _minutes`, `_maintenant`, `_écart_minutes(h1 ; h2)`, `_écart_heures(h1 ; h2)`, `t _en_heure`.
 
-## 15. Fichiers et images *(v0.3)*
-
-
 ### 14.8 Le mois, le jour, en toutes lettres *(2.4)*
 
 ```
@@ -1381,6 +1410,8 @@ Afficher l'échéance en toutes lettres.           →  vendredi 16 octobre 2026
 - Comme `l'année de d` (§ 14.5) : `le mois de d` et `le jour de d` sont des nombres entiers ; `le jour de la semaine de d` est un texte, de « lundi » à « dimanche ».
 - `d en toutes lettres` est un texte : le jour de la semaine, le jour (« 1er » le premier du mois), le mois, l'année. Seulement d'une date : « « en toutes lettres » s'applique à une date ».
 - Forme compacte : `d.mois`, `d.jour`, `d.jour_de_la_semaine`, `d _en_toutes_lettres`.
+
+## 15. Fichiers et images *(v0.3)*
 
 ### 15.1 Valeurs
 
@@ -1433,6 +1464,25 @@ Exporter les œuvres conservées dont la cotisation est positive dans « œuvres
 - Un calcul n'exporte pas (§ 9.4) : « Un calcul n'écrit pas sur le disque : exporte dans une action. »
 - Lire un tableau : § 15.5.
 - En forme compacte : `_exporter membre _conservé [_dont …] [_par nom [_décroissant]] [_avec nom ; compositeur.nom] _dans « m.csv »`.
+
+### 15.5 Lire un tableau
+
+```
+Pour chaque ligne du tableau « import.csv » :
+    Le m vaut un nouveau membre :
+        Le nom vaut la colonne « Nom » de la ligne.
+        La cotisation vaut la colonne « Cotisation » de la ligne en nombre.
+    Conserver m.
+```
+
+- `Pour chaque ligne du tableau « f.csv » :` lit le fichier une fois, au début, et parcourt ses lignes dans l'ordre. Le nom de la ligne est libre (`Pour chaque l du tableau …`), sans article, en lecture seule, comme un compteur ; `Sortir de la boucle.` et `Passer au tour suivant.` s'y emploient.
+- La première ligne du fichier porte les titres. Les lignes vides sont ignorées. Une ligne qui n'a pas autant de cellules que de titres arrête la lecture : « « import.csv », ligne 3 : 2 cellules pour 3 colonnes. » ; de même un guillemet jamais refermé.
+- `la colonne « Nom » de la ligne` est un texte : la cellule telle qu'écrite. Le titre se reconnaît sans tenir compte des accents ni de la casse, comme `contient` (§ 4.5). Une cellule vide est **absente** (§ 16.9) : un champ facultatif la reçoit, un champ obligatoire la refuse. Une colonne inconnue : « Aucune colonne « Pays » dans ce tableau : Nom, Cotisation, Ville. »
+- Les conversions du § 4.5 lisent la cellule : `… en nombre`, `… en date`, `… en vrai ou faux`.
+- Le format est celui d'un tableur ou d'un export (§ 15.4) : UTF-8, marque d'ordre ignorée ; séparateur deviné sur la ligne des titres, le plus fréquent de `;`, `,` et la tabulation, hors guillemets ; guillemets selon la RFC 4180 (citée de mémoire) ; lignes CR LF ou LF.
+- `Afficher ligne.` montre ses cellules, séparées par « ; ».
+- Un calcul ne lit pas de tableau (§ 9.4). Aucun mot réservé : `colonne` et `tableau` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ `colonne` déclaré l'emporte.
+- En forme compacte : `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)`.
 
 ### 15.6 Un rapport *(implémenté le 16 octobre 2026)*
 
@@ -1517,25 +1567,6 @@ Une visite, conservée, a :
 - **En toute langue** *(2.86)* : `Amorcer la transcription avec t, en toute langue.` fait de même, et laisse Whisper reconnaître la langue parlée : la parole s'écrit dans sa langue, telle qu'elle est dite. Sans cette mention, le français est imposé, comme avant : une parole dans une autre langue risque alors d'être mal transcrite, ou rendue à peu près en français (non mesuré ici). La mention vaut jusqu'à la prochaine phrase `Amorcer` ; sans transcripteur, la phrase ne fait rien. Forme compacte : `_amorcer t _toute_langue`.
 - **La langue d'un texte** *(2.86)* : `la langue reconnue de t` rend le code ISO 639-1 de sa langue, `« fr »`, `« en »`, `« de »`, `« es »`, `« it »`, `« nl »` ou `« pt »`, d'après ses mots outils (articles, pronoms, prépositions, salutations courantes), sans accents ni casse, les élisions coupées (« c'est » : « c » et « est ») ; la langue qui en compte le plus l'emporte si elle en a deux au moins et un de plus que la suivante. Sinon, absent : un texte trop court, des indicatifs, des chiffres (« CQ CQ HB9 »). C'est une estimation, sans dictionnaire ni service extérieur ; elle se trompe sur une phrase très courte ou mêlée de deux langues. t absent : absent ; autre chose qu'un texte : « « la langue reconnue de » attend un texte. » Permise dans un calcul. Forme compacte : `_langue t`. Écoutille s'en sert pour n'envoyer à DeepL que la parole qui n'est pas française.
 - **Le morse** *(2.78)* : `le morse de x`, x un son (un WAV PCM 16 bits, mono ou non, à toute fréquence), rend le texte lu en capitales (« CQ DE HB9ABC K »), ou absent s'il n'y a pas de morse (de la voix, du bruit). Le décodage se fait sur l'ordinateur (`src/morse.c`) : la note dominante de 300 à 1500 Hz, qui doit porter l'essentiel de l'énergie ; son enveloppe toutes les 4 ms, avec deux seuils ; la durée du point tirée des porteuses et des silences (de 5 à 50 mots par minute) ; la table de l'UIT (lettres, chiffres, ponctuation, « `<SK>` »). Une suite inconnue s'écrit « ? » ; au-delà de trois sur dix, ou moins de deux signes reconnus : absent. Éprouvé sur du morse fabriqué, de 8 à 40 mots par minute, jusqu'à un bruit plus fort que la note.
-
-### 15.5 Lire un tableau
-
-```
-Pour chaque ligne du tableau « import.csv » :
-    Le m vaut un nouveau membre :
-        Le nom vaut la colonne « Nom » de la ligne.
-        La cotisation vaut la colonne « Cotisation » de la ligne en nombre.
-    Conserver m.
-```
-
-- `Pour chaque ligne du tableau « f.csv » :` lit le fichier une fois, au début, et parcourt ses lignes dans l'ordre. Le nom de la ligne est libre (`Pour chaque l du tableau …`), sans article, en lecture seule, comme un compteur ; `Sortir de la boucle.` et `Passer au tour suivant.` s'y emploient.
-- La première ligne du fichier porte les titres. Les lignes vides sont ignorées. Une ligne qui n'a pas autant de cellules que de titres arrête la lecture : « « import.csv », ligne 3 : 2 cellules pour 3 colonnes. » ; de même un guillemet jamais refermé.
-- `la colonne « Nom » de la ligne` est un texte : la cellule telle qu'écrite. Le titre se reconnaît sans tenir compte des accents ni de la casse, comme `contient` (§ 4.5). Une cellule vide est **absente** (§ 16.9) : un champ facultatif la reçoit, un champ obligatoire la refuse. Une colonne inconnue : « Aucune colonne « Pays » dans ce tableau : Nom, Cotisation, Ville. »
-- Les conversions du § 4.5 lisent la cellule : `… en nombre`, `… en date`, `… en vrai ou faux`.
-- Le format est celui d'un tableur ou d'un export (§ 15.4) : UTF-8, marque d'ordre ignorée ; séparateur deviné sur la ligne des titres, le plus fréquent de `;`, `,` et la tabulation, hors guillemets ; guillemets selon la RFC 4180 (citée de mémoire) ; lignes CR LF ou LF.
-- `Afficher ligne.` montre ses cellules, séparées par « ; ».
-- Un calcul ne lit pas de tableau (§ 9.4). Aucun mot réservé : `colonne` et `tableau` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ `colonne` déclaré l'emporte.
-- En forme compacte : `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)`.
 
 ### 15.9 Les lignes, le JSON *(3.02)*
 
@@ -1967,6 +1998,10 @@ Le prochain devient « fermé ».       →  « « fermé » n'est pas une valeu
   - Les paramètres facultatifs (§ 9.3 bis) n'en prennent pas : leur valeur de départ dit déjà leur sorte.
   - En forme compacte : `_le total (nombre) << 0`, `_calcul _le carré(_un x (nombre))`, `(vrai_ou_faux)`.
 - En forme compacte : `_type _un état « à faire » ; « en cours » ; « fini »`, `_le prochain (état) << « à faire »`, `_un statut (état)`.
+
+### 16.17 *(sans contenu)*
+
+Ce numéro n'a jamais servi : les paragraphes suivants gardent le leur, cité ailleurs (programmes, journal).
 
 ### 16.18 La base chiffrée *(2.37, implémenté le 21 octobre 2026)*
 
@@ -3212,3 +3247,4 @@ Pour rappeler un patient :
 | 3.20 | 2026-11-10 | § 1.5 : le premier avertissement, qui n'arrête rien : collé par `suivi de`, un texte entre guillemets français qui commence par `:`, `;`, `!` ou `?` perd l'espace devant ce signe (pas un signe seul, souvent une donnée ; rien après `puis`, qui met l'espace). Dit par `grym` sur la sortie d'erreur (`fichier:ligne:colonne : avertissement : …`, une fois par commande, fichiers utilisés compris), par l'aide à la saisie (sévérité 2) et par l'éditeur de l'atelier (pointillé, message au survol). Trouvé dans Praxis, huit fois (`d97ab3d`) |
 | 3.21 | 2026-11-10 | § 9.7 : `On est le 15.03.2027.` fixe la date du jour d'un scénario (geste de forme 10, sans instruction nouvelle). Les 24 scénarios de Praxis s'en servent, au 10.11.2026 ; joués aussi au 31.12.2026, 01.01.2027, 29.02.2028 et 01.03.2027 : tous justes. Analyse : un chemin de `dont` (« le nom de l'état de l'état … ») essaie au plus 20 000 découpages, au lieu d'une croissance exponentielle (24 maillons : 1,6 s, 60 : des jours) |
 | 3.22 | 2026-11-11 | § 22.23 : `, qui ferme l'écran`, un bouton qui ferme son écran sans événement écrit ; l'événement écrit en plus est refusé. Compilé en un événement « Fermer l'écran. » que le programme n'écrit pas : ni instruction nouvelle, ni format changé. Praxis : 51 événements de moins par version |
+| 3.23 | 2026-11-11 | Remise en ordre, sans changement du langage. § 6 : la règle `base` réparée (sa suite était tombée sous `multiple`), `heure`, `maintenant` et les listes ; un résumé des entités, écrans, événements, exemples, scénarios et gestes, renvoyant au paragraphe qui fait foi. Le § 14.8 revient avant le titre du § 15 ; le § 15.5 entre le 15.4 et le 15.6 ; le § 16.17, jamais employé, est dit tel, sans renuméroter ce qui le suit. `grym lsp` s'annonce avec la version de `grym` au lieu de « 0.4 » |

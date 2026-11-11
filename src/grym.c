@@ -957,7 +957,7 @@ int main(int argc, char **argv) {
     signal(SIGINT, sur_interruption);
     if (argc == 1) return boucle(NULL);
     if (argc == 3 && strcmp(argv[1], "--base") == 0) return boucle(argv[2]);
-    if (argc == 2 && strcmp(argv[1], "lsp") == 0) return lsp_servir(stdin, stdout);   /* docs/lsp.md */
+    if (argc == 2 && strcmp(argv[1], "lsp") == 0) { lsp_version(VERSION); return lsp_servir(stdin, stdout); }   /* docs/lsp.md */
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
     if (argc == 3 && strcmp(argv[1], "exemples") == 0) return exemples(argv[2]);
     if (argc == 3 && strcmp(argv[1], "scenarios") == 0) return scenarios(argv[2]);   /* § 9.7 */
