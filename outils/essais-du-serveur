@@ -1,0 +1,79 @@
+#!/bin/sh
+# Essais du serveur (10 novembre 2026) : lance « grym servir » sur un programme, obtient un jeton valide, puis envoie au
+# hasard des formulaires abîmés (urlencoded, multipart, bornes, longueurs, octets quelconques) à /evenement, /reponse et
+# aux autres adresses, avec l'hôte et l'origine attendus. Un serveur qui s'arrête est un défaut : la requête est gardée.
+#   outils/essais-du-serveur [secondes] [graine] [programme.grym]   (60 s, graine 1, l'exemple des Amis du Tilleul)
+#   GRYM=/chemin/grym outils/essais-du-serveur 600                  (un grym construit avec -fsanitize=address voit plus)
+# Ne bloque aucune publication. Trouvailles : « serveur-* » dans le dossier courant.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="${GRYM:-$racine/grym}"
+[ -x "$grym" ] || { echo "essais-du-serveur : construis d'abord grym (make)."; exit 1; }
+prog="${3:-$racine/projets/Amis du Tilleul/association.grym}"
+python3 - "$grym" "$prog" "${1:-60}" "${2:-1}" "$(pwd)" <<'PY'
+import socket, subprocess, random, time, sys, os, re
+G=sys.argv[1]; prog=sys.argv[2]; duree=int(sys.argv[3]); graine=int(sys.argv[4]); sortie=sys.argv[5]
+random.seed(graine); port=18100+graine
+env=dict(os.environ, ASAN_OPTIONS='detect_leaks=0:abort_on_error=1', BROWSER='true')
+def http(data,lire=True):
+    s=socket.create_connection(('127.0.0.1',port),1); s.settimeout(1.5); s.sendall(data); r=b''
+    try:
+        while lire:
+            x=s.recv(65536)
+            if not x: break
+            r+=x
+    except Exception: pass
+    s.close(); return r
+def lancer():
+    p=subprocess.Popen([G,'servir',prog,'--port',str(port)],cwd=os.path.dirname(prog),stdout=subprocess.PIPE,stderr=open(os.path.join(sortie,'serveur-%d.err'%graine),'ab'),env=env,text=True)
+    adr=None; t=time.time()
+    while time.time()-t<15 and adr is None:
+        l=p.stdout.readline()
+        m=re.search(r'jeton=([A-Za-z0-9_-]+)',l or '')
+        if m: adr=m.group(1)
+    cookie=''
+    for _ in range(50):
+        try:
+            r=http(('GET /?jeton=%s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\n\r\n'%(adr,port)).encode())
+            m=re.search(rb'Set-Cookie: ([^;\r\n]+)',r)
+            if m: cookie=m.group(1).decode()
+            break
+        except OSError: time.sleep(0.1)
+    return p,cookie
+def corps_aleatoire():
+    k=random.random()
+    champs=['q','e','x','valeur','fichier','zone','bouton','choix','ligne']
+    if k<0.5:
+        parts=[]
+        for _ in range(random.randint(0,12)):
+            n=random.choice(champs+['%','%zz','&','=','',"a"*3000])
+            v=random.choice(['1','0','-1','99999999999999999999','%ff','%','+','é',"«»",'\x00','x'*random.randint(0,50000),str(random.randint(-5,20))])
+            parts.append(n+'='+v)
+        return 'application/x-www-form-urlencoded', '&'.join(parts).encode('utf8','surrogatepass')
+    b=random.choice(['xyz','','-'*80,'a b','"q"','x'*200])
+    ct='multipart/form-data; boundary='+b if random.random()<0.9 else 'multipart/form-data'
+    body=b''
+    for _ in range(random.randint(0,6)):
+        disp=random.choice(['form-data; name="q"','form-data; name="fichier"; filename="a.txt"','form-data; name=','form-data','',
+                             'form-data; name="'+'n'*5000+'"','form-data; filename="../../x"'])
+        body+=('--'+b+'\r\nContent-Disposition: '+disp+'\r\n'+random.choice(['','Content-Type: text/plain\r\n'])+'\r\n').encode()
+        body+=random.choice([b'1',b'',b'\r\n--'+b.encode(),bytes(random.getrandbits(8) for _ in range(random.randint(0,3000)))])+b'\r\n'
+    if random.random()<0.8: body+=('--'+b+'--\r\n').encode()
+    if random.random()<0.2: body=body[:random.randint(0,len(body))]
+    return ct,body
+p,cookie=lancer(); t0=time.time(); n=0; morts=0
+while time.time()-t0<duree:
+    ct,body=corps_aleatoire(); n+=1
+    cible=random.choice(['/evenement','/reponse','/evenement','/reponse','/logo','/police','/signature','/?jeton=x'])
+    meth='POST' if cible in ('/evenement','/reponse') else random.choice(['GET','POST'])
+    h='%s %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nOrigin: http://127.0.0.1:%d\r\nContent-Type: %s\r\nContent-Length: %d\r\n'%(meth,cible,port,port,ct,len(body))
+    if cookie: h+='Cookie: '+cookie+'\r\n'
+    data=h.encode()+b'\r\n'+body
+    try: http(data, lire=random.random()<0.5)
+    except Exception: pass
+    if p.poll() is not None:
+        morts+=1; open(os.path.join(sortie,'serveur-arret-%d-%d.bin'%(graine,n)),'wb').write(data); p,cookie=lancer()
+p.terminate()
+try: p.wait(5)
+except Exception: p.kill()
+print('essais-du-serveur : %d requêtes en %d s, %d arrêt(s) du serveur%s' % (n, duree, morts, '' if cookie else ' (jeton non obtenu : essais superficiels)'))
+PY

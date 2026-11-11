@@ -308,6 +308,18 @@ static void verifier_chiffre(int ligne, const char *chemin, const char *mdp, con
     free(r);
 }
 
+/* Les copies datées que fait une mise à jour (« _essai_mig avant mise à jour 2026-11-10 1009.grymd », § 16.6), ses clés
+ * comprises : balayées à la fin, sans quoi chaque « make test » en laissait de nouvelles à la racine du dépôt
+ * (10 novembre 2026 : quarante après cinq passages). */
+static void effacer_copies_de_mise_a_jour(void) {
+    DIR *d = opendir(".");
+    if (!d) return;
+    struct dirent *e;
+    while ((e = readdir(d)) != NULL)
+        if (strncmp(e->d_name, "_essai", 6) == 0 && strstr(e->d_name, " avant mise à jour ")) remove(e->d_name);
+    closedir(d);
+}
+
 static void effacer_base(const char *b) {
     const char *suffixes[] = { "", ".clés", ".restaurer", ".restaurer.clés", "-wal", "-shm" };
     for (size_t k = 0; k < sizeof suffixes / sizeof *suffixes; k++) {
@@ -5489,6 +5501,7 @@ int main(void) {
     essai_case_vide();
     essai_image();
 
+    effacer_copies_de_mise_a_jour();
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

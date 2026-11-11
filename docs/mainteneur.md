@@ -1,6 +1,6 @@
 # GrymoiR : manuel du mainteneur
 
-Version 1.12, révisée le 10 novembre 2026 (rédigée le 24 septembre 2026).
+Version 1.13, révisée le 10 novembre 2026 (rédigée le 24 septembre 2026).
 Référence : Charte de GrymoiR v1.38, art. 14 ; grammaire 1.38 ; `docs/vm.md` 1.33.
 Toute modification passe par une révision numérotée. Ce manuel se révise à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 
@@ -60,6 +60,13 @@ dépasse dix secondes est un défaut, gardé dans `mutations/` puis réduit au p
 rien. Il a trouvé, le 10 novembre 2026, la double libération des parties (une partie qui s'utilise elle-même après un
 premier usage), qui faisait tomber `grym`, `grym lsp` et l'éditeur de l'atelier ; AddressSanitizer a trouvé ensuite, sur
 la correction, des parties imbriquées qui lisaient des jetons déjà libérés.
+
+`outils/essais-du-serveur [secondes] [graine] [programme]` fait de même pour `grym servir` : il obtient un jeton valide,
+puis envoie au hasard des formulaires abîmés (urlencoded, multipart, bornes et longueurs fausses, octets quelconques) à
+`/evenement`, `/reponse` et aux autres adresses, avec l'hôte et l'origine attendus, sans quoi le serveur refuse tout dès
+la première ligne. Un serveur qui s'arrête est un défaut, sa requête gardée. Le 10 novembre 2026, sous AddressSanitizer
+et UndefinedBehaviorSanitizer : 608 000 requêtes, aucun arrêt, aucun signalement. La forme compacte et les programmes
+compilés (`.grymb`, `grym desassembler` puis `grym lancer`) ont reçu le même jour 8 243 fichiers abîmés : rien non plus.
 
 Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `test_guide` exécute le programme de chaque chapitre (`docs/guide/chapitre-NN.grym`), exige qu'il soit en forme canonique, que chaque bloc ```` ```grymoir ```` du chapitre en soit un extrait et que chaque bloc ```` ```sortie ```` apparaisse dans ce qu'il affiche, dans l'ordre. Un chapitre en plusieurs fichiers vit dans un dossier (`docs/guide/chapitre-12/association.grym` et les fichiers qu'il utilise) ; ses extraits peuvent venir de n'importe lequel. `test_guide` ne fait que compiler un programme à écrans, que la console n'ouvre pas : les chapitres 11 et 12 s'exécutent vraiment dans `test_atelier`, qui clique à la place du lecteur. Un changement du langage qui casse un exemple du guide casse donc les essais : corrigez le programme du chapitre, puis le texte.
 
@@ -298,3 +305,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.10 | 2026-11-07 | § 1 : `natif.c` et `grym_natif.h`, les fonctions C (grammaire 3.14) |
 | 1.11 | 2026-11-07 | § 2 : `outils/banc-de-mesure` |
 | 1.12 | 2026-11-10 | § 2 : `outils/essais-par-mutation` |
+| 1.13 | 2026-11-10 | § 2 : `outils/essais-du-serveur` |
