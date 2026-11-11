@@ -34,9 +34,12 @@ static void verifier(int ligne, const char *obtenu, const char *attendu) {
     }
 }
 
-/* Le faux poste : lit des commandes finies par « ; », répond comme un FT-991A (ID 0670). */
+/* Le faux poste : lit des commandes finies par « ; », répond comme un FT-991A (ID 0670). Il prend aussi une fréquence
+ * (« FA014205000; », 9 chiffres) et un mode (« MD02; ») sans répondre, comme le poste (manuel CAT du FT-991A, FA et MD) :
+ * la lecture qui suit rend ce qui a été posé (11 novembre 2026, « Remettre l'accord » d'Écoutille). */
 static void faux_poste(int m) {
     char cmd[64];
+    char frequence[10] = "014074000", mode = 'C';
     size_t n = 0;
     for (;;) {
         char c;
@@ -46,8 +49,19 @@ static void faux_poste(int m) {
         if (c != ';') continue;
         cmd[n] = 0;
         n = 0;
-        const char *rep = !strcmp(cmd, "ID;") ? "ID0670;" : !strcmp(cmd, "FA;") ? "FA014074000;"
-                        : !strcmp(cmd, "MD0;") ? "MD0C;" : !strcmp(cmd, "XX;") ? NULL : "?;";
+        char lu[32];
+        const char *rep = "?;";
+        if (!strcmp(cmd, "ID;")) rep = "ID0670;";
+        else if (!strcmp(cmd, "FA;")) { snprintf(lu, sizeof lu, "FA%s;", frequence); rep = lu; }
+        else if (!strcmp(cmd, "MD0;")) { snprintf(lu, sizeof lu, "MD0%c;", mode); rep = lu; }
+        else if (!strcmp(cmd, "XX;")) rep = NULL;
+        else if (strlen(cmd) == 12 && !strncmp(cmd, "FA", 2) && strspn(cmd + 2, "0123456789") == 9) {
+            memcpy(frequence, cmd + 2, 9);
+            rep = NULL;
+        } else if (strlen(cmd) == 5 && !strncmp(cmd, "MD0", 3)) {
+            mode = cmd[3];
+            rep = NULL;
+        }
         if (rep && write(m, rep, strlen(rep)) < 0) _exit(1);
     }
 }
@@ -81,6 +95,14 @@ int main(int argc, char **argv) {
     free(r);
     r = serie_echanger(esclave, 4800, "MD0;", &err);
     verifier(__LINE__, r, "MD0C;");
+    free(r);
+    r = serie_echanger(esclave, 4800, "FA007074000;", &err);   /* poser une fréquence : le poste se tait */
+    verifier(__LINE__, r, "");
+    free(r);
+    r = serie_echanger(esclave, 4800, "FA;", &err);
+    verifier(__LINE__, r, "FA007074000;");
+    free(r);
+    r = serie_echanger(esclave, 4800, "FA014074000;", &err);
     free(r);
     r = serie_echanger(esclave, 4800, "XX;", &err);   /* le poste se tait : un texte vide, pas une erreur */
     verifier(__LINE__, r, "");

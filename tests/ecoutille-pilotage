@@ -1,7 +1,8 @@
 #!/bin/sh
 # Écoutille, le pilotage (3 novembre 2026) : un passage d'un poste qui se pilote lit sa fréquence et son mode sur un faux
 # FT-991A (test_serie --faux-poste, un pseudo-terminal) : « 14,074 MHz DATA-USB » ; un poste sans port, ou un port qui ne
-# s'ouvre pas, garde le passage sans accord. Sous Windows, pas de pseudo-terminal : sauté.
+# s'ouvre pas, garde le passage sans accord. « Remettre l'accord » (11 novembre 2026) pose une fréquence et un mode, que la
+# lecture suivante rend. Sous Windows, pas de pseudo-terminal : sauté.
 racine=$(cd "$(dirname "$0")/.." && pwd)
 grym="$racine/grym"
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "ecoutille-pilotage : sauté sous Windows"; exit 0;; esac
@@ -50,6 +51,29 @@ Conserver le q.
 Lire l'accord du q.
 Si l'accord du q est absent et la fréquence du q est absente, afficher « sans accord ».
 Afficher le mode Yaesu de « E » suivi de « , » suivi du mode Yaesu de « Z ».
+Le port de pilotage du k devient « $port ».
+La fréquence du q devient 7074000.
+Le mode du q devient « LSB ».
+Remettre l'accord du q.
+Le r vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:32.
+    L'enregistrement vaut le fichier « a.wav ».
+Conserver le r.
+Lire l'accord du r.
+Afficher l'accord du r.
+Le s vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:33.
+    L'enregistrement vaut le fichier « a.wav ».
+Conserver le s.
+Essayer :
+    Remettre l'accord du s.
+    Afficher « remis sans fréquence ».
+En cas d'échec :
+    Afficher le motif de l'échec.
 FIN
 # un WAV de 16 kHz, mono, 16 bits, d'un dixième de seconde de silence
 printf 'RIFF\044\014\000\000WAVEfmt \020\000\000\000\001\000\001\000\200\076\000\000\000\175\000\000\002\000\020\000data\000\014\000\000' > "$d/a.wav"
@@ -62,5 +86,7 @@ verifier "$(echo "$sortie" | sed -n 2p)" "14'074'000" "la fréquence en hertz"
 verifier "$(echo "$sortie" | sed -n 3p)" "DATA-USB" "le mode, code C"
 verifier "$(echo "$sortie" | sed -n 4p)" "sans accord" "un port qui ne s'ouvre pas : pas d'accord, pas d'arrêt"
 verifier "$(echo "$sortie" | sed -n 5p)" "C4FM,Z" "la table des modes, un code inconnu gardé"
+verifier "$(echo "$sortie" | sed -n 6p)" "7,074 MHz LSB" "l'accord remis sur le poste, puis relu (11 novembre 2026)"
+verifier "$(echo "$sortie" | sed -n 7p)" "Ce passage n'a pas de fréquence : rien à remettre." "sans fréquence, rien n'est envoyé"
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]

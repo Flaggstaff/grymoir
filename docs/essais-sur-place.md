@@ -59,6 +59,16 @@ Sur un poste branché en USB, en veille :
    de trois mots et plus qui passe encore (le recopier : il dira s'il faut un autre filtre que la longueur).
 7. **Pays** : ouvrir un passage qui a des indicatifs. Attendu : une ligne « Pays : HB9ABC Suisse, F4XYZ France ». C'est
    l'attribution de l'UIT, pas l'entité DXCC : la Guadeloupe sort « France ». À rapporter : un pays faux, avec l'indicatif.
+8. **Minuterie** (à faire d'abord chez Flaggstaff, sans radio) : WSJT-X lancé, ouvrir « WSJT-X » dans Écoutille et ne rien
+   toucher. Attendu : les décodages arrivent seuls, l'avis change toutes les 10 secondes environ. C'est le premier essai réel
+   de la minuterie (grammaire 3.03) dans l'atelier. À rapporter : rien ne bouge sans « Relever », ou l'écran se fige.
+9. **Remettre l'accord** : sur un Yaesu, WSJT-X fermé (il tient le port), ouvrir un passage ancien qui a un accord, cliquer
+   « Remettre l'accord », confirmer. Attendu : le poste revient sur la fréquence et le mode du passage, sans émettre. Seul le
+   VFO A change. À rapporter : le message, et le menu CAT RATE du poste s'il ne répond pas.
+10. **Courriel d'alerte** : dans « Réglages », un destinataire, l'adresse, le serveur (port 465), le compte et la clé de la
+    messagerie, puis une alerte sur un mot entendu souvent (« CQ »). Attendu : un courriel au premier passage qui allume
+    l'alerte, aucun autre dans les 10 minutes qui suivent, même si l'alerte s'allume encore à l'écran. À rapporter : le
+    message « Courriel d'alerte non parti », ou un courriel en double dans les 10 minutes.
 
 ## Les deux applications : un plantage
 

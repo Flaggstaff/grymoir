@@ -90,10 +90,21 @@ Un réglage, conservé, a :
     une clé de relève (secret), facultative,
     un vocabulaire personnel (texte), facultatif,
     une alerte (texte), facultative,
-    une parole minimale (nombre entier), facultative.
+    une parole minimale (nombre entier), facultative,
+    un destinataire d'alerte (texte), facultatif,
+    une adresse de courriel (texte), facultative,
+    un serveur de courriel (texte), facultatif,
+    un compte de courriel (texte), facultatif,
+    une clé de courriel (secret), facultative,
+    un jour de dernière alerte (date), facultatif,
+    une heure de dernière alerte (heure), facultative.
 
 Remarque : la parole minimale (11 novembre 2026) : le nombre de mots qu'une parole doit avoir pour être gardée ; vide, toute
 Remarque : parole est gardée. Sur du souffle, Whisper écrit volontiers un mot ou deux qu'on n'a pas dits.
+Remarque : l'alerte par courriel (11 novembre 2026) : un passage qui allume l'alerte écrit aussi au destinataire, depuis la
+Remarque : messagerie des Réglages (grammaire § 22.27 : l'adresse, le serveur, le compte et la clé de courriel, reconnus par leur
+Remarque : nom). Un courriel par 10 minutes au plus : un « CQ » entendu cinquante fois dans l'heure n'en fait pas cinquante. Le
+Remarque : jour et l'heure du dernier courriel parti le décident.
 Remarque : l'alerte (3 novembre 2026) : des mots séparés par des espaces (« CQ HB9XYZ ») ; un passage dont le morse, la parole ou
 Remarque : les indicatifs en contiennent un le signale à l'écran, avec le poste et l'accord.
 
@@ -354,6 +365,43 @@ Pour lire l'accord d'un passage :
     Si la fréquence du passage est présente :
         L'accord du passage devient (la fréquence du passage ÷ 1000000) suivi de " MHz".
         Si le mode du passage est présent, l'accord du passage devient l'accord du passage suivi de " " suivi du mode du passage.
+
+Remarque : le code Yaesu d'un mode, la table du mode yaesu à l'envers ; un mode inconnu : « » (le mode du poste ne change pas).
+Le code yaesu d'un mode :
+    Si le mode = « LSB », rendre « 1 ».
+    Si le mode = « USB », rendre « 2 ».
+    Si le mode = « CW-U », rendre « 3 ».
+    Si le mode = « FM », rendre « 4 ».
+    Si le mode = « AM », rendre « 5 ».
+    Si le mode = « RTTY-LSB », rendre « 6 ».
+    Si le mode = « CW-L », rendre « 7 ».
+    Si le mode = « DATA-LSB », rendre « 8 ».
+    Si le mode = « RTTY-USB », rendre « 9 ».
+    Si le mode = « DATA-FM », rendre « A ».
+    Si le mode = « FM-N », rendre « B ».
+    Si le mode = « DATA-USB », rendre « C ».
+    Si le mode = « AM-N », rendre « D ».
+    Si le mode = « C4FM », rendre « E ».
+    Si le mode = « DATA-FM-N », rendre « F ».
+    Rendre « ».
+
+Remarque : remettre le poste sur l'accord d'un passage (11 novembre 2026) : « FA014074000; » pose la fréquence (9 chiffres, en
+Remarque : hertz), « MD0C; » le mode (manuel CAT du FT-991A, commandes FA et MD) ; le poste ne répond rien à une commande qui
+Remarque : pose. Puis la fréquence est relue : un poste qui ne l'a pas prise (hors de ses bandes, tenu par WSJT-X) est signalé.
+Remarque : Rien n'émet : FA et MD changent le VFO A et son mode, jamais l'émission.
+Pour remettre l'accord d'un passage :
+    Le port vaut le port de pilotage du poste du passage.
+    Si le port est absent, refuser "Ce poste n'a pas de port de pilotage : pose-le dans sa fiche (bouton « Ports série » pour la liste).".
+    Si la fréquence du passage est absente, refuser « Ce passage n'a pas de fréquence : rien à remettre. ».
+    Le chiffré vaut la fréquence du passage en format technique.
+    Si la longueur du chiffré > 9, refuser « Fréquence trop haute pour un Yaesu : » suivi du chiffré suivi de « Hz. ».
+    Tant que la longueur du chiffré < 9, le chiffré devient « 0 » suivi du chiffré.
+    Le retour vaut la réponse du port à (« FA » suivi du chiffré suivi de « ; »), à la vitesse de pilotage du poste du passage bauds.
+    Le code vaut « ».
+    Si le mode du passage est présent, le code devient le code yaesu du mode du passage.
+    Si le code ≠ « », le retour devient la réponse du port à (« MD0 » suivi du code suivi de « ; »), à la vitesse de pilotage du poste du passage bauds.
+    Le retour devient la réponse du port à « FA; », à la vitesse de pilotage du poste du passage bauds.
+    Si le retour ≠ « FA » suivi du chiffré suivi de « ; », refuser "Le poste n'a pas pris la fréquence (il répond « " suivi du retour suivi de " ») : hors de ses bandes, ou tenu par un autre logiciel ?".
 
 Remarque : ce qu'un passage a fait entendre, les indicatifs, le morse et la parole, en un texte ; vide s'il n'y a rien.
 Le texte entendu d'un passage :
@@ -650,6 +698,15 @@ La parole retenue d'un dit et d'un minimum :
     Si le nombre de mots du dit < le minimum, rendre absent.
     Rendre le dit.
 
+Remarque : un courriel d'alerte peut-il partir (11 novembre 2026) : oui sans courriel encore parti, oui un autre jour, oui
+Remarque : 10 minutes et plus après le dernier ; sinon non. Un dernier courriel à 23:58 n'empêche pas celui de 00:03 : un autre
+Remarque : jour, un courriel de plus, sans dommage.
+L'envoi permis d'un jour et d'une heure et d'un jour passé et d'une heure passée :
+    Si le jour passé est absent ou l'heure passée est absente, rendre vrai.
+    Si le jour ≠ le jour passé, rendre vrai.
+    Si l'heure − l'heure passée ≥ 10, rendre vrai.
+    Rendre faux.
+
 Remarque : la bande d'une fréquence en hertz (3 novembre 2026) : les bornes de l'énumération Band de l'ADIF (d'après la table
 Remarque : de PyQSO, ADIF 3.0.4) ; la CB à part (canaux 1 à 40 de la CEPT, de 26,965 à 27,405 MHz), qui n'est pas une bande
 Remarque : de l'ADIF ; hors bande : « ».
@@ -723,6 +780,7 @@ L'écran du passage, « Passage », montre :
     un enregistrement (son), facultatif,
     côte à côte :
         un bouton « Garder le son », principal,
+        un bouton « Remettre l'accord », à confirmer par « Remettre le poste sur la fréquence et le mode de ce passage ? », actif si la fréquence du passage ouvert est présente,
         un bouton « Fermer ».
 
 L'écran de veille montre :
@@ -793,6 +851,13 @@ L'écran des réglages, « Réglages », montre :
     une parole minimale (nombre entier), facultative, de 1 à 50, avec l'unité « mots », avec l'indication « Une parole plus courte n'est pas gardée (le son du passage reste) ; vide : tout garder »,
     le texte « Alerte », en petites capitales,
     une alerte (texte), facultative, avec l'indication « Des mots séparés par des espaces (CQ, ton indicatif) : un passage qui en contient un est signalé »,
+    un destinataire d'alerte (texte), facultatif, avec l'indication « Une adresse de courriel : l'alerte y est envoyée aussi, une fois par 10 minutes au plus ; vide : écran seulement »,
+    côte à côte :
+        une adresse de courriel (texte), facultative, avec l'indication « L'expéditeur »,
+        un serveur de courriel (texte), facultatif, avec l'indication « mail.infomaniak.com, smtp.gmail.com… (port 465) »,
+    côte à côte :
+        un compte de courriel (texte), facultatif, avec l'indication « L'identifiant, souvent l'adresse »,
+        une clé de courriel (secret), facultative, avec l'indication « Le mot de passe de la messagerie ; vide : celui enregistré reste »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
@@ -822,6 +887,27 @@ Pour relever les décodages :
         Si le compte > 0, l'avis WSJT devient le compte suivi de " décodage(s) relevé(s) à " suivi de (maintenant en format universel) suivi de « . ».
     En cas d'échec :
         L'avis WSJT devient le motif de l'échec.
+
+Remarque : le courriel d'une alerte (11 novembre 2026), envoyé en dernier, une fois le passage conservé : un courriel parti ne
+Remarque : s'annule pas (§ 22.27). Sans destinataire ou sans messagerie complète, rien ; refusé ou serveur muet, l'écran le dit et
+Remarque : la veille continue. Le frein compte depuis le dernier courriel parti, pas depuis le dernier essai.
+Pour avertir un réglage et un mot et un passage :
+    Le complet vaut le destinataire d'alerte du réglage est présent et le serveur de courriel du réglage est présent et l'adresse de courriel du réglage est présente et le compte de courriel du réglage est présent et la clé de courriel du réglage est présente.
+    Le jour vaut aujourd'hui.
+    L'heure vaut maintenant.
+    Si le complet et l'envoi permis du jour et de l'heure et du jour de dernière alerte du réglage et de l'heure de dernière alerte du réglage :
+        Le message vaut "Écoutille a entendu « " suivi du mot suivi de " » sur " suivi du nom du poste du passage suivi de ", le " suivi du jour du passage suivi de " à " suivi de l'heure du passage suivi de « . ».
+        Si l'accord du passage est présent, le message devient le message suivi de " Accord : " suivi de l'accord du passage suivi de « . ».
+        Si la transcription du passage est présente, le message devient le message suivi de " Parole : " suivi de la transcription du passage.
+        Si le morse du passage est présent, le message devient le message suivi de " Morse : " suivi du morse du passage.
+        L'adresse visée vaut le destinataire d'alerte du réglage.
+        L'objet visé vaut "Écoutille : " suivi du mot.
+        Essayer :
+            Envoyer un courriel à l'adresse visée, avec l'objet l'objet visé, depuis le réglage, et le texte le message.
+            Le jour de dernière alerte du réglage devient le jour.
+            L'heure de dernière alerte du réglage devient l'heure.
+        En cas d'échec :
+            Signaler « Courriel d'alerte non parti : » puis le motif de l'échec.
 
 Quand un poste capte un son dans l'écran de veille :
     Le p vaut un nouveau passage.
@@ -864,6 +950,7 @@ Quand un poste capte un son dans l'écran de veille :
         Si le mot ≠ « » :
             Si l'accord du p est présent, signaler « Alerte » puis le mot puis « : » puis le nom du poste puis « , » suivi de l'accord du p suivi de « . ».
             Sinon, signaler « Alerte » puis le mot puis « : » puis le nom du poste suivi de « . ».
+            Avertir le réglage et le mot et le p.
 
 Pour délimiter une période :
     Le début des passages devient aujourd'hui.
@@ -896,6 +983,11 @@ Remarque : Les passages d'avant le carnet, sans moment universel, n'y sont pas.
 Quand on clique sur « WSJT-X » dans l'écran de veille :
     Relever les décodages.
     Ouvrir l'écran des décodages.
+
+Remarque : la minuterie (11 novembre 2026, grammaire 3.03) : les décodages se relèvent seuls toutes les 10 secondes tant que
+Remarque : l'écran est ouvert ; « Relever » reste pour le faire aussitôt.
+Toutes les 10 secondes dans l'écran des décodages :
+    Relever les décodages.
 
 Quand on clique sur « Relever » dans l'écran des décodages :
     Relever les décodages.
@@ -931,6 +1023,10 @@ Quand on ouvre l'écran des réglages :
         Le vocabulaire personnel de l'écran devient le vocabulaire personnel du réglage.
         L'alerte de l'écran devient l'alerte du réglage.
         La parole minimale de l'écran devient la parole minimale du réglage.
+        Le destinataire d'alerte de l'écran devient le destinataire d'alerte du réglage.
+        L'adresse de courriel de l'écran devient l'adresse de courriel du réglage.
+        Le serveur de courriel de l'écran devient le serveur de courriel du réglage.
+        Le compte de courriel de l'écran devient le compte de courriel du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
@@ -939,6 +1035,11 @@ Quand on clique sur « Enregistrer » dans l'écran des réglages :
         Le vocabulaire personnel du réglage devient le vocabulaire personnel de l'écran.
         L'alerte du réglage devient l'alerte de l'écran.
         La parole minimale du réglage devient la parole minimale de l'écran.
+        Le destinataire d'alerte du réglage devient le destinataire d'alerte de l'écran.
+        L'adresse de courriel du réglage devient l'adresse de courriel de l'écran.
+        Le serveur de courriel du réglage devient le serveur de courriel de l'écran.
+        Le compte de courriel du réglage devient le compte de courriel de l'écran.
+        Si la clé de courriel de l'écran est présente, la clé de courriel du réglage devient la clé de courriel de l'écran.
         Le compte gratuit du réglage devient le compte gratuit de l'écran.
         Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
         Si la clé de relève de l'écran est présente, la clé de relève du réglage devient la clé de relève de l'écran.
@@ -974,6 +1075,10 @@ Quand on clique sur « Garder le son » dans l'écran du passage :
             Signaler « Son gardé dans » puis le nom suivi de « (2).wav ».
         En cas d'échec :
             Refuser le motif de l'échec.
+
+Quand on clique sur « Remettre l'accord » dans l'écran du passage :
+    Remettre l'accord du passage ouvert.
+    Signaler « Poste » puis le nom du poste du passage ouvert puis « remis sur » suivi de " " suivi de l'accord du passage ouvert suivi de « . ».
 
 Quand on clique sur « Fermer » dans l'écran du passage :
     Fermer l'écran.

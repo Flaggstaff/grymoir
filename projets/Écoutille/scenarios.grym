@@ -186,3 +186,30 @@ Scénario « le ménage efface les passages plus vieux que la conservation » :
     Vérifier que le nombre de passages conservés dont le jour = 11.10.2026 = 0.
     Vérifier que le nombre de passages conservés dont le jour = 12.10.2026 = 1.
     Vérifier que le nombre de postes conservés = 1.
+
+Scénario « le courriel d'alerte attend 10 minutes après le dernier » :
+    Vérifier que l'envoi permis de 11.11.2026 et de 14:30 et d'absent et d'absent.
+    Vérifier que l'envoi permis de 11.11.2026 et de 14:39 et de 11.11.2026 et de 14:30 est faux.
+    Vérifier que l'envoi permis de 11.11.2026 et de 14:40 et de 11.11.2026 et de 14:30.
+    Vérifier que l'envoi permis de 12.11.2026 et de 14:31 et de 11.11.2026 et de 14:30.
+    Remarque : un autre jour, même à quelques minutes de minuit.
+    Vérifier que l'envoi permis de 12.11.2026 et de 0:03 et de 11.11.2026 et de 23:58.
+
+Scénario « la messagerie de l'alerte s'enregistre, sa clé ne se relit pas » :
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+    Conserver le r.
+    On écrit « michel@exemple.ch » dans le destinataire d'alerte de l'écran des réglages.
+    On écrit « veille@exemple.ch » dans l'adresse de courriel de l'écran des réglages.
+    On écrit « mail.infomaniak.com » dans le serveur de courriel de l'écran des réglages.
+    On écrit « veille@exemple.ch » dans le compte de courriel de l'écran des réglages.
+    On clique sur « Enregistrer » dans l'écran des réglages.
+    Ouvrir l'écran des réglages.
+    Vérifier que le destinataire d'alerte du r = « michel@exemple.ch ».
+    Vérifier que le serveur de courriel du r = « mail.infomaniak.com ».
+    Vérifier que la clé de courriel du r est absente.
+
+Scénario « le mode d'un passage se retrouve en code Yaesu » :
+    Pour chaque code parmi les mots de « 1 2 3 4 5 6 7 8 9 A B C D E F » :
+        Vérifier que le code yaesu du mode yaesu de code = code.
+    Vérifier que le code yaesu de « PKT » = « ».
