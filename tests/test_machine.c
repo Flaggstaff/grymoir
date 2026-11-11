@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <dirent.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -5326,6 +5327,11 @@ int main(void) {
         sendto(s, (const char *)st.d, st.n, 0, (struct sockaddr *)&a, sizeof a);
         sendto(s, (const char *)de.d, de.n, 0, (struct sockaddr *)&a, sizeof a);
         close(s);
+        /* 11 novembre 2026 : un échec isolé sur macOS (intégration continue), les deux datagrammes pas encore lus ;
+         * cause probable, non prouvée : la remise par le système, plus lente qu'une lecture qui suit aussitôt.
+         * Un cinquième de seconde avant de les lire. */
+        const clock_t depart = clock();
+        while (clock() - depart < CLOCKS_PER_SEC / 5) { }
     }
     PROG("Pour chaque d parmi les décodages WSJT du port 52237 :\n"
          "    Afficher le champ « heure » de d puis le champ « mode » de d puis le champ « fréquence » de d puis le champ « message » de d.\n"

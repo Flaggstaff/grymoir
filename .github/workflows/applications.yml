@@ -37,10 +37,19 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-multimedia-dev cmake
       - name: Fabrication des applications
+        # un projet est un dossier qui a son projet.grymatelier : projets/Praxis n'en est pas un, ses versions oui
+        # (11 novembre 2026 : « Programme principal inconnu » sur projets/Praxis). « Test de charge » ne se fabrique pas.
+        # Les essais tournent au premier projet seulement : les refaire à chaque projet coûtait vingt minutes sur macOS
+        # et multipliait les chances d'un essai réseau capricieux.
         run: |
-          for p in projets/*/; do
+          premier=1
+          while IFS= read -r f; do
+            p="$(dirname "$f")"
+            case "$p" in *"Test de charge"*) continue ;; esac
+            if [ "$premier" = 0 ]; then export GRYM_SANS_ESSAIS=1; fi
             outils/fabriquer-ci "$p" sortie
-          done
+            premier=0
+          done < <(ls -d projets/*/projet.grymatelier projets/*/*/projet.grymatelier)
       - uses: actions/upload-artifact@v4
         with:
           name: applications-${{ matrix.systeme }}
@@ -72,10 +81,19 @@ jobs:
             make zip mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-multimedia mingw-w64-ucrt-x86_64-qt6-tools
       - name: Fabrication des applications
+        # un projet est un dossier qui a son projet.grymatelier : projets/Praxis n'en est pas un, ses versions oui
+        # (11 novembre 2026 : « Programme principal inconnu » sur projets/Praxis). « Test de charge » ne se fabrique pas.
+        # Les essais tournent au premier projet seulement : les refaire à chaque projet coûtait vingt minutes sur macOS
+        # et multipliait les chances d'un essai réseau capricieux.
         run: |
-          for p in projets/*/; do
+          premier=1
+          while IFS= read -r f; do
+            p="$(dirname "$f")"
+            case "$p" in *"Test de charge"*) continue ;; esac
+            if [ "$premier" = 0 ]; then export GRYM_SANS_ESSAIS=1; fi
             outils/fabriquer-ci "$p" sortie
-          done
+            premier=0
+          done < <(ls -d projets/*/projet.grymatelier projets/*/*/projet.grymatelier)
       - uses: actions/upload-artifact@v4
         with:
           name: applications-windows
