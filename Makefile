@@ -132,6 +132,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/ecoutille-epellation
 	sh tests/ecoutille-pilotage
 	sh tests/ecoutille-carnet
+	sh tests/ecoutille-scenarios
 	sh tests/ecoutille
 	sh tests/balayer
 

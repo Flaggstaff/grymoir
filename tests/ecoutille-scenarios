@@ -1,0 +1,23 @@
+#!/bin/sh
+# Les scénarios d'Écoutille (11 novembre 2026, grammaire § 9.7) : projets/Écoutille/scenarios.grym, joués par
+# « grym scenarios » sur une copie du projet, chacun sur une base neuve en mémoire. Ils gardent ce qui ne demande ni son ni
+# poste branché : les postes, le catalogue, le carnet, le pays d'un indicatif, l'alerte, la parole trop courte, le ménage.
+# Un échec arrête « ./appliquer ».
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cp -R "$racine/projets/Écoutille/." "$d/" || exit 1
+cd "$d" || exit 1
+# le son d'essai des passages : un en-tête de WAV, que rien ne lit
+printf 'RIFF$\000\000\000WAVEfmt ' > a.wav
+if sortie="$("$grym" scenarios scenarios.grym 2>&1 < /dev/null)"; then
+    echo "$sortie" | tail -1
+    exit 0
+fi
+echo "$sortie" | grep -E "✗|scénarios?,|erreur"
+echo
+echo "Un scénario d'Écoutille ne passe plus (projets/Écoutille/scenarios.grym)."
+echo "- Si Écoutille a reçu un champ obligatoire, complète les actions d'aide « Poser » et « Capter » en tête du fichier."
+echo "- Sinon, un comportement a changé : vérifie que c'est voulu avant de modifier le scénario."
+exit 1

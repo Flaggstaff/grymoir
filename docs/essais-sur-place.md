@@ -53,6 +53,12 @@ Sur un poste branché en USB, en veille :
    avec l'heure UTC, le mode, la bande et le message. Si l'avis dit que le port ne s'ouvre pas : JTAlert ou GridTracker
    l'écoutent déjà ; les fermer, ou régler l'un des deux sur un autre port (Écoutille lit le 2237). À rapporter si rien
    n'arrive : la version de WSJT-X (le format UDP de WSJT-X n'a été vérifié ici que contre des messages fabriqués).
+6. **Parole minimale** (11 novembre 2026) : dans « Réglages », « Parole minimale » à 3 mots. Laisser un poste en veille sur
+   une fréquence sans trafic, squelch ouvert. Attendu : les passages de souffle restent dans la veille avec leur son, sans
+   texte ; un vrai QSO garde sa parole. À rapporter : une parole utile perdue (son nombre de mots), ou un texte inventé
+   de trois mots et plus qui passe encore (le recopier : il dira s'il faut un autre filtre que la longueur).
+7. **Pays** : ouvrir un passage qui a des indicatifs. Attendu : une ligne « Pays : HB9ABC Suisse, F4XYZ France ». C'est
+   l'attribution de l'UIT, pas l'entité DXCC : la Guadeloupe sort « France ». À rapporter : un pays faux, avec l'indicatif.
 
 ## Les deux applications : un plantage
 

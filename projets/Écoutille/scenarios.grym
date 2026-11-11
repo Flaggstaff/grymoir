@@ -1,0 +1,188 @@
+Remarque : les scénarios d'Écoutille (11 novembre 2026), joués par « grym scenarios scenarios.grym » ; chacun sur une base neuve.
+Remarque : ils éprouvent ce qui ne demande ni son ni poste branché : les postes, le catalogue, le carnet, le pays, l'alerte,
+Remarque : la parole trop courte, le ménage. La capture d'un son ne se simule pas : elle s'éprouve dans l'atelier (tests/ecoutille).
+Ces scénarios éprouvent « Écoutille ».
+
+Remarque : un poste en veille, comme « Ajouter » le fait.
+Pour poser un nom :
+    Le k vaut un nouveau poste :
+        Le nom vaut nom.
+        La sorte vaut « émetteur-récepteur ».
+        La veille vaut vrai.
+        L'affichage vaut vrai.
+        La parole transcrite vaut vrai.
+        La traduction voulue vaut faux.
+        La vitesse de pilotage vaut 4800.
+    Conserver le k.
+    Rendre le k.
+
+Remarque : un passage de ce poste, ce jour-là ; « a.wav » est un son d'essai, posé à côté par tests/ecoutille-scenarios.
+Pour capter un poste et un jour :
+    Le p vaut un nouveau passage :
+        Le poste vaut poste.
+        Le jour vaut jour.
+        L'heure vaut 14:30.
+        L'enregistrement vaut le fichier « a.wav ».
+    Conserver le p.
+    Rendre le p.
+
+Scénario « un poste s'ajoute par l'écran, en veille » :
+    On écrit « Stryker » dans le nom de l'écran des postes.
+    On clique sur « Ajouter » dans l'écran des postes.
+    On ferme l'écran des postes.
+    Ouvrir l'écran des postes.
+    Vérifier que le nombre de postes conservés = 1.
+    Pour chaque poste conservé :
+        Vérifier que le nom du poste = « Stryker ».
+        Vérifier que la veille du poste.
+        Vérifier que la sorte du poste = « émetteur-récepteur ».
+        Vérifier que la vitesse de pilotage du poste = 4800.
+
+Scénario « le modèle choisi donne le nom et décide de la sorte » :
+    Le m vaut un nouveau modèle :
+        La désignation vaut « Uniden SDS100E ».
+        La marque vaut « Uniden ».
+        La sorte vaut « scanner ».
+    Conserver le m.
+    On choisit « Uniden SDS100E » dans le modèle de l'écran des postes.
+    On clique sur « Ajouter » dans l'écran des postes.
+    On ferme l'écran des postes.
+    Ouvrir l'écran des postes.
+    Pour chaque poste conservé :
+        Vérifier que le nom du poste = « Uniden SDS100E ».
+        Vérifier que la sorte du poste = « scanner ».
+        Vérifier que la désignation du modèle du poste = « Uniden SDS100E ».
+    Vérifier que le nombre de postes conservés = 1.
+
+Scénario « le catalogue ajoute un modèle, et ne réécrit pas celui que Michel a saisi » :
+    Cataloguer « Yaesu FT-710 » et « Yaesu » et « radioamateur » et « USB son et pilotage » et « USB-B » et « manuel ».
+    Vérifier que le nombre de modèles conservés = 1.
+    Pour chaque modèle conservé :
+        Vérifier que le raccordement du modèle = « USB son et pilotage ».
+        Vérifier que l'USB intégré du modèle.
+        Vérifier que la révision du modèle = 2.
+    Remarque : relancée, Écoutille ne double pas le modèle.
+    Cataloguer « Yaesu FT-710 » et « Yaesu » et « radioamateur » et « USB son et pilotage » et « USB-B » et « manuel ».
+    Vérifier que le nombre de modèles conservés = 1.
+    Remarque : un modèle saisi dans l'application garde sa sorte, même si le catalogue en dit une autre.
+    Le m vaut un nouveau modèle :
+        La désignation vaut « Poste maison ».
+        La marque vaut « Michel ».
+        La sorte vaut « CB ».
+        La source vaut « ajouté dans Écoutille ».
+    Conserver le m.
+    Cataloguer « Poste maison » et « Michel » et « scanner » et (absent) et (absent) et « catalogue ».
+    Vérifier que la sorte du m = « CB ».
+    Vérifier que la source du m = « ajouté dans Écoutille ».
+
+Scénario « un modèle s'ajoute par l'écran des modèles » :
+    On écrit « Poste maison » dans la désignation de l'écran des modèles.
+    On écrit « Michel » dans la marque de l'écran des modèles.
+    On choisit « CB » dans la sorte de l'écran des modèles.
+    On clique sur « Ajouter » dans l'écran des modèles.
+    On ferme l'écran des modèles.
+    Ouvrir l'écran des modèles.
+    Vérifier que le nombre de modèles conservés dont la désignation est « Poste maison » = 1.
+    Pour chaque modèle conservé :
+        Vérifier que la sorte du modèle = « CB ».
+        Vérifier que la source du modèle = « ajouté dans Écoutille ».
+
+Scénario « les indicatifs se reconnaissent à leur forme » :
+    Vérifier que le repérage de « CQ CQ de HB9ABC, 5NN 599 QSL73 f4xyz? 9A2AA et 4X4AB, HB9ABC encore » = « HB9ABC F4XYZ 9A2AA 4X4AB ».
+    Vérifier que le repérage de « Bonjour à tous, QRZ ? » = « ».
+
+Scénario « la bande se déduit de la fréquence » :
+    Vérifier que la bande ADIF de 14074000 = « 20m ».
+    Vérifier que la bande ADIF de 7100000 = « 40m ».
+    Vérifier que la bande ADIF de 27205000 = « CB ».
+    Vérifier que la bande ADIF de 145500000 = « 2m ».
+    Vérifier que la bande ADIF de 15000000 = « ».
+
+Scénario « une ligne du carnet ADIF » :
+    Poser « FT-991A », qui donne le k.
+    Capter le k et 03.11.2026, qui donne le p.
+    La fréquence du p devient 14205000.
+    Le mode du p devient « USB ».
+    La bande du p devient « 20m ».
+    Le moment universel du p devient « 2026-11-03T13:30:00Z ».
+    Vérifier que l'enregistrement ADIF du p et de « HB9ABC » = « <CALL:6>HB9ABC <QSO_DATE:8>20261103 <TIME_ON:6>133000 <FREQ:6>14.205 <BAND:3>20m <MODE:3>SSB <SUBMODE:3>USB <EOR> ».
+
+Scénario « le pays d'un indicatif » :
+    Vérifier que le pays de « HB9ABC » = « Suisse ».
+    Vérifier que le pays de « HB0XYZ » = « Liechtenstein ».
+    Vérifier que le pays de « F4XYZ » = « France ».
+    Vérifier que le pays de « DL1ABC » = « Allemagne ».
+    Vérifier que le pays de « I2ABC » = « Italie ».
+    Vérifier que le pays de « OE1ABC » = « Autriche ».
+    Vérifier que le pays de « 9A2AA » = « Croatie ».
+    Vérifier que le pays de « 4X4AB » = « Israël ».
+    Vérifier que le pays de « K1ABC » = « États-Unis ».
+    Vérifier que le pays de « JA1ABC » = « Japon ».
+    Vérifier que le pays de « BV2AB » = « Taïwan ».
+    Vérifier que le pays de « BA1AA » = « Chine ».
+    Vérifier que le pays de « 3D2AG » = « Fidji ».
+    Vérifier que le pays de « 3DA0RU » = « Eswatini ».
+    Remarque : une série que l'UIT n'attribue pas : rien, plutôt qu'un faux.
+    Vérifier que le pays de « Q1AA » = « ».
+    Vérifier que la provenance de « HB9ABC F4XYZ Q1AA » = « HB9ABC Suisse, F4XYZ France, Q1AA ».
+
+Scénario « l'alerte s'allume sur un mot entier » :
+    Vérifier que le déclencheur de « hb9xyz CQ » et de « CQ CQ de HB9ABC » = « CQ ».
+    Vérifier que le déclencheur de « CQ » et de « CQD here » = « ».
+    Vérifier que le déclencheur de « HB9XYZ » et de « ici HB9XYZ, à vous. » = « HB9XYZ ».
+    Vérifier que le déclencheur de « HB9XYZ » et de « rien à signaler » = « ».
+
+Scénario « l'alphabet phonétique se resserre en indicatif » :
+    Vérifier que l'épellation de « Ici Hotel Bravo Neuf Alpha Bravo Charlie, à vous. » = « Ici HB9ABC, à vous. ».
+    Vérifier que l'épellation de « Charlie est là. » = « Charlie est là. ».
+
+Scénario « une parole trop courte n'est pas gardée » :
+    Vérifier que la parole retenue de « Merci. » et de 3 est absent.
+    Vérifier que la parole retenue de « CQ CQ de HB9ABC » et de 3 = « CQ CQ de HB9ABC ».
+    Remarque : trois mots pour un minimum de trois : gardée.
+    Vérifier que la parole retenue de « QRZ de HB9ABC » et de 3 = « QRZ de HB9ABC ».
+    Remarque : sans minimum dans les Réglages, tout est gardé.
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+    Conserver le r.
+    Vérifier que la parole retenue de « Merci. » et de la parole minimale du r = « Merci. ».
+
+Scénario « les réglages s'enregistrent par leur écran » :
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+    Conserver le r.
+    On écrit 30 dans la conservation de l'écran des réglages.
+    On écrit « CQ HB9XYZ » dans l'alerte de l'écran des réglages.
+    On écrit 3 dans la parole minimale de l'écran des réglages.
+    On clique sur « Enregistrer » dans l'écran des réglages.
+    Ouvrir l'écran des réglages.
+    Vérifier que la conservation du r = 30.
+    Vérifier que l'alerte du r = « CQ HB9XYZ ».
+    Vérifier que la parole minimale du r = 3.
+
+Scénario « sans conservation, le ménage garde tout » :
+    On est le 11.11.2026.
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+    Conserver le r.
+    Poser « Stryker », qui donne le k.
+    Capter le k et 11.11.2020, qui donne le vieux.
+    Faire le ménage.
+    Vérifier que le nombre de passages conservés = 1.
+
+Scénario « le ménage efface les passages plus vieux que la conservation » :
+    On est le 11.11.2026.
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+        La conservation vaut 30.
+    Conserver le r.
+    Poser « Stryker », qui donne le k.
+    Capter le k et 11.10.2026, qui donne le vieux.
+    Capter le k et 12.10.2026, qui donne le limite.
+    Capter le k et 11.11.2026, qui donne le récent.
+    Faire le ménage.
+    Remarque : le 11 octobre a 31 jours, il part ; le 12 octobre en a 30, il reste.
+    Vérifier que le nombre de passages conservés = 2.
+    Vérifier que le nombre de passages conservés dont le jour = 11.10.2026 = 0.
+    Vérifier que le nombre de passages conservés dont le jour = 12.10.2026 = 1.
+    Vérifier que le nombre de postes conservés = 1.

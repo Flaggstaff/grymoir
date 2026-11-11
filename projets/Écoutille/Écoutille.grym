@@ -89,8 +89,11 @@ Un réglage, conservé, a :
     un compte gratuit (vrai ou faux), vrai au départ,
     une clé de relève (secret), facultative,
     un vocabulaire personnel (texte), facultatif,
-    une alerte (texte), facultative.
+    une alerte (texte), facultative,
+    une parole minimale (nombre entier), facultative.
 
+Remarque : la parole minimale (11 novembre 2026) : le nombre de mots qu'une parole doit avoir pour être gardée ; vide, toute
+Remarque : parole est gardée. Sur du souffle, Whisper écrit volontiers un mot ou deux qu'on n'a pas dits.
 Remarque : l'alerte (3 novembre 2026) : des mots séparés par des espaces (« CQ HB9XYZ ») ; un passage dont le morse, la parole ou
 Remarque : les indicatifs en contiennent un le signale à l'écran, avec le poste et l'accord.
 
@@ -403,6 +406,250 @@ Le repérage d'un texte :
             Sinon, le r devient le r suivi de " " suivi du i.
     Rendre le r.
 
+Remarque : le pays d'un indicatif (11 novembre 2026) : celui à qui l'UIT a attribué la série (Règlement des radiocommunications,
+Remarque : appendice 42, tableau des séries internationales d'indicatifs), lue sur les deux premiers caractères, ou le
+Remarque : premier quand un pays a toute la lettre (F, G, I, K…). C'est l'attribution, pas l'entité DXCC : la Guadeloupe (FG)
+Remarque : sort « France », Jersey (GJ) « Royaume-Uni ». Trois écarts, d'usage chez les radioamateurs : HB0, le Liechtenstein ;
+Remarque : BM à BQ et BU à BX, Taïwan ; 3D2, les Fidji (la série de l'UIT est 3DN à 3DZ). La table est écrite de mémoire, puis
+Remarque : recoupée le 11 novembre 2026 avec la liste DXCC de github.com/k0swe/dxcc-json : 515 clés sur 759 y figurent, toutes
+Remarque : d'accord, territoires à part ; les 244 autres (des séries rarement entendues) ne sont pas recoupées. Série sans
+Remarque : pays (Q, 1A, S0, Z6) : « », plutôt qu'un faux.
+La série UIT d'un début :
+    Le s vaut " " suivi du début suivi de " ".
+    Si " AA AB AC AD AE AF AG AH AI AJ AK AL K N W " contient le s, rendre « États-Unis ».
+    Si " AM AN AO EA EB EC ED EE EF EG EH " contient le s, rendre « Espagne ».
+    Si " AP AQ AR AS 6P 6Q 6R 6S " contient le s, rendre « Pakistan ».
+    Si " AT AU AV AW VT VU VV VW 8T 8U 8V 8W 8X 8Y " contient le s, rendre « Inde ».
+    Si " AX VH VI VJ VK VL VM VN VZ " contient le s, rendre « Australie ».
+    Si " AY AZ LO LP LQ LR LS LT LU LV LW L2 L3 L4 L5 L6 L7 L8 L9 " contient le s, rendre « Argentine ».
+    Si " A2 8O " contient le s, rendre « Botswana ».
+    Si " A3 " contient le s, rendre « Tonga ».
+    Si " A4 " contient le s, rendre « Oman ».
+    Si " A5 " contient le s, rendre « Bhoutan ».
+    Si " A6 " contient le s, rendre « Émirats arabes unis ».
+    Si " A7 " contient le s, rendre « Qatar ».
+    Si " A8 D5 EL 5L 5M 6Z " contient le s, rendre « Libéria ».
+    Si " A9 " contient le s, rendre « Bahreïn ».
+    Si " BM BN BO BP BQ BU BV BW BX " contient le s, rendre « Taïwan ».
+    Si " B XS 3H 3I 3J 3K 3L 3M 3N 3O 3P 3Q 3R 3S 3T 3U " contient le s, rendre « Chine ».
+    Si " VR " contient le s, rendre « Chine (Hong Kong) ».
+    Si " XX " contient le s, rendre « Chine (Macao) ».
+    Si " CA CB CC CD CE XQ XR 3G " contient le s, rendre « Chili ».
+    Si " CF CG CH CI CJ CK CY CZ VA VB VC VD VE VF VG VO VX VY XJ XK XL XM XN XO " contient le s, rendre « Canada ».
+    Si " CL CM CO T4 " contient le s, rendre « Cuba ».
+    Si " CN 5C 5D 5E 5F 5G " contient le s, rendre « Maroc ».
+    Si " CP " contient le s, rendre « Bolivie ».
+    Si " CQ CR CS CT CU " contient le s, rendre « Portugal ».
+    Si " CV CW CX " contient le s, rendre « Uruguay ».
+    Si " C2 " contient le s, rendre « Nauru ».
+    Si " C3 " contient le s, rendre « Andorre ».
+    Si " C4 H2 P3 5B " contient le s, rendre « Chypre ».
+    Si " C5 " contient le s, rendre « Gambie ».
+    Si " C6 " contient le s, rendre « Bahamas ».
+    Si " C7 " contient le s, rendre « Organisation météorologique mondiale ».
+    Si " C8 C9 " contient le s, rendre « Mozambique ».
+    Si " DA DB DC DD DE DF DG DH DI DJ DK DL DM DN DO DP DQ DR Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 " contient le s, rendre « Allemagne ».
+    Si " DS DT D7 D8 D9 HL 6K 6L 6M 6N " contient le s, rendre « Corée du Sud ».
+    Si " DU DV DW DX DY DZ 4D 4E 4F 4G 4H 4I " contient le s, rendre « Philippines ».
+    Si " D2 D3 " contient le s, rendre « Angola ».
+    Si " D4 " contient le s, rendre « Cap-Vert ».
+    Si " D6 " contient le s, rendre « Comores ».
+    Si " EI EJ " contient le s, rendre « Irlande ».
+    Si " EK " contient le s, rendre « Arménie ».
+    Si " EM EN EO UR US UT UU UV UW UX UY UZ " contient le s, rendre « Ukraine ».
+    Si " EP EQ 9B 9C 9D " contient le s, rendre « Iran ».
+    Si " ER " contient le s, rendre « Moldavie ».
+    Si " ES " contient le s, rendre « Estonie ».
+    Si " ET 9E 9F " contient le s, rendre « Éthiopie ».
+    Si " EU EV EW " contient le s, rendre « Biélorussie ».
+    Si " EX " contient le s, rendre « Kirghizistan ».
+    Si " EY " contient le s, rendre « Tadjikistan ».
+    Si " EZ " contient le s, rendre « Turkménistan ».
+    Si " E2 HS " contient le s, rendre « Thaïlande ».
+    Si " E3 " contient le s, rendre « Érythrée ».
+    Si " E4 " contient le s, rendre « Palestine ».
+    Si " E5 " contient le s, rendre « Îles Cook ».
+    Si " E6 " contient le s, rendre « Niue ».
+    Si " E7 " contient le s, rendre « Bosnie-Herzégovine ».
+    Si " F HW HX HY TH TK TM TO TP TQ TV TW TX " contient le s, rendre « France ».
+    Si " G M 2 VP VQ VS ZB ZC ZD ZE ZF ZG ZH ZI ZJ ZN ZO ZQ " contient le s, rendre « Royaume-Uni ».
+    Si " HA HG " contient le s, rendre « Hongrie ».
+    Si " HB0 " contient le s, rendre « Liechtenstein ».
+    Si " HB HE " contient le s, rendre « Suisse ».
+    Si " HC HD " contient le s, rendre « Équateur ».
+    Si " HF SN SO SP SQ SR 3Z " contient le s, rendre « Pologne ».
+    Si " HH 4V " contient le s, rendre « Haïti ».
+    Si " HI " contient le s, rendre « République dominicaine ».
+    Si " HJ HK 5J 5K " contient le s, rendre « Colombie ».
+    Si " HM P5 P6 P7 P8 P9 " contient le s, rendre « Corée du Nord ».
+    Si " HN YI " contient le s, rendre « Irak ».
+    Si " HO HP H3 H8 H9 3E 3F " contient le s, rendre « Panama ».
+    Si " HQ HR " contient le s, rendre « Honduras ».
+    Si " HT H6 H7 YN " contient le s, rendre « Nicaragua ».
+    Si " HU YS " contient le s, rendre « Salvador ».
+    Si " HV " contient le s, rendre « Vatican ».
+    Si " HZ 7Z 8Z " contient le s, rendre « Arabie saoudite ».
+    Si " H4 " contient le s, rendre « Îles Salomon ».
+    Si " I " contient le s, rendre « Italie ».
+    Si " JA JB JC JD JE JF JG JH JI JJ JK JL JM JN JO JP JQ JR JS 7J 7K 7L 7M 7N 8J 8K 8L 8M 8N " contient le s, rendre « Japon ».
+    Si " JT JU JV " contient le s, rendre « Mongolie ».
+    Si " JW JX LA LB LC LD LE LF LG LH LI LJ LK LL LM LN 3Y " contient le s, rendre « Norvège ».
+    Si " JY " contient le s, rendre « Jordanie ».
+    Si " JZ PK PL PM PN PO YB YC YD YE YF YG YH 7A 7B 7C 7D 7E 7F 7G 7H 7I 8A 8B 8C 8D 8E 8F 8G 8H 8I " contient le s, rendre « Indonésie ».
+    Si " J2 " contient le s, rendre « Djibouti ».
+    Si " J3 " contient le s, rendre « Grenade ».
+    Si " J4 SV SW SX SY SZ " contient le s, rendre « Grèce ».
+    Si " J5 " contient le s, rendre « Guinée-Bissau ».
+    Si " J6 " contient le s, rendre « Sainte-Lucie ».
+    Si " J7 " contient le s, rendre « Dominique ».
+    Si " J8 " contient le s, rendre « Saint-Vincent-et-les-Grenadines ».
+    Si " LX " contient le s, rendre « Luxembourg ».
+    Si " LY " contient le s, rendre « Lituanie ».
+    Si " LZ " contient le s, rendre « Bulgarie ».
+    Si " OA OB OC 4T " contient le s, rendre « Pérou ».
+    Si " OD " contient le s, rendre « Liban ».
+    Si " OE " contient le s, rendre « Autriche ».
+    Si " OF OG OH OI OJ " contient le s, rendre « Finlande ».
+    Si " OK OL " contient le s, rendre « Tchéquie ».
+    Si " OM " contient le s, rendre « Slovaquie ».
+    Si " ON OO OP OQ OR OS OT " contient le s, rendre « Belgique ».
+    Si " OU OV OW OX OY OZ XP 5P 5Q " contient le s, rendre « Danemark ».
+    Si " PA PB PC PD PE PF PG PH PI " contient le s, rendre « Pays-Bas ».
+    Si " PJ " contient le s, rendre « Pays-Bas (Caraïbes) ».
+    Si " PP PQ PR PS PT PU PV PW PX PY ZV ZW ZX ZY ZZ " contient le s, rendre « Brésil ».
+    Si " PZ " contient le s, rendre « Suriname ».
+    Si " P2 " contient le s, rendre « Papouasie-Nouvelle-Guinée ».
+    Si " P4 " contient le s, rendre « Aruba ».
+    Si " R UA UB UC UD UE UF UG UH UI " contient le s, rendre « Russie ».
+    Si " SA SB SC SD SE SF SG SH SI SJ SK SL SM 7S 8S " contient le s, rendre « Suède ».
+    Si " SSA SSB SSC SSD SSE SSF SSG SSH SSI SSJ SSK SSL SSM SU 6A 6B " contient le s, rendre « Égypte ».
+    Si " SSN SSO SSP SSQ SSR SSS SST SSU SSV SSW SSX SSY SSZ ST 6T 6U " contient le s, rendre « Soudan ».
+    Si " S2 S3 " contient le s, rendre « Bangladesh ».
+    Si " S5 " contient le s, rendre « Slovénie ».
+    Si " S6 9V " contient le s, rendre « Singapour ».
+    Si " S7 " contient le s, rendre « Seychelles ».
+    Si " S8 ZR ZS ZT ZU " contient le s, rendre « Afrique du Sud ».
+    Si " S9 " contient le s, rendre « Sao Tomé-et-Principe ».
+    Si " TA TB TC YM " contient le s, rendre « Turquie ».
+    Si " TD TG " contient le s, rendre « Guatemala ».
+    Si " TE TI " contient le s, rendre « Costa Rica ».
+    Si " TF " contient le s, rendre « Islande ».
+    Si " TJ " contient le s, rendre « Cameroun ».
+    Si " TL " contient le s, rendre « République centrafricaine ».
+    Si " TN " contient le s, rendre « Congo ».
+    Si " TR " contient le s, rendre « Gabon ».
+    Si " TS 3V " contient le s, rendre « Tunisie ».
+    Si " TT " contient le s, rendre « Tchad ».
+    Si " TU " contient le s, rendre « Côte d'Ivoire ».
+    Si " TY " contient le s, rendre « Bénin ».
+    Si " TZ " contient le s, rendre « Mali ».
+    Si " T2 " contient le s, rendre « Tuvalu ».
+    Si " T3 " contient le s, rendre « Kiribati ».
+    Si " T5 6O " contient le s, rendre « Somalie ».
+    Si " T6 YA " contient le s, rendre « Afghanistan ».
+    Si " T7 " contient le s, rendre « Saint-Marin ».
+    Si " T8 " contient le s, rendre « Palaos ».
+    Si " UJ UK UL UM " contient le s, rendre « Ouzbékistan ».
+    Si " UN UO UP UQ " contient le s, rendre « Kazakhstan ».
+    Si " V2 " contient le s, rendre « Antigua-et-Barbuda ».
+    Si " V3 " contient le s, rendre « Belize ».
+    Si " V4 " contient le s, rendre « Saint-Christophe-et-Niévès ».
+    Si " V5 " contient le s, rendre « Namibie ».
+    Si " V6 " contient le s, rendre « Micronésie ».
+    Si " V7 " contient le s, rendre « Îles Marshall ».
+    Si " V8 " contient le s, rendre « Brunei ».
+    Si " XA XB XC XD XE XF XG XH XI 4A 4B 4C 6D 6E 6F 6G 6H 6I 6J " contient le s, rendre « Mexique ».
+    Si " XT " contient le s, rendre « Burkina Faso ».
+    Si " XU " contient le s, rendre « Cambodge ».
+    Si " XV 3W " contient le s, rendre « Viêt Nam ».
+    Si " XW " contient le s, rendre « Laos ».
+    Si " XY XZ " contient le s, rendre « Myanmar ».
+    Si " YJ " contient le s, rendre « Vanuatu ».
+    Si " YK 6C " contient le s, rendre « Syrie ».
+    Si " YL " contient le s, rendre « Lettonie ».
+    Si " YO YP YQ YR " contient le s, rendre « Roumanie ».
+    Si " YT YU " contient le s, rendre « Serbie ».
+    Si " YV YW YX YY 4M " contient le s, rendre « Venezuela ».
+    Si " ZA " contient le s, rendre « Albanie ».
+    Si " ZK ZL ZM " contient le s, rendre « Nouvelle-Zélande ».
+    Si " ZP " contient le s, rendre « Paraguay ».
+    Si " Z2 " contient le s, rendre « Zimbabwe ».
+    Si " Z3 " contient le s, rendre « Macédoine du Nord ».
+    Si " Z8 " contient le s, rendre « Soudan du Sud ».
+    Si " 3A " contient le s, rendre « Monaco ».
+    Si " 3B " contient le s, rendre « Maurice ».
+    Si " 3C " contient le s, rendre « Guinée équatoriale ».
+    Si " 3DA 3DB 3DC 3DD 3DE 3DF 3DG 3DH 3DI 3DJ 3DK 3DL 3DM " contient le s, rendre « Eswatini ».
+    Si " 3DN 3DO 3DP 3DQ 3DR 3DS 3DT 3DU 3DV 3DW 3DX 3DY 3DZ 3D2 " contient le s, rendre « Fidji ».
+    Si " 3X " contient le s, rendre « Guinée ».
+    Si " 4J 4K " contient le s, rendre « Azerbaïdjan ».
+    Si " 4L " contient le s, rendre « Géorgie ».
+    Si " 4O " contient le s, rendre « Monténégro ».
+    Si " 4P 4Q 4R 4S " contient le s, rendre « Sri Lanka ».
+    Si " 4U " contient le s, rendre « Nations Unies ».
+    Si " 4W " contient le s, rendre « Timor oriental ».
+    Si " 4X 4Z " contient le s, rendre « Israël ».
+    Si " 4Y " contient le s, rendre « Organisation de l'aviation civile internationale ».
+    Si " 5A " contient le s, rendre « Libye ».
+    Si " 5H 5I " contient le s, rendre « Tanzanie ».
+    Si " 5N 5O " contient le s, rendre « Nigéria ».
+    Si " 5R 5S 6X " contient le s, rendre « Madagascar ».
+    Si " 5T " contient le s, rendre « Mauritanie ».
+    Si " 5U " contient le s, rendre « Niger ».
+    Si " 5V " contient le s, rendre « Togo ».
+    Si " 5W " contient le s, rendre « Samoa ».
+    Si " 5X " contient le s, rendre « Ouganda ».
+    Si " 5Y 5Z " contient le s, rendre « Kenya ».
+    Si " 6V 6W " contient le s, rendre « Sénégal ».
+    Si " 6Y " contient le s, rendre « Jamaïque ».
+    Si " 7O " contient le s, rendre « Yémen ».
+    Si " 7P " contient le s, rendre « Lesotho ».
+    Si " 7Q " contient le s, rendre « Malawi ».
+    Si " 7R 7T 7U 7V 7W 7X 7Y " contient le s, rendre « Algérie ».
+    Si " 8P " contient le s, rendre « Barbade ».
+    Si " 8Q " contient le s, rendre « Maldives ».
+    Si " 8R " contient le s, rendre « Guyana ».
+    Si " 9A " contient le s, rendre « Croatie ».
+    Si " 9G " contient le s, rendre « Ghana ».
+    Si " 9H " contient le s, rendre « Malte ».
+    Si " 9I 9J " contient le s, rendre « Zambie ».
+    Si " 9K " contient le s, rendre « Koweït ».
+    Si " 9L " contient le s, rendre « Sierra Leone ».
+    Si " 9M 9W " contient le s, rendre « Malaisie ».
+    Si " 9N " contient le s, rendre « Népal ».
+    Si " 9O 9P 9Q 9R 9S 9T " contient le s, rendre « République démocratique du Congo ».
+    Si " 9U " contient le s, rendre « Burundi ».
+    Si " 9X " contient le s, rendre « Rwanda ».
+    Si " 9Y 9Z " contient le s, rendre « Trinité-et-Tobago ».
+    Rendre « ».
+
+Le pays d'un indicatif :
+    Si l'indicatif est absent, rendre « ».
+    Le trouvé vaut « ».
+    Si la longueur de l'indicatif ≥ 3, le trouvé devient la série UIT de (l'indicatif sur 3).
+    Si le trouvé = « » et la longueur de l'indicatif ≥ 2, le trouvé devient la série UIT de (l'indicatif sur 2).
+    Si le trouvé = « » et la longueur de l'indicatif ≥ 1, le trouvé devient la série UIT de (l'indicatif sur 1).
+    Rendre le trouvé.
+
+Remarque : les pays d'un relevé d'indicatifs, pour l'écran du passage : « HB9ABC Suisse, F4XYZ France » ; un indicatif sans pays
+Remarque : connu reste seul.
+La provenance d'un relevé :
+    Si le relevé est absent, rendre absent.
+    Le r vaut « ».
+    Pour chaque mot parmi les mots du relevé :
+        Si le r ≠ « », le r devient le r suivi de ", ".
+        Le r devient le r suivi du mot.
+        Si le pays du mot ≠ « », le r devient le r suivi de " " suivi du pays du mot.
+    Rendre le r.
+
+Remarque : la parole gardée (11 novembre 2026) : absente si elle a moins de mots que le minimum des Réglages ; sans minimum, telle
+Remarque : quelle. Les mots se comptent avant l'épellation, qui resserre « Hotel Bravo Neuf Alpha Bravo Charlie » en un seul.
+La parole retenue d'un dit et d'un minimum :
+    Si le dit est absent, rendre absent.
+    Si le minimum est absent, rendre le dit.
+    Si le nombre de mots du dit < le minimum, rendre absent.
+    Rendre le dit.
+
 Remarque : la bande d'une fréquence en hertz (3 novembre 2026) : les bornes de l'énumération Band de l'ADIF (d'après la table
 Remarque : de PyQSO, ADIF 3.0.4) ; la CB à part (canaux 1 à 40 de la CEPT, de 26,965 à 27,405 MHz), qui n'est pas une bande
 Remarque : de l'ADIF ; hors bande : « ».
@@ -468,6 +715,7 @@ Remarque : de la base (un QSO à garder, un échantillon à envoyer).
 L'écran du passage, « Passage », montre :
     le texte "Poste " suivi du nom du poste du passage ouvert suivi de ", le " suivi du jour du passage ouvert suivi de " à " suivi de l'heure du passage ouvert,
     le texte la ligne de « Indicatifs : » et du relevé d'indicatifs du passage ouvert, visible si la ligne de « Indicatifs : » et du relevé d'indicatifs du passage ouvert ≠ « »,
+    le texte la ligne de « Pays : » et de la provenance du relevé d'indicatifs du passage ouvert, visible si la ligne de « Pays : » et de la provenance du relevé d'indicatifs du passage ouvert ≠ « »,
     le texte la ligne de « Accord : » et de l'accord du passage ouvert, visible si la ligne de « Accord : » et de l'accord du passage ouvert ≠ « »,
     le texte la ligne de « Morse : » et du morse du passage ouvert, visible si la ligne de « Morse : » et du morse du passage ouvert ≠ « »,
     le texte la ligne de « Parole : » et de la transcription du passage ouvert, visible si la ligne de « Parole : » et de la transcription du passage ouvert ≠ « »,
@@ -542,6 +790,7 @@ L'écran des réglages, « Réglages », montre :
     le texte le témoin des clés du réglage conservé,
     le texte « Transcription », en petites capitales,
     un vocabulaire personnel (texte), facultatif, sur plusieurs lignes, avec l'indication « Indicatifs, noms et lieux entendus souvent, séparés par des virgules : la transcription les écrit juste »,
+    une parole minimale (nombre entier), facultative, de 1 à 50, avec l'unité « mots », avec l'indication « Une parole plus courte n'est pas gardée (le son du passage reste) ; vide : tout garder »,
     le texte « Alerte », en petites capitales,
     une alerte (texte), facultative, avec l'indication « Des mots séparés par des espaces (CQ, ton indicatif) : un passage qui en contient un est signalé »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
@@ -586,6 +835,9 @@ Quand un poste capte un son dans l'écran de veille :
     Sinon, amorcer la transcription avec l'amorce du réglage conservé.
     Le morse du p devient le morse du son capté.
     Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
+    Remarque : une parole trop courte n'est pas gardée (11 novembre 2026) ; le passage et son enregistrement restent.
+    Pour chaque réglage conservé :
+        Si la transcription du p est présente, la transcription du p devient la parole retenue de la transcription du p et de la parole minimale du réglage.
     Si la transcription du p est présente, la transcription du p devient l'épellation de la transcription du p.
     Remarque : le carnet (3 novembre 2026) : le temps universel, et les indicatifs entendus en morse ou en parole.
     Le moment universel du p devient maintenant en format universel.
@@ -678,6 +930,7 @@ Quand on ouvre l'écran des réglages :
         Le compte gratuit de l'écran devient le compte gratuit du réglage.
         Le vocabulaire personnel de l'écran devient le vocabulaire personnel du réglage.
         L'alerte de l'écran devient l'alerte du réglage.
+        La parole minimale de l'écran devient la parole minimale du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
@@ -685,6 +938,7 @@ Quand on clique sur « Enregistrer » dans l'écran des réglages :
         La conservation du réglage devient la conservation de l'écran.
         Le vocabulaire personnel du réglage devient le vocabulaire personnel de l'écran.
         L'alerte du réglage devient l'alerte de l'écran.
+        La parole minimale du réglage devient la parole minimale de l'écran.
         Le compte gratuit du réglage devient le compte gratuit de l'écran.
         Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
         Si la clé de relève de l'écran est présente, la clé de relève du réglage devient la clé de relève de l'écran.
@@ -991,20 +1245,25 @@ Cataloguer « President Johnny III » et « President » et « CB » et (absent)
 Cataloguer « Albrecht AE 6490 » et « Albrecht » et « CB » et « son analogique seul » et « jack 3,5 mm mono haut-parleur externe 8 Ω ; micro 6 broches (notice commune avec l'AE 6491) » et « Alan Electronics, notice AE 6490/AE 6491 ».
 Cataloguer « Icom IC-R15 » et « Icom » et « scanner » et (absent) et (absent) et « Icom Japan (liste du pilote USB Icom) ».
 
-Remarque : un seul réglage, créé au premier lancement ; puis le ménage des vieux passages, effacés pour de bon (leur son pèse).
+Remarque : le ménage des vieux passages, effacés pour de bon (leur son pèse) : ceux d'avant la conservation des Réglages ; sans
+Remarque : elle, tout est gardé. Une action (11 novembre 2026), pour qu'un scénario la joue à une date fixée.
+Remarque : les décodages, nombreux (un QSO FT8 en fait une dizaine) : 30 jours au plus, ou la conservation si elle est plus courte.
+Pour faire le ménage :
+    Le délai vaut absent.
+    Pour chaque réglage conservé, le délai devient la conservation du réglage.
+    Si le délai est présent :
+        Pour chaque passage conservé dont le jour < aujourd'hui − délai :
+            Supprimer le passage définitivement.
+    Le délai des décodages vaut 30.
+    Si le délai est présent et le délai < 30, le délai des décodages devient le délai.
+    Pour chaque décodage conservé dont le jour < aujourd'hui − le délai des décodages :
+        Supprimer le décodage définitivement.
+
+Remarque : un seul réglage, créé au premier lancement ; puis le ménage.
 Si le nombre de réglages conservés = 0 :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
     Conserver le r.
-Le délai vaut absent.
-Pour chaque réglage conservé, le délai devient la conservation du réglage.
-Si le délai est présent :
-    Pour chaque passage conservé dont le jour < aujourd'hui − délai :
-        Supprimer le passage définitivement.
-Remarque : les décodages, nombreux (un QSO FT8 en fait une dizaine) : 30 jours au plus, ou la conservation si elle est plus courte.
-Le délai des décodages vaut 30.
-Si le délai est présent et le délai < 30, le délai des décodages devient le délai.
-Pour chaque décodage conservé dont le jour < aujourd'hui − le délai des décodages :
-    Supprimer le décodage définitivement.
+Faire le ménage.
 
 Ouvrir l'écran de veille.
