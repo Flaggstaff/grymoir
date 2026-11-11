@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.21 de la spécification, révisée le 10 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.22 de la spécification, révisée le 11 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2898,6 +2898,12 @@ Quand on clique sur « Espèces » dans l'écran des séances :
 - `destructif` ne demande rien : la question reste celle de `, à confirmer par « … »` (2.65).
 - Dans le navigateur : `class="destructif"`. Forme compacte : `_destructif`.
 
+**Un bouton qui ferme son écran** *(3.22)* : `un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? » si l'écran est modifié`. Le bouton ferme l'écran comme `Fermer l'écran.`, sans `Quand on clique sur « Fermer » dans l'écran … :` à écrire ; la confirmation, s'il en a une, se pose avant, et `Quand on ferme l'écran …` s'exécute comme d'habitude.
+
+- Écrire aussi l'événement est refusé : « Le bouton « Fermer » de l'écran « x » ferme déjà l'écran (« qui ferme l'écran ») : retire son « Quand on clique … », ou retire « qui ferme l'écran ». »
+- N'importe quel bouton peut l'être (`« Annuler »`, `« Fermer l'application »`), pas seulement « Fermer ».
+- Praxis s'en sert pour 51 boutons, dont les 50 « Fermer » ; Forme compacte : `_ferme`.
+
 ### 22.24 Agenda *(2.74, implémenté le 1er novembre 2026)*
 
 Une liste montrée en grille horaire : une colonne par jour, chaque objet à son heure et sur sa durée. Un clic le choisit ; on le glisse ailleurs à la souris.
@@ -3205,3 +3211,4 @@ Pour rappeler un patient :
 | 3.19 | 2026-11-09 | Petits manques relevés en chemin. § 9.1 : `vrai`, `faux` et une condition entre parenthèses en argument d'un calcul. § 13.9, § 16.13 : `est parmi` hors d'un `dont` (ensemble, liste, liste calculée, champ multiple d'un objet, relation inverse). § 9.7 : `On voit l'erreur « … » dans l'écran …`, le refus attendu dans un scénario. § 16.6 : les conflits sur les champs multiples (élément par élément) et sur les suppressions ; deux `absent` sont la même valeur. Démarrage automatique : `--systemd` et `--tache` à côté de `--plist` (`docs/v2.md`, § 11) |
 | 3.20 | 2026-11-10 | § 1.5 : le premier avertissement, qui n'arrête rien : collé par `suivi de`, un texte entre guillemets français qui commence par `:`, `;`, `!` ou `?` perd l'espace devant ce signe (pas un signe seul, souvent une donnée ; rien après `puis`, qui met l'espace). Dit par `grym` sur la sortie d'erreur (`fichier:ligne:colonne : avertissement : …`, une fois par commande, fichiers utilisés compris), par l'aide à la saisie (sévérité 2) et par l'éditeur de l'atelier (pointillé, message au survol). Trouvé dans Praxis, huit fois (`d97ab3d`) |
 | 3.21 | 2026-11-10 | § 9.7 : `On est le 15.03.2027.` fixe la date du jour d'un scénario (geste de forme 10, sans instruction nouvelle). Les 24 scénarios de Praxis s'en servent, au 10.11.2026 ; joués aussi au 31.12.2026, 01.01.2027, 29.02.2028 et 01.03.2027 : tous justes. Analyse : un chemin de `dont` (« le nom de l'état de l'état … ») essaie au plus 20 000 découpages, au lieu d'une croissance exponentielle (24 maillons : 1,6 s, 60 : des jours) |
+| 3.22 | 2026-11-11 | § 22.23 : `, qui ferme l'écran`, un bouton qui ferme son écran sans événement écrit ; l'événement écrit en plus est refusé. Compilé en un événement « Fermer l'écran. » que le programme n'écrit pas : ni instruction nouvelle, ni format changé. Praxis : 51 événements de moins par version |

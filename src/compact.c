@@ -1506,7 +1506,7 @@ static int est_etat(const Jeton *t) {
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
         || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales") || est_cle(t, "confirmer")
-        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié") || est_cle(t, "clavier") || est_cle(t, "destructif");
+        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié") || est_cle(t, "clavier") || est_cle(t, "destructif") || est_cle(t, "ferme");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -1642,6 +1642,13 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             mot(r, "par", x);
             copier(r, &r->e[k + 1]);
             k += 2;
+        } else if (!zone && est_cle(x, "ferme")) {   /* _ferme → , qui ferme l'écran (un bouton, 3.22) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "qui", x);
+            mot(r, "ferme", x);
+            emettre(r, J_ELISION, "l", x, 1);
+            mot(r, "écran", x);
+            k++;
         } else if (!zone && est_cle(x, "destructif")) {   /* _destructif → , destructif (un bouton, 2.72) */
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "destructif", x);

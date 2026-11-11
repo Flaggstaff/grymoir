@@ -1854,6 +1854,7 @@ static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     if (el->type == N_BOUTON && (el->entier & 512)) aj(im, im->compact ? " _tuile" : ", en tuile");     /* 2.15 */
     if (el->type == N_BOUTON && (el->entier & 1024)) aj(im, im->compact ? " _côté_titre" : ", à côté du titre");   /* 2.17 */
     if (el->type == N_BOUTON && el->destructif) aj(im, im->compact ? " _destructif" : ", destructif");   /* 2.72 */
+    if (el->type == N_BOUTON && (el->entier & 8192)) aj(im, im->compact ? " _ferme" : ", qui ferme l'écran");   /* 3.22 */
     if (el->type == N_BOUTON && el->indication) { aj(im, im->compact ? " _description " : ", avec la description "); ecrire_texte(im, el->indication); }
     if (el->type == N_BOUTON && el->texte2) { aj(im, im->compact ? " _image " : ", avec l'image "); ecrire_texte(im, el->texte2); }
     if (el->type == N_BOUTON && el->confirmation) {   /* 2.65 */

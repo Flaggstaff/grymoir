@@ -1739,6 +1739,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 classe_typer_dernier_champ(cm, el->texte2, 0);
                 if (el->entier & 1) classe_facultatif_dernier_champ(cm);
                 if (el->entier & 16) classe_multiple_dernier_champ(cm);   /* « des genres (genre) » (§ 22.1) */
+            } else if (el->type == N_BOUTON && (el->entier & 8192)) {
+                /* « , qui ferme l'écran » (3.22) : l'événement que le programme n'écrit pas, « Fermer l'écran. » seul */
+                Bloc *f = bloc_creer();
+                f->nom = grym_formater("quand clic « %s » dans l'écran %s", el->texte, ph->texte);
+                f->fichier = c->fichier ? grym_dupliquer(c->fichier) : NULL;
+                f->sorte = B_ACTION;
+                module_ajouter(c->module, f);
+                bloc_emettre(f, I_FERMER_ECRAN, 0, el->ligne, el->colonne);
+                bloc_emettre(f, I_RETOUR, 0, el->ligne, 0);
             } else if (el->type == N_CHERCHER && !el->graphique) {   /* un graphique ne se choisit pas (§ 22.11) */
                 int fem = 0;   /* « le compositeur choisi », « la partition choisie » : le genre de l'entité */
                 for (size_t q = 0; q < c->module->nb_classes; q++)
@@ -1883,13 +1892,25 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
                 bloc_corriger_saut(c->b, autre, c->b->taille_code);
             }
-            if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
+            /* « , qui ferme l'écran » (3.22) : l'événement que le compilateur a fabriqué avec l'écran, sans P_QUAND */
+            char *ferme = !q && el->type == N_BOUTON && (el->entier & 8192)
+                        ? grym_formater("quand clic « %s » dans l'écran %s", el->texte, e->texte) : NULL;
+            if (!q && !ferme) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
             char num[24];
             snprintf(num, sizeof num, "%lu", (unsigned long)(k + 1));
             emettre(c, I_LIRE_LOCAL, ev, ph->ligne, ph->colonne);
             emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, num), ph->ligne, ph->colonne);
             emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
             size_t suivant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
+            if (ferme) {
+                const long nf = bloc_nom(c->b, ferme);
+                free(ferme);
+                if (nf < 0) { free(vers_apres); trop_grand(c, ph); return; }
+                bloc_emettre_appel(c->b, (uint16_t)nf, 0, 0, ph->ligne, ph->colonne);
+                vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+                bloc_corriger_saut(c->b, suivant, c->b->taille_code);
+                continue;
+            }
             if (q->forme == 7) {   /* le poste capté, champ de l'écran que la machine vient d'écrire, puis le son (2.70) */
                 int fem = 0;
                 for (size_t m = 0; m < c->module->nb_classes; m++)

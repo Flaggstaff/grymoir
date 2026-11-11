@@ -8487,6 +8487,15 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         if (!el->confirmation) attendre_mot(a, a->i + 1, "à confirmer par «", strlen("à confirmer par «"));
         if (!el->raccourci) attendre_mot(a, a->i + 1, "au clavier «", strlen("au clavier «"));
         if (!el->destructif && !(el->entier & 256)) attendre_mot(a, a->i + 1, "destructif", strlen("destructif"));
+        if (!(el->entier & 8192)) attendre_mot(a, a->i + 1, "qui ferme l'écran", strlen("qui ferme l'écran"));
+        if (est_mot(x, "qui") && est_mot(voir(a, 2), "ferme") && voir(a, 3)->type == J_ELISION && est_mot(voir(a, 4), "écran")) {
+            /* « , qui ferme l'écran » (3.22) : le bouton ferme son écran, sans « Quand on clique » ; sa confirmation
+             * (« à confirmer par « … » si l'écran a changé ») se pose avant, comme pour tout bouton */
+            if (el->entier & 8192) return erreur(a, x, grym_dupliquer("« qui ferme l'écran » est déjà dit.")), -1;
+            el->entier |= 8192;
+            a->i += 5;
+            return 1;
+        }
         if (est_mot(x, "destructif") || est_mot(x, "destructive")) {
             /* « , destructif » (2.72) : un bouton qui retire ou efface, dessiné en rouge, à l'écart de l'action attendue */
             if (est_mot(x, "destructive")) return erreur(a, x, grym_dupliquer("Accord : « destructif » (le bouton).")), -1;
@@ -10216,11 +10225,12 @@ static void chercher_quand(Noeud *const *ph, size_t nb, const char *ecran, const
     }
 }
 
-static const Noeud *bouton_orphelin(Noeud *const *tout, size_t nb_tout, Noeud *const *ph, size_t nb, const char **ecran) {
+/* Un bouton sans événement, ou (*double) un bouton « qui ferme l'écran » qui en a un quand même (3.22). */
+static const Noeud *bouton_orphelin(Noeud *const *tout, size_t nb_tout, Noeud *const *ph, size_t nb, const char **ecran, int *double_) {
     for (size_t k = 0; k < nb; k++) {
         const Noeud *n = ph[k];
         if (n->type == P_UTILISER) {
-            const Noeud *r = bouton_orphelin(tout, nb_tout, n->enfants, n->nb_enfants, ecran);
+            const Noeud *r = bouton_orphelin(tout, nb_tout, n->enfants, n->nb_enfants, ecran, double_);
             if (r) return r;
         }
         if (n->type != P_ECRAN) continue;
@@ -10228,7 +10238,8 @@ static const Noeud *bouton_orphelin(Noeud *const *tout, size_t nb_tout, Noeud *c
             if (n->enfants[q]->type != N_BOUTON) continue;
             int trouve = 0;
             chercher_quand(tout, nb_tout, n->texte, n->enfants[q]->texte, &trouve);
-            if (!trouve) { *ecran = n->texte; return n->enfants[q]; }
+            const int ferme = (n->enfants[q]->entier & 8192) != 0;
+            if (trouve == ferme) { *ecran = n->texte; *double_ = ferme; return n->enfants[q]; }
         }
     }
     return NULL;
@@ -12457,11 +12468,16 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     if (racine && !a.echec && !interactif) verifier_contrats(&a);   /* § 13.7 bis ; pas dans la boucle interactive */
     if (racine && !a.echec && !interactif && copie.fichier_index == 0) {   /* un bouton sans événement (§ 22.2) */
         const char *ecran = NULL;
-        const Noeud *orphelin = bouton_orphelin(racine->enfants, racine->nb_enfants, racine->enfants, racine->nb_enfants, &ecran);
+        int double_ = 0;
+        const Noeud *orphelin = bouton_orphelin(racine->enfants, racine->nb_enfants, racine->enfants, racine->nb_enfants, &ecran, &double_);
         if (orphelin) {
             a.echec = 1;
-            diag->message = grym_formater("Le bouton « %s » de l'écran « %s » n'a pas de « Quand on clique sur « %s » dans "
-                                          "l'écran %s : ».", orphelin->texte, ecran, orphelin->texte, ecran);
+            diag->message = double_
+                ? grym_formater("Le bouton « %s » de l'écran « %s » ferme déjà l'écran (« qui ferme l'écran ») : retire son "
+                                "« Quand on clique sur « %s » dans l'écran %s : », ou retire « qui ferme l'écran ».",
+                                orphelin->texte, ecran, orphelin->texte, ecran)
+                : grym_formater("Le bouton « %s » de l'écran « %s » n'a pas de « Quand on clique sur « %s » dans "
+                                "l'écran %s : ».", orphelin->texte, ecran, orphelin->texte, ecran);
             diag->ligne = orphelin->ligne;
             diag->colonne = orphelin->colonne;
         }
