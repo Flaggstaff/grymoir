@@ -218,7 +218,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     le texte l'état calendly, visible si l'agenda du cabinet conservé = « Calendly »,
     le texte l'inachevé du cabinet conservé,
     côte à côte :
-        un bouton « Fermer l'application »,
+        un bouton « Fermer l'application », qui ferme l'écran,
         un bouton « Verrouiller », visible si le multiposte du cabinet conservé.
 
 Remarque : la page de garde (3 novembre 2026) : un seul mot de passe, qui dit qui est là ; pas de bouton pour passer outre.
@@ -257,7 +257,7 @@ L'écran du personnel, « Personnel », montre :
         un bouton « Feuilles de salaire », en tuile, avec la description « Établir le mois, imprimer, verser »,
         un bouton « Barèmes », en tuile, avec la description « Les taux de chaque année »,
         un bouton « Salariés sortis », en tuile, avec la description « Ceux qui ont quitté le cabinet »,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : la fiche d'un salarié : l'adresse comme sur une enveloppe (la feuille part par la poste), le contrat, les retenues
 Remarque : que la caisse et le canton fixent. Le salaire mensuel est celui d'un plein temps.
@@ -287,13 +287,13 @@ L'écran du salarié, « Salarié », montre :
         une retenue d'impôt (nombre), avec l'unité « CHF », avec l'indication « Impôt à la source par mois, d'après le barème cantonal ; 0 sans permis B ou G », à 552 de la gauche et 456 du haut, large de 260,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer ce salarié ? Il part dans la corbeille, ses feuilles restent. », visible si le salarié ouvert est présent.
 
 Remarque : les salariés sortis : leur fiche s'ouvre encore, pour une attestation ou une feuille d'avant ; vider la sortie les ramène.
 L'écran des sortis, « Salariés sortis », montre :
     la liste des salariés conservés dont la sortie est présente, par nom, avec le nom, le prénom, la fonction et la sortie,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : les barèmes : un par année ; une année nouvelle reçoit les taux de 2026, à corriger si l'OFAS les change.
 L'écran des barèmes, « Barèmes », montre :
@@ -301,7 +301,7 @@ L'écran des barèmes, « Barèmes », montre :
     côte à côte :
         une nouvelle année (nombre entier), facultative, de 2000 à 2100,
         un bouton « Ajouter », principal,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 L'écran du barème, ("Barème " suivi de l'année du barème ouvert), montre :
     le texte « Part du salarié », en petites capitales,
@@ -317,7 +317,7 @@ L'écran du barème, ("Barème " suivi de l'année du barème ouvert), montre :
         un taux LAA employeur (nombre), avec l'unité « % », avec l'indication « Accidents professionnels, selon l'assureur »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : les feuilles de salaire : l'année choisie ; « Établir le mois » fait la feuille de chaque salarié en poste qui n'en a
 Remarque : pas encore pour ce mois ; une feuille choisie s'ouvre, s'imprime, se marque versée ou envoyée, ou s'efface.
@@ -330,7 +330,7 @@ L'écran des feuilles, ("Feuilles de salaire " suivi de l'année des feuilles), 
         un bouton « Virements »,
     le texte l'annonce de l'avis du personnel,
     la liste des feuilles conservées dont le mois ≥ le début des feuilles et le mois < la fin des feuilles, par mois décroissant, avec l'intitulé, le nom du salarié, le brut, le net, le versement et l'envoi,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 L'écran de la feuille, ("Feuille de salaire, " suivi de l'intitulé de la feuille ouverte), montre :
     le texte l'appellation du salarié de la feuille ouverte, en petites capitales,
@@ -347,7 +347,7 @@ L'écran de la feuille, ("Feuille de salaire, " suivi de l'intitulé de la feuil
     côte à côte :
         un bouton « Imprimer », principal, au clavier « P »,
         un bouton « Enregistrer », au clavier « S »,
-        un bouton « Fermer »,
+        un bouton « Fermer », qui ferme l'écran,
         un bouton « Effacer », destructif, à confirmer par « Effacer cette feuille pour toujours ? Elle se refait depuis les feuilles, par le mois. » en tapant « effacer ».
 
 Remarque : les virements (3 novembre 2026) : un fichier pain.001 (ISO 20022, Swiss Payment Standards 2026, IG 2.3 du 20 février
@@ -366,7 +366,7 @@ L'écran des virements, « Virements des salaires », montre :
     le texte l'annonce de l'avis du personnel,
     côte à côte :
         un bouton « Écrire le fichier », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 Remarque : la feuille de salaire sur papier (3 novembre 2026) : le cabinet, le salarié et son adresse (enveloppe à fenêtre),
 Remarque : le mois, le brut, chaque retenue, le net, le compte du virement.
@@ -394,9 +394,6 @@ Le document de feuille, « Feuille de salaire », montre :
 Quand on clique sur « Personnel » dans l'écran d'accueil :
     Ouvrir l'écran du personnel.
 
-Quand on clique sur « Fermer » dans l'écran du personnel :
-    Fermer l'écran.
-
 Quand on clique sur « Nouveau salarié » dans l'écran du personnel :
     Le salarié ouvert devient absent.
     Ouvrir l'écran du salarié.
@@ -411,9 +408,6 @@ Quand on clique sur « Salariés sortis » dans l'écran du personnel :
 Quand on choisit un salarié dans l'écran des sortis :
     Le salarié ouvert devient le salarié choisi de l'écran.
     Ouvrir l'écran du salarié.
-
-Quand on clique sur « Fermer » dans l'écran des sortis :
-    Fermer l'écran.
 
 Quand on ouvre l'écran du salarié :
     Si le salarié ouvert est présent :
@@ -480,9 +474,6 @@ Quand on clique sur « Enregistrer » dans l'écran du salarié :
     La retenue d'impôt du s devient la retenue d'impôt de l'écran.
     Fermer l'écran.
 
-Quand on clique sur « Fermer » dans l'écran du salarié :
-    Fermer l'écran.
-
 Quand on clique sur « Supprimer » dans l'écran du salarié :
     Supprimer le salarié ouvert.
     Fermer l'écran.
@@ -510,9 +501,6 @@ Quand on choisit un barème dans l'écran des barèmes :
     Le barème ouvert devient le barème choisi de l'écran.
     Ouvrir l'écran du barème.
 
-Quand on clique sur « Fermer » dans l'écran des barèmes :
-    Fermer l'écran.
-
 Quand on ouvre l'écran du barème :
     Le b vaut le barème ouvert.
     Le taux AVS de l'écran devient le taux AVS du b.
@@ -532,9 +520,6 @@ Quand on clique sur « Enregistrer » dans l'écran du barème :
     Le taux AC employeur du b devient le taux AC employeur de l'écran.
     Le taux allocations familiales du b devient le taux allocations familiales de l'écran.
     Le taux LAA employeur du b devient le taux LAA employeur de l'écran.
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran du barème :
     Fermer l'écran.
 
 Quand on clique sur « Feuilles de salaire » dans l'écran du personnel :
@@ -626,15 +611,9 @@ Quand on clique sur « Écrire le fichier » dans l'écran des virements :
         Le versement de la feuille devient l'exécution du l.
     L'avis du personnel devient le nombre fait suivi de " virement(s), CHF " suivi de (l'arrondi du total à 0,01) suivi de ", écrits dans " suivi du chemin suivi de " ; les feuilles sont marquées versées le " suivi de l'exécution du l suivi de « . ».
 
-Quand on clique sur « Fermer » dans l'écran des virements :
-    Fermer l'écran.
-
 Quand on choisit une feuille dans l'écran des feuilles :
     La feuille ouverte devient la feuille choisie de l'écran.
     Ouvrir l'écran de la feuille.
-
-Quand on clique sur « Fermer » dans l'écran des feuilles :
-    Fermer l'écran.
 
 Quand on ouvre l'écran de la feuille :
     Le versement de l'écran devient le versement de la feuille ouverte.
@@ -649,9 +628,6 @@ Remarque : l'aperçu du document, d'où l'on imprime ou enregistre un PDF (Cmd+P
 Quand on clique sur « Imprimer » dans l'écran de la feuille :
     Ouvrir le document de feuille.
 
-Quand on clique sur « Fermer » dans l'écran de la feuille :
-    Fermer l'écran.
-
 Quand on clique sur « Effacer » dans l'écran de la feuille :
     Supprimer la feuille ouverte définitivement.
     Fermer l'écran.
@@ -659,9 +635,6 @@ Quand on clique sur « Effacer » dans l'écran de la feuille :
 Remarque : quitter (24 octobre 2026) : le bouton « Fermer l'application » ou la croix de la fenêtre ferment l'accueil ; en
 Remarque : partant, une copie chiffrée de la base, dans le dossier de sauvegarde, sinon dans « Sauvegardes » à côté de
 Remarque : l'application ; jamais par-dessus une autre (« (2) », « (3) »… le même jour) ; ratée, l'application se ferme quand même.
-Quand on clique sur « Fermer l'application » dans l'écran d'accueil :
-    Fermer l'écran.
-
 Remarque : en partant (2 novembre 2026), les réservations du jour sont relues : leurs rappels SMS partent chez ASPSMS ce soir.
 Quand on ferme l'écran d'accueil :
     Relire les réservations, qui donne l'état calendly.
@@ -706,7 +679,7 @@ L'écran d'inscription, « Nouveau patient », montre :
         une autre personne (vrai ou faux), facultative, avec l'indication « À cocher si Praxis signale une fiche semblable et que ce n'est pas la même personne », à 552 de la gauche et 640 du haut, large de 520,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : la page d'un patient, comme son inscription, puis ses séances ; on y corrige ses données directement.
 Remarque : l'ajout, dicté ou tapé, s'ajoute à la fin de l'anamnèse, daté, à l'enregistrement : rien de ce qui est déjà écrit ne se perd.
@@ -749,7 +722,7 @@ L'écran du patient, « Patient », montre :
         un bouton « Historique »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
         un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
     côte à côte :
         un bouton « Archiver »,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. »,
@@ -763,7 +736,7 @@ L'écran de la fusion, « Fusionner deux fiches », montre :
     le texte le bilan du doublon de l'écran,
     côte à côte :
         un bouton « Fusionner », destructif, à confirmer par « Verser cette fiche dans la fiche gardée ? Ses séances, factures, quittances et notes changent de fiche ; elle part vide dans la corbeille. » en tapant « fusionner »,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -785,7 +758,7 @@ L'écran de la séance, « Séance », montre :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Facture ou quittance »,
         un bouton « Annuler sa facture », destructif, à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance ouverte est présente,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
     côte à côte :
         un bouton « Espèces »,
@@ -809,7 +782,7 @@ L'écran du soin, « Soin », montre :
     une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Nouvel acte »,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer ce soin ? Il part dans la corbeille. ».
 
@@ -823,7 +796,7 @@ L'écran de l'acte, « Acte du Tarif 590 », montre :
     une première séance seulement (vrai ou faux), en interrupteur, avec l'indication « Allumé : l'anamnèse, que les séances suivantes n'ont pas »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cet acte ? ».
 
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
@@ -840,7 +813,7 @@ L'écran de comptabilité, « Comptabilité », montre :
     un bouton « Exporter en CSV », en tuile, avec la description « Recettes et frais, pour un tableur ou la fiduciaire »,
     un dossier d'export (texte), facultatif, avec le choix d'un dossier, avec l'indication « Où vont les CSV ; vide : Exports, à côté de l'application. »,
     le texte l'annonce de l'avis des comptes,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
 L'écran des factures, (le titre des factures de l'année des comptes et de (la recherche des factures suivi du nom cherché des factures)), montre :
@@ -854,7 +827,7 @@ L'écran des factures, (le titre des factures de l'année des comptes et de (la 
     côte à côte :
         un bouton « Annuler la facture », destructif, à confirmer par « Annuler la facture choisie ? Elle ne se rétablit pas : on en refait une. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler »,
         un bouton « Facture électronique »,
-        un bouton « Fermer »,
+        un bouton « Fermer », qui ferme l'écran,
     le texte l'avis des factures.
 
 Remarque : les factures échues (trente jours) et pas réglées : « Rappel » imprime le rappel de la facture choisie ;
@@ -871,7 +844,7 @@ L'écran des rappels, « Rappels », montre :
     la liste des rappels conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture,
     côte à côte :
         un bouton « Rappel électronique »,
-        un bouton « Fermer »,
+        un bouton « Fermer », qui ferme l'écran,
     le texte l'avis des factures.
 
 Remarque : l'en-tête des pièces (24 octobre 2026) : la signature et l'adresse du cabinet, une seule fois pour toutes les pièces.
@@ -943,7 +916,7 @@ L'écran des quittances, (le titre des quittances de l'année des comptes et de 
     côte à côte :
         un bouton « Annuler la quittance », destructif, à confirmer par « Annuler la quittance choisie ? Elle ne se rétablit pas : on en refait une. » en tapant « annuler »,
         un bouton « Quittance électronique »,
-        un bouton « Fermer »,
+        un bouton « Fermer », qui ferme l'écran,
     le texte l'avis des factures.
 
 L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
@@ -951,7 +924,7 @@ L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
     la liste des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
     côte à côte :
         un bouton « Nouveau frais », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », qui ferme l'écran,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer le frais choisi ? Il part dans la corbeille. ».
 
 L'écran du frais, « Frais », montre :
@@ -966,7 +939,7 @@ L'écran du frais, « Frais », montre :
         un bouton « Retirer le justificatif », à 552 de la gauche et 144 du haut, actif si le justificatif de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
 
 Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, les séances et leur paiement, le montant reçu ; ce qu'une
@@ -992,11 +965,11 @@ Remarque : séances, des factures et des virements reçus ; signés Direction ou
 L'écran de l'historique, « Historique », montre :
     le texte le nom de la personne ouverte, en petites capitales,
     le texte l'historique de la personne ouverte,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 L'écran du journal, « Journal des changements », montre :
     le texte l'historique de la base,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : l'attestation annuelle (4 novembre 2026) : ce que le patient a payé lui-même dans l'année choisie dans la Comptabilité,
 Remarque : séance par séance, au jour du paiement, avec sa pièce ; pour sa déclaration d'impôt ou son assurance complémentaire. Les
@@ -1050,7 +1023,7 @@ L'écran des patients montre :
     la liste des patients conservés dont l'archivage est absent et (le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients), par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :
         un bouton « Nouveau patient », au clavier « N »,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 L'écran de séance, « Nouvelle séance » en grand, montre :
     côte à côte :
@@ -1070,7 +1043,7 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
     un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : les séances (30 octobre 2026) : du jour, à venir ou passées ; une prévue se dit faite, annulée ou absente ; une séance
 Remarque : du jour ou passée se règle d'ici comme dans « À encaisser ».
@@ -1092,7 +1065,7 @@ L'écran des prévues, « Séances », montre :
         une date de virement (date), facultative, avec l'indication « Le jour où le virement est arrivé ; vide : aujourd'hui »,
         un bouton « Offert »,
         un bouton « Facture »,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : tout ce qui n'est pas payé, jusqu'à aujourd'hui compris, prévues du jour aussi (30 octobre 2026).
 L'écran des encaissements, « À encaisser », montre :
@@ -1105,7 +1078,7 @@ L'écran des encaissements, « À encaisser », montre :
         une date de virement (date), facultative, avec l'indication « Le jour où le virement est arrivé ; vide : aujourd'hui »,
         un bouton « Offert »,
         un bouton « Facture »,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : l'agenda (1er novembre 2026) : la semaine ou le jour ; un clic ouvre une séance, la glisser la déplace (au quart
 Remarque : d'heure, son rappel SMS reprogrammé) ; un clic dans le vide ouvre une nouvelle séance à cette heure ; hors des
@@ -1120,7 +1093,7 @@ L'écran du calendrier, « Agenda », montre :
         une vue (« Semaine » ou « Jour »), « Semaine » au départ,
     le texte le titre du calendrier, en petites capitales,
     la liste des séances conservées dont la date ≥ le début du calendrier et la date ≤ la fin du calendrier et le statut ≠ « annulée », par date puis heure, avec la date, l'heure, la durée, le nom du patient et le nom du soin, en agenda selon la grille du calendrier,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : la facturation, depuis l'accueil (30 octobre 2026) : encaisser, les factures, les quittances ; les factures aux
 Remarque : assurances aussi (31 octobre 2026), quand le cabinet les fait. La Comptabilité garde les comptes : frais, rappels, journal.
@@ -1130,7 +1103,7 @@ L'écran de caisse, « Facturation », montre :
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
     un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Virements reçus », en tuile, avec la description « L'avis de la banque, rapproché des factures »,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : les virements reçus (4 novembre 2026) : l'avis de crédit (camt.054) ou le relevé (camt.053) de l'e-banking, lu une fois
 Remarque : ou plusieurs (rien n'est compté deux fois) ; ceux de l'année, les plus récents d'abord ; un virement choisi s'ouvre.
@@ -1140,7 +1113,7 @@ L'écran des crédits, ("Virements reçus " suivi de l'année des comptes), mont
     un bouton « Lire l'avis », principal, actif si l'avis de l'écran est présent,
     le texte l'annonce des crédits,
     la liste des crédits conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le montant, le payeur, l'état, le numéro de la facture, le numéro du décompte et la raison,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : un virement à vérifier : la facture qu'il règle, choisie à la main, se solde au jour du virement ; « Écarter » le met de
 Remarque : côté (un remboursement, un virement privé) ; « À vérifier » l'y remet.
@@ -1155,7 +1128,7 @@ L'écran du crédit, « Virement reçu », montre :
         un bouton « Rapprocher », principal, actif si l'état du crédit ouvert ≠ « rapproché »,
         un bouton « Écarter », actif si l'état du crédit ouvert = « à vérifier »,
         un bouton « À vérifier », actif si l'état du crédit ouvert = « écarté »,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
 Remarque : trois colonnes, l'adresse, les contacts et numéros, puis la facturation et l'image du cabinet : tout tient sur un écran (27 octobre 2026).
@@ -1193,7 +1166,7 @@ L'écran du cabinet, « Le cabinet », montre :
             une quittance différée (vrai ou faux), en interrupteur, avec l'indication « Allumé : Espèces et Twint n'ouvrent pas de quittance ; Facturation, Quittances la fait sur demande »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Retirer le logo »,
         un bouton « Retirer la signature ».
 
@@ -1205,7 +1178,7 @@ L'écran des notes, « Notes confidentielles », montre :
     une nouvelle note (texte), facultative, sur plusieurs lignes, transcrite de la dictée,
     côte à côte :
         un bouton « Ajouter », principal,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Modifier »,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer la note choisie ? ».
 
@@ -1245,14 +1218,14 @@ L'écran de la corbeille, « Corbeille », montre :
     le texte « Pièces annulées », en petites capitales,
     la liste des factures supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
     la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : les patients archivés : ceux qui ont des pièces et ne viennent plus ; leur page s'ouvre, leur historique avec.
 L'écran des archives, « Archives », montre :
     la liste des patients conservés dont l'archivage est présent, par nom, avec le nom, le téléphone, la localité et l'archivage,
     côte à côte :
         un bouton « Désarchiver »,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 Remarque : au premier lancement, après le mot de passe (que l'application a fait choisir) : le dossier des copies automatiques,
 Remarque : celui du système qui se synchronise (rien ne le devine : on le montre).
@@ -1278,7 +1251,7 @@ L'écran des sauvegardes, « Sauvegardes », montre :
     un nouveau mot de passe (texte), facultatif, masqué, large de 12 caractères,
     une confirmation (texte), facultative, masquée, large de 12 caractères,
     un bouton « Changer le mot de passe »,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : la configuration : ce que Nicolas règle une fois, et retouche quand il veut.
 L'écran de configuration, « Configuration », montre :
@@ -1295,7 +1268,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Journal », en tuile, avec la description « Les derniers changements : patients, séances, factures, virements », visible si le rôle ouvert = « Direction »,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
     le texte "Praxis, version " suivi de la version, en petites capitales,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 Remarque : les accès (3 novembre 2026) : chaque mot de passe se pose ou se remplace, en deux saisies ; vide, il reste ce qu'il est.
 Remarque : sans mot de passe de Direction, Praxis n'a pas de page de garde : la poser l'allume au prochain lancement ou verrouillage.
@@ -1309,7 +1282,7 @@ L'écran des accès, « Accès », montre :
     le texte l'annonce de l'avis des accès,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 Quand on clique sur « Accès » dans l'écran de configuration :
     L'avis des accès devient absent.
@@ -1332,9 +1305,6 @@ Quand on clique sur « Enregistrer » dans l'écran des accès :
         Le fait devient « Mot de passe enregistré. ».
     L'avis des accès devient le fait.
 
-Quand on clique sur « Fermer » dans l'écran des accès :
-    Fermer l'écran.
-
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
 L'écran de l'agenda, « Rendez-vous », montre :
     un agenda (« Praxis », « OneDoc » ou « Calendly »), avec l'indication « OneDoc : Praxis ouvre l'agenda ; Calendly : Praxis relit les réservations du site »,
@@ -1355,13 +1325,13 @@ L'écran de l'agenda, « Rendez-vous », montre :
     le texte « Une plage par ligne ; deux le même jour pour le matin et l'après-midi. Sans aucune plage, l'agenda montre tous les jours. »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 L'écran des soins, « Soins », montre :
     la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi, la durée et le code tarifaire,
     côte à côte :
         un bouton « Nouveau soin »,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 Remarque : renommer une rubrique renomme tous ses frais : ils la désignent, pas son nom.
 L'écran des rubriques, « Rubriques de frais », montre :
@@ -1369,13 +1339,13 @@ L'écran des rubriques, « Rubriques de frais », montre :
     côte à côte :
         une nouvelle rubrique (texte), facultative,
         un bouton « Ajouter », principal,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 L'écran de la rubrique, « Rubrique », montre :
     un nom (texte),
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
 
 Remarque : les bornes des factures : l'année des comptes, ou toutes les années pendant une recherche.
@@ -1917,9 +1887,6 @@ Quand on choisit un crédit dans l'écran des crédits :
     Le crédit ouvert devient le crédit choisi de l'écran.
     Ouvrir l'écran du crédit.
 
-Quand on clique sur « Fermer » dans l'écran des crédits :
-    Fermer l'écran.
-
 Quand on ouvre l'écran du crédit :
     La facture de l'écran devient la facture du crédit ouvert.
 
@@ -1934,12 +1901,6 @@ Quand on clique sur « Écarter » dans l'écran du crédit :
 
 Quand on clique sur « À vérifier » dans l'écran du crédit :
     L'état du crédit ouvert devient « à vérifier ».
-
-Quand on clique sur « Fermer » dans l'écran du crédit :
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran de caisse :
-    Fermer l'écran.
 
 Quand on clique sur « Comptabilité » dans l'écran d'accueil :
     Ouvrir l'écran de comptabilité.
@@ -2006,9 +1967,6 @@ Quand on choisit une facture dans l'écran des factures :
     Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
     Sinon, ouvrir le document de facture.
     Si le justificatif de la créance en cours est présent, ouvrir le justificatif de la créance en cours.
-
-Quand on clique sur « Fermer » dans l'écran des factures :
-    Fermer l'écran.
 
 Remarque : une facture fausse s'annule : ses séances se corrigent, puis « Facture » en refait une, sous un nouveau numéro.
 Remarque : les pièces électroniques (generalInvoice 5.0, 27 octobre 2026) : chacune un fichier XML dans le dossier d'export, à
@@ -2106,12 +2064,6 @@ Quand on clique sur « Facturer » dans l'écran des rappels :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste du bas. ».
     Attester la séance choisie de l'écran.
 
-Quand on clique sur « Fermer » dans l'écran des rappels :
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran de comptabilité :
-    Fermer l'écran.
-
 Remarque : une quittance pour la séance payée choisie ; son exemplaire, le PDF, est gardé, puis montré pour l'imprimer.
 Quand on clique sur « Quittance » dans l'écran des quittances :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance payée dans la liste. ».
@@ -2126,9 +2078,6 @@ Quand on choisit une quittance dans l'écran des quittances :
     Ouvrir l'exemplaire de la pièce en cours.
     Si le justificatif de la pièce en cours est présent, ouvrir le justificatif de la pièce en cours.
 
-Quand on clique sur « Fermer » dans l'écran des quittances :
-    Fermer l'écran.
-
 Quand on clique sur « Annuler la quittance » dans l'écran des quittances :
     Si la quittance choisie de l'écran est absente, refuser « Choisis d'abord une quittance dans la liste du bas. ».
     Défaire la quittance choisie de l'écran.
@@ -2140,9 +2089,6 @@ Quand on clique sur « Nouveau frais » dans l'écran des frais :
 Quand on choisit un frais dans l'écran des frais :
     Le frais ouvert devient le frais choisi de l'écran.
     Ouvrir l'écran du frais.
-
-Quand on clique sur « Fermer » dans l'écran des frais :
-    Fermer l'écran.
 
 Remarque : un frais saisi par erreur va dans la corbeille (rien ne disparaît définitivement).
 Quand on clique sur « Supprimer » dans l'écran des frais :
@@ -2181,9 +2127,6 @@ Quand on clique sur « Enregistrer » dans l'écran du frais :
 Remarque : le justificatif choisi ou gardé, dans la visionneuse du système.
 Quand on clique sur « Voir le justificatif » dans l'écran du frais :
     Ouvrir le justificatif de l'écran.
-
-Quand on clique sur « Fermer » dans l'écran du frais :
-    Fermer l'écran.
 
 Remarque : le justificatif retiré quitte le frais tout de suite (il reste dans les sauvegardes d'avant).
 Quand on clique sur « Retirer le justificatif » dans l'écran du frais :
@@ -2254,9 +2197,6 @@ Quand on clique sur « Retirer la plage » dans l'écran de l'agenda :
     Le jour retiré vaut le jour de la plage choisie de l'écran.
     Supprimer la plage choisie de l'écran définitivement.
     Signaler « Plage retirée : » puis le jour retiré suivi de « . ».
-
-Quand on clique sur « Fermer » dans l'écran de l'agenda :
-    Fermer l'écran.
 
 Quand on clique sur « Agenda » dans l'écran d'accueil :
     Ouvrir l'écran du calendrier.
@@ -2332,9 +2272,6 @@ Quand on choisit un créneau dans l'écran du calendrier :
     La date proposée devient absente.
     L'heure proposée devient absente.
 
-Quand on clique sur « Fermer » dans l'écran du calendrier :
-    Fermer l'écran.
-
 Quand on clique sur « Relire les rendez-vous » dans l'écran d'accueil :
     Relire les réservations, qui donne l'état calendly.
 
@@ -2347,9 +2284,6 @@ Quand on clique sur « Soins » dans l'écran de configuration :
 
 Quand on clique sur « Rubriques de frais » dans l'écran de configuration :
     Ouvrir l'écran des rubriques.
-
-Quand on clique sur « Fermer » dans l'écran de configuration :
-    Fermer l'écran.
 
 Quand on clique sur « Corbeille » dans l'écran de configuration :
     Ouvrir l'écran de la corbeille.
@@ -2398,9 +2332,6 @@ Quand on clique sur « Changer le mot de passe » dans l'écran des sauvegardes 
     En cas d'échec :
         Refuser le motif de l'échec.
     L'avis des sauvegardes devient « Mot de passe changé. Les copies déjà faites s'ouvrent avec l'ancien. ».
-
-Quand on clique sur « Fermer » dans l'écran des sauvegardes :
-    Fermer l'écran.
 
 Quand on clique sur « Rétablir le patient » dans l'écran de la corbeille :
     Si le patient choisi de l'écran est absent, refuser « Choisis d'abord un patient dans la liste. ».
@@ -2480,9 +2411,6 @@ Quand on choisit une quittance dans l'écran de la corbeille :
     Si l'exemplaire de la quittance choisie de l'écran est absent, refuser « Cette quittance n'a pas d'exemplaire gardé. ».
     Ouvrir l'exemplaire de la quittance choisie de l'écran.
 
-Quand on clique sur « Fermer » dans l'écran de la corbeille :
-    Fermer l'écran.
-
 Quand on clique sur « Archives » dans l'écran de configuration :
     Ouvrir l'écran des archives.
 
@@ -2495,9 +2423,6 @@ Quand on clique sur « Désarchiver » dans l'écran des archives :
     Si le patient choisi de l'écran est absent, refuser « Choisis d'abord un patient dans la liste. ».
     L'archivage du patient choisi de l'écran devient absent.
 
-Quand on clique sur « Fermer » dans l'écran des archives :
-    Fermer l'écran.
-
 Quand on clique sur « Ajouter » dans l'écran des rubriques :
     Si la nouvelle rubrique de l'écran est absente, refuser « Écris d'abord le nom de la rubrique. ».
     La r vaut une nouvelle rubrique :
@@ -2509,17 +2434,11 @@ Quand on choisit une rubrique dans l'écran des rubriques :
     La rubrique ouverte devient la rubrique choisie de l'écran.
     Ouvrir l'écran de la rubrique.
 
-Quand on clique sur « Fermer » dans l'écran des rubriques :
-    Fermer l'écran.
-
 Quand on ouvre l'écran de la rubrique :
     Le nom de l'écran devient le nom de la rubrique ouverte.
 
 Quand on clique sur « Enregistrer » dans l'écran de la rubrique :
     Le nom de la rubrique ouverte devient le nom de l'écran.
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran de la rubrique :
     Fermer l'écran.
 
 Quand on clique sur « Supprimer » dans l'écran de la rubrique :
@@ -2642,9 +2561,6 @@ Quand on choisit une séance dans l'écran du patient :
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
-Quand on clique sur « Fermer » dans l'écran du patient :
-    Fermer l'écran.
-
 Quand on clique sur « Notes » dans l'écran du patient :
     Ouvrir l'écran des notes.
 
@@ -2670,9 +2586,6 @@ Quand on clique sur « Fusionner » dans l'écran de la fusion :
     Signaler "Fiche « " suivi du versé suivi de " » versée dans « " suivi du nom de la personne ouverte suivi de " » ; elle est dans la corbeille.".
     Fermer l'écran.
 
-Quand on clique sur « Fermer » dans l'écran de la fusion :
-    Fermer l'écran.
-
 Remarque : archiver : le patient quitte la liste des patients, rien ne se perd ; « Archives » le montre et le ramène.
 Quand on clique sur « Archiver » dans l'écran du patient :
     L'archivage de la personne ouverte devient aujourd'hui.
@@ -2688,9 +2601,6 @@ Quand on clique sur « Ajouter » dans l'écran des notes :
     Conserver la n.
     La nouvelle note de l'écran devient absente.
     La dictée de l'écran devient absente.
-
-Quand on clique sur « Fermer » dans l'écran des notes :
-    Fermer l'écran.
 
 Remarque : une note choisie revient dans la zone ; « Modifier » y écrit le texte corrigé, « Supprimer » la met dans la corbeille.
 Quand on choisit une note dans l'écran des notes :
@@ -2748,9 +2658,6 @@ Quand on clique sur « Nouveau patient » dans l'écran des patients :
     Si l'inscrit est présent :
         La personne ouverte devient l'inscrit.
         Ouvrir l'écran du patient.
-
-Quand on clique sur « Fermer » dans l'écran des patients :
-    Fermer l'écran.
 
 Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
@@ -2832,24 +2739,12 @@ Quand on clique sur « Enregistrer » dans l'écran d'inscription :
 Quand on clique sur « Historique » dans l'écran du patient :
     Ouvrir l'écran de l'historique.
 
-Quand on clique sur « Fermer » dans l'écran de l'historique :
-    Fermer l'écran.
-
 Quand on clique sur « Journal » dans l'écran de configuration :
     Ouvrir l'écran du journal.
-
-Quand on clique sur « Fermer » dans l'écran du journal :
-    Fermer l'écran.
 
 Quand on clique sur « Attestation annuelle » dans l'écran du patient :
     Ouvrir le document d'attestation.
     Signaler "Attestation " suivi de l'année des comptes suivi de " : une autre année se choisit dans la Comptabilité.".
-
-Quand on clique sur « Fermer » dans l'écran d'inscription :
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran de séance :
-    Fermer l'écran.
 
 Quand on choisit une séance dans l'écran d'accueil :
     La séance ouverte devient la séance choisie de l'écran.
@@ -2932,9 +2827,6 @@ Quand on clique sur « Absence » dans l'écran des prévues :
     Clore la séance choisie de l'écran et « absence ».
     Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de " : notée absente.".
 
-Quand on clique sur « Fermer » dans l'écran des prévues :
-    Fermer l'écran.
-
 Quand on clique sur « Espèces » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Régler la séance choisie de l'écran et « espèces ».
@@ -2987,9 +2879,6 @@ Quand on clique sur « Facture » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Facturer au comptoir la séance choisie de l'écran.
 
-Quand on clique sur « Fermer » dans l'écran des encaissements :
-    Fermer l'écran.
-
 Quand on choisit un soin dans l'écran des soins :
     Le soin ouvert devient le soin choisi de l'écran.
     Ouvrir l'écran du soin.
@@ -3018,9 +2907,6 @@ Quand on clique sur « Enregistrer » dans l'écran du soin :
         La facturation du s devient la facturation de l'écran.
         La position tarifaire du s devient la position tarifaire de l'écran.
         Si l'ordonnance exigée du s est vraie, la facturation du s devient « assurance ».
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran du soin :
     Fermer l'écran.
 
 Remarque : un soin ou une rubrique supprimé ne se propose plus ; les séances et les frais qui le désignent le gardent.
@@ -3063,9 +2949,6 @@ Quand on clique sur « Enregistrer » dans l'écran de l'acte :
     La quantité du a devient la quantité de l'écran.
     Le prix du a devient le prix de l'écran.
     La première séance seulement du a devient la première séance seulement de l'écran.
-    Fermer l'écran.
-
-Quand on clique sur « Fermer » dans l'écran de l'acte :
     Fermer l'écran.
 
 Quand on clique sur « Supprimer » dans l'écran de l'acte :
@@ -3172,9 +3055,6 @@ Quand on clique sur « Voir le patient » dans l'écran de la séance :
     Ouvrir l'écran du patient.
     La personne ouverte devient le précédent.
 
-Quand on clique sur « Fermer » dans l'écran de la séance :
-    Fermer l'écran.
-
 Remarque : une séance supprimée va dans la corbeille, d'où elle se rétablit ; sa quittance est d'abord annulée ; facturée, elle
 Remarque : attend que sa facture le soit, par « Annuler sa facture » (31 octobre 2026).
 Quand on clique sur « Supprimer » dans l'écran de la séance :
@@ -3257,9 +3137,6 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le prénom du c devient le prénom de l'écran.
     Fermer l'écran.
 
-Quand on clique sur « Fermer » dans l'écran du cabinet :
-    Fermer l'écran.
-
 Remarque : sans logo ni signature, les écrans et les pièces n'en montrent pas, dès le lancement suivant.
 Quand on clique sur « Retirer le logo » dans l'écran du cabinet :
     Le logo du cabinet conservé devient absent.
@@ -3268,9 +3145,6 @@ Quand on clique sur « Retirer le logo » dans l'écran du cabinet :
 Quand on clique sur « Retirer la signature » dans l'écran du cabinet :
     La signature du cabinet conservé devient absente.
     La signature de l'écran devient absente.
-
-Quand on clique sur « Fermer » dans l'écran des soins :
-    Fermer l'écran.
 
 Remarque : monoposte ou multiposte (8 novembre 2026) : Praxis s'ouvre sur un seul poste, sauf si le cabinet allume le
 Remarque : multiposte dans sa fiche. Servie à plusieurs postes (« grym servir Praxis.grym --reseau … », docs/v2.md, § 12),
@@ -3301,7 +3175,7 @@ L'écran des assureurs, « Assureurs », montre :
     la liste des assureurs conservés, par nom, avec le nom, le numéro GLN et la localité,
     côte à côte :
         un bouton « Nouvel assureur »,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 L'écran de l'assureur, « Assureur », montre :
     un nom (texte),
@@ -3314,7 +3188,7 @@ L'écran de l'assureur, « Assureur », montre :
     une valeur du point (nombre), facultative, avec l'indication « Seulement si elle diffère de celle du cabinet (Tarif des assurances) »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cet assureur ? ».
 
 Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
@@ -3324,7 +3198,7 @@ L'écran des prescriptions, « Ordonnances », montre :
     la liste des ordonnances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, le médecin, le maximum de séances et le cas,
     côte à côte :
         un bouton « Nouvelle ordonnance », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer », qui ferme l'écran.
 
 L'écran de l'ordonnance, « Ordonnance », montre :
     une date (date), avec l'indication « Le jour de la prescription »,
@@ -3340,7 +3214,7 @@ L'écran de l'ordonnance, « Ordonnance », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Voir le scan »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cette ordonnance ? »,
         un bouton « Facturer à l'assurance »,
         un bouton « Annoncer à l'assureur ».
@@ -3355,9 +3229,6 @@ Quand on clique sur « Nouvel assureur » dans l'écran des assureurs :
 Quand on choisit un assureur dans l'écran des assureurs :
     L'assureur ouvert devient l'assureur choisi de l'écran.
     Ouvrir l'écran de l'assureur.
-
-Quand on clique sur « Fermer » dans l'écran des assureurs :
-    Fermer l'écran.
 
 Quand on ouvre l'écran de l'assureur :
     Si l'assureur ouvert est présent :
@@ -3390,9 +3261,6 @@ Quand on clique sur « Enregistrer » dans l'écran de l'assureur :
     La valeur du point du a devient la valeur du point de l'écran.
     Fermer l'écran.
 
-Quand on clique sur « Fermer » dans l'écran de l'assureur :
-    Fermer l'écran.
-
 Remarque : un assureur qu'un patient désigne encore ne se supprime pas : on change d'abord l'assurance du patient.
 Quand on clique sur « Supprimer » dans l'écran de l'assureur :
     Si l'assureur ouvert est absent, fermer l'écran.
@@ -3414,9 +3282,6 @@ Quand on choisit une ordonnance dans l'écran des prescriptions :
     L'ordonnance ouverte devient l'ordonnance choisie de l'écran.
     L'usage ouvert devient l'usage de l'ordonnance ouverte.
     Ouvrir l'écran de l'ordonnance.
-
-Quand on clique sur « Fermer » dans l'écran des prescriptions :
-    Fermer l'écran.
 
 Quand on ouvre l'écran de l'ordonnance :
     Si l'ordonnance ouverte est présente :
@@ -3465,9 +3330,6 @@ Quand on clique sur « Voir le scan » dans l'écran de l'ordonnance :
     Si le scan de l'ordonnance ouverte est absent, refuser « Pas de scan pour cette ordonnance. ».
     Ouvrir le scan de l'ordonnance ouverte.
 
-Quand on clique sur « Fermer » dans l'écran de l'ordonnance :
-    Fermer l'écran.
-
 Remarque : une ordonnance qui couvre déjà des séances ne se supprime pas : la facture tiers payant la cite.
 Quand on clique sur « Supprimer » dans l'écran de l'ordonnance :
     Si l'ordonnance ouverte est absente, fermer l'écran.
@@ -3484,7 +3346,7 @@ L'écran du tarif, « Tarif des assurances », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Nouvelle position »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 L'écran de la position, « Position tarifaire », montre :
     un code (texte), avec l'indication « Le chiffre du tarif : 7601 »,
@@ -3493,13 +3355,13 @@ L'écran de la position, « Position tarifaire », montre :
     une unité (« quart d'heure » ou « séance »), avec l'indication « Par quart d'heure entier ou entamé, ou par séance »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cette position tarifaire ? ».
 
 Remarque : les factures tiers payant, la plus récente en tête ; une facture choisie s'ouvre : ses PDF, et son règlement.
 L'écran des assurances, « Factures aux assurances », montre :
     la liste des décomptes conservés, par date décroissant, avec le numéro, la date, le nom du patient, le nom de l'assureur, le montant et l'état,
-    un bouton « Fermer ».
+    un bouton « Fermer », qui ferme l'écran.
 
 L'écran du décompte, « Facture tiers payant », montre :
     le texte "N° " suivi du numéro du décompte ouvert suivi de ", du " suivi de la date du décompte ouvert,
@@ -3511,7 +3373,7 @@ L'écran du décompte, « Facture tiers payant », montre :
         un bouton « Réglée », principal,
         un bouton « Voir la facture »,
         un bouton « Voir la copie »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Quand on clique sur « Facturer à l'assurance » dans l'écran de l'ordonnance :
     Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
@@ -3535,9 +3397,6 @@ Quand on clique sur « Nouvelle position » dans l'écran du tarif :
 Quand on choisit une position dans l'écran du tarif :
     La position ouverte devient la position choisie de l'écran.
     Ouvrir l'écran de la position.
-
-Quand on clique sur « Fermer » dans l'écran du tarif :
-    Fermer l'écran.
 
 Quand on ouvre l'écran de la position :
     Si la position ouverte est présente :
@@ -3564,9 +3423,6 @@ Quand on clique sur « Enregistrer » dans l'écran de la position :
     L'unité de la p devient l'unité de l'écran.
     Fermer l'écran.
 
-Quand on clique sur « Fermer » dans l'écran de la position :
-    Fermer l'écran.
-
 Remarque : une position qu'un soin désigne encore ne se supprime pas.
 Quand on clique sur « Supprimer » dans l'écran de la position :
     Si la position ouverte est absente, fermer l'écran.
@@ -3583,9 +3439,6 @@ Quand on clique sur « Assurances » dans l'écran de caisse :
 Quand on choisit un décompte dans l'écran des assurances :
     Le décompte ouvert devient le décompte choisi de l'écran.
     Ouvrir l'écran du décompte.
-
-Quand on clique sur « Fermer » dans l'écran des assurances :
-    Fermer l'écran.
 
 Quand on ouvre l'écran du décompte :
     Le règlement de l'écran devient le règlement du décompte ouvert.
@@ -3605,9 +3458,6 @@ Quand on clique sur « Voir la facture » dans l'écran du décompte :
 
 Quand on clique sur « Voir la copie » dans l'écran du décompte :
     Ouvrir la copie du décompte ouvert.
-
-Quand on clique sur « Fermer » dans l'écran du décompte :
-    Fermer l'écran.
 
 Remarque : l'annonce : une lettre à l'assureur, gardée dans l'ordonnance ; une seconde fois, la même lettre s'ouvre.
 Quand on clique sur « Annoncer à l'assureur » dans l'écran de l'ordonnance :
@@ -3639,7 +3489,7 @@ L'écran des SMS, « SMS », montre :
         un bouton « Vérifier le compte »,
         un bouton « SMS d'essai »,
         un bouton « Rappel d'essai »,
-        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+        un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Quand on clique sur « SMS » dans l'écran de configuration :
     L'état SMS devient « Aucun essai encore. ».
@@ -3701,9 +3551,6 @@ Quand on clique sur « Rappel d'essai » dans l'écran des SMS :
         « DeferredDeliveryTime » : le moment d'envoi d'aujourd'hui et de l'heure d'essai de l'écran,
         « TransactionReferenceNumber » : le préfixe des rappels du c suivi de « -essai ».
     L'état SMS devient "Rappel d'essai programmé : " suivi de la réponse.
-
-Quand on clique sur « Fermer » dans l'écran des SMS :
-    Fermer l'écran.
 
 Quand on clique sur « Facturer la complémentaire » dans l'écran du patient :
     Décompter la complémentaire de la personne ouverte.

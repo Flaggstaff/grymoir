@@ -147,32 +147,10 @@ Remarque : (jusqu'à dix au même moment) parmi les références déjà confiée
 La référence de rappel prévue d'une séance :
     La base vaut le préfixe des rappels du cabinet conservé suivi de « - » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
     Si le nombre de séances conservées dont la référence de rappel = la base = 0, rendre la base.
-    Le rang vaut 2.
-    Le candidat vaut la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Le candidat devient la base suivi de « - » suivi du rang.
-    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
-    Le rang devient le rang + 1.
-    Rendre la base suivi de « - » suivi du rang.
+    Pour chaque rang de 2 à 9 :
+        Le candidat vaut la base suivi de « - » suivi du rang.
+        Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Rendre la base suivi de « -10 ».
 
 Remarque : le rappel attendu d'une séance : prévue, à une heure, pour un patient qui l'accepte et a un téléphone, le compte
 Remarque : SMS réglé, et la veille à 18:00 pas encore passée.
