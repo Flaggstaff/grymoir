@@ -290,6 +290,7 @@ struct Machine {
     size_t nb_classes;
     Objet *tas;             /* tous les objets vivants ou non encore ramassés */
     size_t nb_objets, depuis_ramassage, seuil;
+    long jour_fixe;         /* « On est le … » d'un scénario (3.21) : la date du jour, 0 : celle de l'horloge */
 };
 
 #define SEUIL_RAMASSAGE 10000   /* objets créés entre deux ramassages, au minimum */
@@ -5615,7 +5616,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     if (imbrique) m->seuil = (size_t)-1;
 
     m->epoque++;
-    long aujourdhui = date_aujourdhui();
+    long aujourdhui = m->jour_fixe ? m->jour_fixe : date_aujourdhui();   /* un écran ouvert après « On est le … » aussi */
     long maintenant;
     {
         time_t t = time(NULL);
@@ -8044,6 +8045,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_GESTE: {   /* un geste préparé (3.08) : rangé, joué par l'écran simulé à l'ouverture */
             const char *d = b->constantes[op].texte;
             const int forme = atoi(d);
+            if (forme == 10) {   /* « On est le 15.03.2027. » (3.21) : aujourd'hui, pour la suite du scénario */
+                Valeur vj = depiler(&pile);
+                if (vj.type != V_DATE) {
+                    valeur_liberer(&vj);
+                    ok = echouer(diag, b, debut, grym_dupliquer("« On est le … » attend une date : « On est le 15.03.2027. »"));
+                    break;
+                }
+                aujourdhui = m->jour_fixe = vj.jours;
+                break;
+            }
             const char *s1 = strchr(d, '\x1f'), *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL, *s3 = s2 ? strchr(s2 + 1, '\x1f') : NULL;
             /* un créneau (7) : la date, l'heure ; un déplacement (8) : l'objet, la date, l'heure (3.12) */
             Valeur vh = forme == 7 || forme == 8 ? depiler(&pile) : vi_absent(NULL);

@@ -39,6 +39,7 @@ Pour poser un soin et un nom et une date et un statut :
     Rendre la séance.
 
 Scénario « une séance faite se règle en espèces, avec sa quittance » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
     Régler la séance et « espèces ».
@@ -50,6 +51,7 @@ Scénario « une séance faite se règle en espèces, avec sa quittance » :
     Vérifier que le premier élément des docs = « Quittance ».
 
 Scénario « une quittance différée ne sort pas au règlement » :
+    On est le 10.11.2026.
     Installer, avec la quittance différée de vrai, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
     Régler la séance et « Twint ».
@@ -57,6 +59,7 @@ Scénario « une quittance différée ne sort pas au règlement » :
     Vérifier que la quittance de la séance est absente.
 
 Scénario « un virement compte au jour où il est arrivé » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui − 3 jours et « faite », qui donne la séance.
     Régler par virement la séance et aujourd'hui − 1 jour.
@@ -64,6 +67,7 @@ Scénario « un virement compte au jour où il est arrivé » :
     Vérifier que l'encaissement de la séance = aujourd'hui − 1 jour.
 
 Scénario « un virement à venir est refusé » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne la séance.
     Essayer :
@@ -73,6 +77,7 @@ Scénario « un virement à venir est refusé » :
         Vérifier que le paiement de la séance = « à payer ».
 
 Scénario « une séance à venir ne se règle pas » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui + 7 jours et « prévue », qui donne la séance.
     Essayer :
@@ -82,6 +87,7 @@ Scénario « une séance à venir ne se règle pas » :
         Vérifier que le motif de l'échec = « Une séance à venir se règle le jour venu. ».
 
 Scénario « une séance annulée ne se règle pas » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui et « annulée », qui donne la séance.
     Essayer :
@@ -91,6 +97,7 @@ Scénario « une séance annulée ne se règle pas » :
         Vérifier que le motif de l'échec = « Une séance annulée ne se règle pas. ».
 
 Scénario « une séance réglée ne se règle pas deux fois » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne la séance.
     Régler la séance et « espèces ».
@@ -101,6 +108,7 @@ Scénario « une séance réglée ne se règle pas deux fois » :
         Vérifier que le paiement de la séance = « espèces ».
 
 Scénario « une séance réglée par erreur redevient à payer » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui et « faite », qui donne la séance.
     Régler la séance et « espèces ».
@@ -109,6 +117,7 @@ Scénario « une séance réglée par erreur redevient à payer » :
     Vérifier que l'encaissement de la séance est absent.
 
 Scénario « une absence se constate » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Léa Muller » et aujourd'hui et « prévue », qui donne la séance.
     Clore la séance et « absence ».
@@ -117,6 +126,7 @@ Scénario « une absence se constate » :
 
 Remarque : la facturation et les relances (7 novembre 2026) : une facture réunit les séances dues du patient, et seulement elles.
 Scénario « une facture réunit toutes les séances dues du patient » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui − 7 jours et « faite », qui donne la première.
     La seconde vaut une nouvelle séance :
@@ -149,6 +159,7 @@ Scénario « une facture réunit toutes les séances dues du patient » :
     Vérifier que le premier élément des docs = « Facture ».
 
 Scénario « facturer deux fois rouvre la même facture » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
     Facturer la séance.
@@ -159,6 +170,7 @@ Scénario « facturer deux fois rouvre la même facture » :
     Vérifier que le nombre de docs = 1.
 
 Scénario « une facture se relance, ses rappels numérotés » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui − 40 jours et « faite », qui donne la séance.
     Facturer la séance.
@@ -171,6 +183,7 @@ Scénario « une facture se relance, ses rappels numérotés » :
     Vérifier que le dernier élément des docs = « Rappel ».
 
 Scénario « une séance prévue du jour se facture au comptoir, faite d'abord » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « prévue », qui donne la séance.
     Facturer au comptoir la séance.
@@ -178,6 +191,7 @@ Scénario « une séance prévue du jour se facture au comptoir, faite d'abord �
     Vérifier que la facture de la séance est présente.
 
 Scénario « une séance à venir ne se facture pas » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui + 3 jours et « prévue », qui donne la séance.
     Essayer :
@@ -189,6 +203,7 @@ Scénario « une séance à venir ne se facture pas » :
 
 Remarque : l'agenda (7 novembre 2026) : un rendez-vous prévu se déplace, son heure suit.
 Scénario « une séance prévue se déplace dans le calendrier » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « prévue », qui donne la séance.
     L'heure de la séance devient 10:00.
@@ -202,6 +217,7 @@ Scénario « une séance prévue se déplace dans le calendrier » :
 Remarque : la comptabilité en recettes-dépenses (8 novembre 2026) : l'encaissé et le dépensé d'une période, que l'écran de
 Remarque : comptabilité, le journal et l'export montrent. Une recette compte au jour où l'argent est arrivé.
 Scénario « une recette compte au jour de son encaissement, pas à celui de la séance » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui − 10 jours et « faite », qui donne la séance.
     Régler la séance et « espèces ».
@@ -213,6 +229,7 @@ Scénario « une recette compte au jour de son encaissement, pas à celui de la 
     Vérifier que l'encaissé de l'avant et de l'après = 0.
 
 Scénario « ni une séance à payer ni une séance offerte n'entrent dans les recettes » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne l'impayée.
     Poser le s et « Ben Weber » et aujourd'hui et « faite », qui donne l'offerte.
@@ -224,6 +241,7 @@ Scénario « ni une séance à payer ni une séance offerte n'entrent dans les r
     Vérifier que l'encaissé du jour et du lendemain = 120.
 
 Scénario « une séance remise à payer sort des recettes » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
     Régler la séance et « espèces ».
@@ -233,6 +251,7 @@ Scénario « une séance remise à payer sort des recettes » :
     Vérifier que l'encaissé du jour et du lendemain = 0.
 
 Scénario « les frais d'une période, et le résultat » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
     Régler la séance et « espèces ».
@@ -288,6 +307,7 @@ Pour engager un salaire mensuel et un taux d'occupation :
     Rendre le e.
 
 Scénario « la feuille d'un mois : le brut au taux d'occupation, les retenues, le net » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Engager 5000 et 80, qui donne l'employée.
     Établir la feuille de l'employée et l'ouverture de 3 et de 2026, qui donne la f.
@@ -299,6 +319,7 @@ Scénario « la feuille d'un mois : le brut au taux d'occupation, les retenues, 
     Vérifier que le net de la f = 3554.
 
 Scénario « le treizième double le brut de décembre » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Engager 5000 et 80, qui donne l'employée.
     Le treizième de l'employée devient vrai.
@@ -306,6 +327,7 @@ Scénario « le treizième double le brut de décembre » :
     Vérifier que le brut de la f = 8000.
 
 Scénario « l'AC ne se prélève que sous son plafond annuel » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Engager 20000 et 100, qui donne l'employée.
     Pour chaque m de 1 à 7 :
@@ -318,6 +340,7 @@ Scénario « l'AC ne se prélève que sous son plafond annuel » :
     Vérifier que la retenue AVS du septembre = 1060.
 
 Scénario « une feuille par mois » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Engager 5000 et 100, qui donne l'employée.
     Établir la feuille de l'employée et l'ouverture de 3 et de 2026.
@@ -328,6 +351,7 @@ Scénario « une feuille par mois » :
         Vérifier que le motif de l'échec = « La feuille de Muller existe déjà pour ce mois : efface-la d'abord si elle est fausse. ».
 
 Scénario « pas de feuille sans le barème de l'année » :
+    On est le 10.11.2026.
     Installer, qui donne le s.
     Engager 5000 et 100, qui donne l'employée.
     Essayer :

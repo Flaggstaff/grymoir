@@ -1172,6 +1172,10 @@ int main(void) {
         VE(t, 2, 4015, "Expression trop longue");
         free(t);
     }
+    /* 10 novembre 2026 : un chemin de « dont » de 60 maillons ; avant la borne de chemin_de, son analyse croissait d'un
+     * facteur 1,5 par maillon (24 : 1,6 s ; 60 : des jours). L'essai ne finirait pas. */
+    VE("Un état, conservé, a :\n    un nom (texte), unique.\nUne tâche, conservée, a :\n    un état (état), facultatif.\n"
+       "Afficher le nombre de tâches conservées dont le nom de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état de l'état est « x ».", 5, 46, "n'est pas un champ");
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -3483,6 +3483,18 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "écran", &r->e[ke]);
             copier(r, &r->e[ke + 1]);
             point(r, f);
+        } else if (!strcmp(c, "on_est")) {   /* _on_est D → On est le (D). (3.21) */
+            if (f <= d + 1) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _on_est 15.03.2027 »."));
+                return;
+            }
+            mot(r, "on", t);
+            mot(r, "est", t);
+            mot(r, "le", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[d + 1], 1);
+            expression(r, d + 1, f);
+            emettre(r, J_PAR_FERM, NULL, &r->e[f - 1], 1);
+            point(r, f);
         } else if (!strcmp(c, "on_voit")) {   /* _on_voit « … » _écran E → On voit l'erreur « … » dans l'écran E. (3.19) */
             if (f != d + 4 || r->e[d + 1].type != J_TEXTE || !est_cle(&r->e[d + 2], "écran") || r->e[d + 3].type != J_CROCHETS) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _on_voit « Remplis « Nom » » _écran de_saisie »."));

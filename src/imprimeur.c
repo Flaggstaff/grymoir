@@ -2544,6 +2544,13 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, ".\n");
             return;
         }
+        if (n->forme == 10) {   /* « On est le 15.03.2027. » ; « _on_est 15.03.2027 » (3.21) */
+            const int date = n->enfants[0]->type == N_DATE || n->enfants[0]->type == N_GROUPE;   /* une date, ou déjà « ( … ) » */
+            aj(im, c ? "_on_est " : date ? "On est le " : "On est le (");
+            expression(im, n->enfants[0]);
+            aj(im, c ? "\n" : date ? ".\n" : ").\n");
+            return;
+        }
         if (n->forme == 9) {   /* « On voit l'erreur « … » dans l'écran E. » ; « _on_voit « … » _écran E » (3.19) */
             aj(im, c ? "_on_voit " : "On voit l'erreur ");
             ecrire_texte(im, n->texte);

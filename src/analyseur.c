@@ -617,6 +617,7 @@ typedef struct {
     unsigned att;      /* catégories A_… */
     char **att_mots;   /* mots qui prolongent un nom composé déclaré */
     size_t att_nb;
+    size_t chemins_essayes;   /* les découpages d'un chemin de « dont » essayés (chemin_de), bornés */
 } Analyse;
 
 enum {
@@ -1379,8 +1380,14 @@ static int chemin_valide(Portee *p, const Classe *e, char **seg, size_t n) {
     return classe_champ(p, c, seg[0], NULL, NULL);
 }
 
+/* Chaque nom peut couvrir plusieurs mots, et chaque « de » peut ouvrir un maillon : les découpages croissent comme une
+ * puissance du nombre de maillons. Au-delà d'une borne, le chemin est tenu pour introuvable et l'analyse le dit
+ * (10 novembre 2026 : 24 maillons prenaient 1,6 s, chaque maillon de plus multipliait le temps par 1,5 ; un vrai
+ * chemin, de quelques liens, en essaie quelques dizaines). */
+#define CHEMINS_ESSAYES_MAX 20000
+
 static size_t chemin_de(Analyse *a, const Classe *e, size_t pos, char **seg, size_t n, size_t *fin) {
-    if (n == SEGMENTS_MAX || pos >= a->n) return 0;
+    if (n == SEGMENTS_MAX || pos >= a->n || ++a->chemins_essayes > CHEMINS_ESSAYES_MAX) return 0;
     size_t f = pos;
     if (a->j[pos].type == J_CROCHETS) f = pos + 1;
     else while (f < a->n && mot_de_nom(a, f)) f++;
@@ -1516,6 +1523,7 @@ static Noeud *nom_expression(Analyse *a) {
         const Classe *e = classe_de(a->portee, a->dont);
         /* « la comptabilisation de l'écriture » : un champ lu à travers un ou plusieurs liens */
         char *seg[SEGMENTS_MAX] = { 0 };
+        a->chemins_essayes = 0;
         size_t fin_chemin = 0, ns = e ? chemin_de(a, e, d, seg, 0, &fin_chemin) : 0;
         if (ns >= 2) {
             Genre g = GENRE_LIBRE;
@@ -5570,7 +5578,7 @@ static int verifier_permise(Analyse *a, const char *permises, const Noeud *v) {
 /* « Un état est « à faire », « en cours » ou « fini ». » (§ 16.16) : un type nommé, au premier niveau. */
 static Noeud *definition_type(Analyse *a, size_t iest) {
     Jeton *tun = cour(a);
-    Genre g;
+    Genre g = GENRE_MASCULIN;   /* est_un le pose toujours ; gcc ne le voit pas */
     est_un(tun, &g);
     if (!premier_niveau(a, tun)) return NULL;
     const size_t d = a->i + 1;
@@ -11185,12 +11193,26 @@ static Noeud *geste(Analyse *a, const Jeton *t) {
     if (!a->scenario) return erreur(a, t, grym_dupliquer("Un geste (« On clique sur … ») s'écrit dans un scénario (§ 9.7)."));
     const Jeton *verbe = voir(a, 1);
     const int creneau = est_mot(verbe, "choisit") && est_mot(voir(a, 2), "le") && est_mot(voir(a, 3), "créneau");
-    const int forme = creneau ? 7 : est_mot(verbe, "déplace") ? 8 : est_mot(verbe, "voit") ? 9 : est_mot(verbe, "écrit") ? 1
+    const int forme = creneau ? 7 : est_mot(verbe, "est") ? 10 : est_mot(verbe, "déplace") ? 8 : est_mot(verbe, "voit") ? 9
+                    : est_mot(verbe, "écrit") ? 1
                     : est_mot(verbe, "choisit") ? 2 : est_mot(verbe, "clique") ? 3 : est_mot(verbe, "ferme") ? 4
                     : est_mot(verbe, "confirme") ? 5 : 6;
     Noeud *n = noeud_creer(P_GESTE, t->ligne, t->colonne, t->debut);
     n->forme = forme;
     a->i += 2;
+    if (forme == 10) {   /* « On est le 15.03.2027. » (3.21) : la date du jour, pour la suite du scénario */
+        if (!est_mot(cour(a), "le")) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« On est le 15.03.2027. » attendu : la date du jour du scénario."));
+        }
+        avancer(a);
+        Noeud *d = valeur(a);
+        if (!d) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, d);
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     if (forme == 7 || forme == 8) {   /* « le créneau du D à H », « X au D à H », puis « dans l'écran E » (3.12) */
         if (forme == 8) {
             Noeud *x = expression_avant(a, "au", "à");
@@ -11564,7 +11586,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "scénario") && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_DEUX_POINTS) return scenario(a, t, colonne);   /* § 9.7 */
     if (est_mot(t, "on") && (est_mot(voir(a, 1), "écrit") || est_mot(voir(a, 1), "choisit") || est_mot(voir(a, 1), "clique")
                              || est_mot(voir(a, 1), "ferme") || est_mot(voir(a, 1), "confirme") || est_mot(voir(a, 1), "renonce")
-                             || est_mot(voir(a, 1), "déplace")
+                             || est_mot(voir(a, 1), "déplace") || (est_mot(voir(a, 1), "est") && est_mot(voir(a, 2), "le"))
                              || (est_mot(voir(a, 1), "voit") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "erreur"))))
         return geste(a, t);   /* 3.08 ; « On voit l'erreur « … » » (3.19) */
     if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "que") && !visible(a, "vérifier que")) {   /* § 9.7 */

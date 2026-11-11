@@ -488,9 +488,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case P_GESTE: {   /* (geste clic «OK» de saisie), (geste écrit [nom] de saisie «Ana») (3.08) */
-        static const char *const S[] = { "", "écrit", "choisit", "clic", "ferme", "confirme", "renonce", "créneau", "déplace", "voit" };
+        static const char *const S[] = { "", "écrit", "choisit", "clic", "ferme", "confirme", "renonce", "créneau", "déplace", "voit", "jour" };
         chaine_ajouter(c, "(geste ");
-        chaine_ajouter(c, n->forme >= 1 && n->forme <= 9 ? S[n->forme] : "?");
+        chaine_ajouter(c, n->forme >= 1 && n->forme <= 10 ? S[n->forme] : "?");
         const int guillemets = n->forme == 3 || n->forme == 9;
         if (n->texte) { chaine_ajouter(c, guillemets ? " «" : " ["); chaine_ajouter(c, n->texte); chaine_ajouter(c, guillemets ? "»" : "]"); }
         chaine_ajouter(c, " ");
