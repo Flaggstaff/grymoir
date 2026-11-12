@@ -232,6 +232,7 @@ bool EnregistreurSon::enregistre_en_cours() const {
 
 void EnregistreurSon::basculer() {
     if (enregistre_en_cours()) {
+        figer_direct();          // le direct s'arrête au clic, comme l'enregistrement
         enregistreur->stop();   // la fin arrive par recorderStateChanged : le fichier est alors complet
         return;
     }
@@ -275,6 +276,7 @@ void EnregistreurSon::commencer() {
         session->setRecorder(enregistreur);
         connect(enregistreur, &QMediaRecorder::durationChanged, this, [this](qint64 d) {
             if (d > 0) bouton_->setText(QString::fromUtf8("■ Arrêter (%1)").arg(duree_lisible(d)));   // le son arrive : parler
+            duree_ms_ = d;
         });
         connect(enregistreur, &QMediaRecorder::recorderStateChanged, this, [this](QMediaRecorder::RecorderState e) {
             if (e == QMediaRecorder::StoppedState) fini();
@@ -293,6 +295,7 @@ void EnregistreurSon::commencer() {
     enregistreur->setOutputLocation(QUrl::fromLocalFile(dossier->filePath("enregistrement." + extension)));
     message_->clear();
     muet_ = false;
+    duree_ms_ = 0;
     // macOS met environ une seconde à ouvrir le micro : « Un instant… » jusqu'à ce que le son arrive, puis le compteur
     // (24 octobre 2026) ; on sait ainsi quand parler, et un clic arrête quand même
     bouton_->setText(QString::fromUtf8("● Un instant…"));
@@ -311,8 +314,12 @@ void EnregistreurSon::commencer() {
 
 void EnregistreurSon::fini() {
     bouton_->setText(QString::fromUtf8("● Dicter"));
-    arreter_direct();
-    if (!dossier) return;
+    figer_direct();
+    const std::shared_ptr<Dictee> dictee = direct;   // la dictée survit à l'arrêt du direct : son texte est attendu
+    direct.reset();
+    if (message_ && message_->text().startsWith("<i>")) message_->clear();   // le texte final arrive dans sa zone
+    auto abandonner = [&] { if (dictee) dictee->abandonner(); };
+    if (!dossier) { abandonner(); return; }
     QString chemin = enregistreur->actualLocation().toLocalFile();
     if (chemin.isEmpty()) chemin = dossier->filePath("enregistrement." + extension);
     QFile f(chemin);
@@ -321,10 +328,31 @@ void EnregistreurSon::fini() {
     f.close();
     delete dossier;   // le fichier provisoire disparaît : les octets suffisent
     dossier = nullptr;
-    if (muet_) return;   // un enregistrement sans son : le message le dit déjà, rien n'est gardé
+    if (muet_) { abandonner(); return; }   // un enregistrement sans son : le message le dit déjà, rien n'est gardé
     if (octets.isEmpty()) {
         if (message_->text().isEmpty()) message_->setText(QString::fromUtf8("Rien n'a été enregistré."));
+        abandonner();
         return;
+    }
+    // La dictée par segments (12 novembre 2026) : si le direct a reçu le même son que l'enregistreur (à deux secondes ou
+    // un dixième près : les deux lisent le micro chacun de son côté), son texte, presque prêt, est promis pour ces octets
+    // et la passe complète n'a pas lieu. Sinon, la passe complète, comme avant. L'infobulle du bouton dit laquelle.
+    if (dictee) {
+        const qint64 recu_ms = (qint64)(dictee->echantillons() / 16);
+        const qint64 marge = qMax<qint64>(2000, duree_ms_ / 10);
+        if (!dictee_par_segments()) {
+            dictee->abandonner();
+            bouton_->setToolTip(QString::fromUtf8("Dicter au micro ; un second clic arrête.\nDernière dictée : transcrite d'un bloc (GRYMOIR_DICTEE_ENTIERE)."));
+        } else if (duree_ms_ > 0 && recu_ms + marge < duree_ms_) {
+            dictee->abandonner();
+            bouton_->setToolTip(QString::fromUtf8("Dicter au micro ; un second clic arrête.\nDernière dictée : transcrite d'un bloc (le direct n'a reçu que %1 sur %2).")
+                                    .arg(duree_lisible(recu_ms), duree_lisible(duree_ms_)));
+        } else {
+            dictee->finir();
+            promettre_transcription(octets, dictee);
+            bouton_->setToolTip(QString::fromUtf8("Dicter au micro ; un second clic arrête.\nDernière dictée : transcrite au fil de la parole, en %1 segments.")
+                                    .arg(dictee->bornes().size()));
+        }
     }
     const QString nom = QString("enregistrement-%1.%2")
                             .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd-HHmm"), extension);
@@ -332,79 +360,101 @@ void EnregistreurSon::fini() {
     if (enregistre) enregistre(octets, nom);
 }
 
-// --- Le direct (24 octobre 2026) ---
-// Pendant l'enregistrement, le même micro est lu en PCM ; toutes les deux secondes et demie, ce qui suit le dernier point
-// acquis passe dans Whisper (recherche gloutonne), dans un fil à part ; le texte s'affiche à côté du bouton, en italique.
-// À l'arrêt, il s'efface : la transcription finale, sur tout le son, arrive dans sa zone comme avant.
+// --- Le direct (24 octobre 2026), par segments (12 novembre 2026) ---
+// Pendant l'enregistrement, le même micro est lu en PCM et donné à une dictée (transcription.h) : elle se coupe aux pauses,
+// et chaque segment fermé reçoit son texte final dans un fil à part. Toutes les deux secondes et demie, le segment encore
+// ouvert passe dans Whisper (recherche gloutonne) pour l'aperçu, sauf si un segment fermé attend son texte ; l'ensemble
+// s'affiche à côté du bouton, en italique. À l'arrêt, l'aperçu s'efface et le texte de la dictée arrive dans sa zone.
 
 void EnregistreurSon::demarrer_direct(const QAudioDevice &micro) {
     arreter_direct();
     if (modele_de_transcription().isEmpty() || micro.isNull()) return;   // sans modèle : pas de direct, la dictée marche
     QAudioFormat f = micro.preferredFormat();
     if (f.sampleFormat() == QAudioFormat::Unknown) return;
-    direct = new TranscriptionDirecte;
+    direct = std::make_shared<Dictee>();
     frequence_directe = f.sampleRate();
     canaux_directs = qMax(1, f.channelCount());
     format_direct = (int)f.sampleFormat();
     source_directe = new QAudioSource(micro, f, this);
     flux_direct = source_directe->start();
-    if (flux_direct)
-        connect(flux_direct, &QIODevice::readyRead, this, [this] {
-            if (!flux_direct || !direct) return;
-            const QByteArray o = flux_direct->readAll();
-            std::vector<float> brut;
-            switch ((QAudioFormat::SampleFormat)format_direct) {
-            case QAudioFormat::Int16: for (qsizetype i = 0; i + 1 < o.size(); i += 2) brut.push_back(*reinterpret_cast<const qint16 *>(o.constData() + i) / 32768.0f); break;
-            case QAudioFormat::Int32: for (qsizetype i = 0; i + 3 < o.size(); i += 4) brut.push_back(*reinterpret_cast<const qint32 *>(o.constData() + i) / 2147483648.0f); break;
-            case QAudioFormat::Float: for (qsizetype i = 0; i + 3 < o.size(); i += 4) brut.push_back(*reinterpret_cast<const float *>(o.constData() + i)); break;
-            case QAudioFormat::UInt8: for (qsizetype i = 0; i < o.size(); i++) brut.push_back(((unsigned char)o[i] - 128) / 128.0f); break;
-            default: return;
-            }
-            std::vector<float> pcm;
-            pcm_en_16k(brut, frequence_directe, canaux_directs, &pcm);
-            direct->ajouter(pcm);
-        });
+    if (flux_direct) connect(flux_direct, &QIODevice::readyRead, this, &EnregistreurSon::lire_direct);
+    if (dictee_par_segments()) {   // le fil des segments : il tient la dictée, et finit avec elle
+        const std::shared_ptr<Dictee> d = direct;
+        const QString modele = modele_de_transcription();
+        std::thread([d, modele] { d->travailler(modele); }).detach();
+    }
     minuterie_directe = new QTimer(this);
-    connect(minuterie_directe, &QTimer::timeout, this, &EnregistreurSon::lancer_passe);
+    connect(minuterie_directe, &QTimer::timeout, this, [this] { montrer_direct(); lancer_passe(); });
     minuterie_directe->start(2500);
 }
 
+void EnregistreurSon::lire_direct() {
+    if (!flux_direct || !direct) return;
+    const QByteArray o = flux_direct->readAll();
+    std::vector<float> brut;
+    switch ((QAudioFormat::SampleFormat)format_direct) {
+    case QAudioFormat::Int16: for (qsizetype i = 0; i + 1 < o.size(); i += 2) brut.push_back(*reinterpret_cast<const qint16 *>(o.constData() + i) / 32768.0f); break;
+    case QAudioFormat::Int32: for (qsizetype i = 0; i + 3 < o.size(); i += 4) brut.push_back(*reinterpret_cast<const qint32 *>(o.constData() + i) / 2147483648.0f); break;
+    case QAudioFormat::Float: for (qsizetype i = 0; i + 3 < o.size(); i += 4) brut.push_back(*reinterpret_cast<const float *>(o.constData() + i)); break;
+    case QAudioFormat::UInt8: for (qsizetype i = 0; i < o.size(); i++) brut.push_back(((unsigned char)o[i] - 128) / 128.0f); break;
+    default: return;
+    }
+    std::vector<float> pcm;
+    pcm_en_16k(brut, frequence_directe, canaux_directs, &pcm);
+    direct->ajouter(pcm);
+}
+
 void EnregistreurSon::nourrir_direct(const std::vector<float> &pcm16k) {
-    if (!direct) direct = new TranscriptionDirecte;
+    if (!direct) direct = std::make_shared<Dictee>();
     direct->ajouter(pcm16k);
     lancer_passe();
 }
 
+void EnregistreurSon::montrer_direct() {
+    if (!direct) return;
+    const QString t = direct->texte();
+    if (!t.isEmpty()) message_->setText("<i>" + t.toHtmlEscaped() + "</i>");
+}
+
 void EnregistreurSon::lancer_passe() {
-    if (!direct || passe_en_cours) return;
+    if (!direct || passe_en_cours || direct->en_retard()) return;   // un segment fermé d'abord : c'est le texte final
     std::vector<float> morceau;
-    size_t fin = 0;
-    if (!direct->passe(&morceau, &fin)) return;
+    size_t debut = 0, fin = 0;
+    if (!direct->passe(&morceau, &debut, &fin)) return;
     passe_en_cours = true;
     QPointer<EnregistreurSon> moi(this);
+    const std::shared_ptr<Dictee> dictee = direct;
     const QString modele = modele_de_transcription();
-    std::thread([moi, morceau = std::move(morceau), fin, modele]() mutable {
+    std::thread([moi, dictee, morceau = std::move(morceau), debut, modele]() mutable {
         QString probleme;
         const QString texte = transcrire_pcm(std::move(morceau), modele, &probleme, true);
-        QMetaObject::invokeMethod(qApp, [moi, texte, fin] {
+        QMetaObject::invokeMethod(qApp, [moi, dictee, texte, debut] {
             if (!moi) return;
             moi->passe_en_cours = false;
-            if (!moi->direct) return;   // arrêté entre-temps
-            moi->direct->recevoir(texte, fin);
-            const QString t = moi->direct->texte();
-            if (!t.isEmpty()) moi->message_->setText("<i>" + t.toHtmlEscaped() + "</i>");
+            if (moi->direct != dictee) return;   // arrêté entre-temps
+            dictee->recevoir(texte, debut);
+            moi->montrer_direct();
         }, Qt::QueuedConnection);
     }).detach();
 }
 
-void EnregistreurSon::arreter_direct() {
+void EnregistreurSon::figer_direct() {
     if (minuterie_directe) { minuterie_directe->stop(); minuterie_directe->deleteLater(); minuterie_directe = nullptr; }
-    if (source_directe) { source_directe->stop(); source_directe->deleteLater(); source_directe = nullptr; }
+    if (source_directe) {
+        lire_direct();   // les derniers mots, encore dans le tampon du micro
+        source_directe->stop();
+        source_directe->deleteLater();
+        source_directe = nullptr;
+    }
     flux_direct = nullptr;
+}
+
+void EnregistreurSon::arreter_direct() {
+    figer_direct();
     if (direct) {
-        delete direct;
-        direct = nullptr;
-        if (message_ && message_->text().startsWith("<i>")) message_->clear();   // le texte final arrive dans sa zone
+        direct->abandonner();
+        direct.reset();
+        if (message_ && message_->text().startsWith("<i>")) message_->clear();
     }
 }
 

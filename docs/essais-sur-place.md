@@ -33,6 +33,27 @@ Sur place :
    Configuration aussi, signé Direction ou Équipe si la page de garde est en service.
 7. **Attestation annuelle** : sur un patient qui a payé cette année, l'attestation liste ses séances payées et le total.
 
+## La dictée par segments (12 novembre 2026)
+
+Ce que les essais automatiques ne mesurent pas : la qualité du texte (le modèle d'essai ne rend aucun mot) et le micro réel.
+
+1. **Sur un enregistrement connu**, avant tout : `construction/grym-atelier.app/Contents/MacOS/grym-atelier --comparer-dictee
+   <son>` (l'assemblée de 71 minutes, ou toute dictée gardée). Il écrit à côté du son `-bloc.txt` (la passe complète, comme
+   avant), `-segments.txt` (comme une dictée) et `-coupes.txt` (où chaque segment commence et finit, et son texte), puis affiche
+   les durées et l'écart en mots.
+   - Attendu : un écart de quelques pour cent au plus, fait de ponctuation et de majuscules aux coupes ; « l'attente à
+     l'arrêt » de une à trois secondes sur une puce Apple.
+   - Un mot coupé en deux à une coupe (lisible dans `-coupes.txt`) : rapporter les deux lignes et les secondes.
+   - Je ne sais pas ce que sera l'écart : c'est cet essai qui le dit.
+2. **Au micro**, dans Praxis : dicter une anamnèse d'une minute, avec des pauses, puis « Arrêter ». Le texte doit remplir la
+   zone en une à trois secondes. Laisser la souris sur « Dicter » : l'infobulle dit « transcrite au fil de la parole, en N
+   segments ». Si elle dit « transcrite d'un bloc (le direct n'a reçu que … sur …) », le micro du direct et l'enregistreur n'ont
+   pas reçu le même son : rapporter les deux durées et le micro choisi.
+3. **Le premier et le dernier mot** : commencer à parler dès que le compteur démarre, arrêter juste après le dernier mot ;
+   les deux doivent être dans le texte. Écouter le son gardé : s'il contient un mot que le texte n'a pas, rapporter lequel.
+4. **Revenir à l'ancienne manière**, pour comparer ou en cas de doute : lancer l'application avec la variable
+   `GRYMOIR_DICTEE_ENTIERE=1` ; la dictée est alors transcrite d'un bloc à l'arrêt.
+
 ## Écoutille chez Michel
 
 Sur un poste branché en USB, en veille :

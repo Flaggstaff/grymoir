@@ -3,6 +3,11 @@
 #include <algorithm>
 
 #include <QAudioBuffer>
+#include <QCryptographicHash>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QList>
+#include <QPair>
 #include <QAudioDecoder>
 #include <QAudioFormat>
 #include <QCoreApplication>
@@ -16,6 +21,7 @@
 #include <QThread>
 #include <QUrl>
 #include <QtEndian>
+#include <cstdio>
 #include <cstring>
 
 #include "whisper.h"
@@ -172,6 +178,10 @@ static QMutex verrou;
 static whisper_context *ctx = nullptr;
 static QString charge;
 
+// À la fermeture de l'application, plus aucune transcription ne commence : un fil encore au travail (une dictée par
+// segments, une zone en attente) rechargerait le modèle après sa libération, et Metal arrêterait le programme.
+static bool fermeture = false;   // lu et écrit sous le verrou
+
 void liberer_transcription() {
     QMutexLocker garde(&verrou);
     if (ctx) whisper_free(ctx);
@@ -179,15 +189,30 @@ void liberer_transcription() {
     charge.clear();
 }
 
+static void fermer_transcription() {
+    { QMutexLocker garde(&verrou); fermeture = true; }
+    liberer_transcription();
+}
+
 bool modele_charge() {
     QMutexLocker garde(&verrou);
     return ctx != nullptr;
 }
 
+static std::shared_ptr<Dictee> dictee_promise(const QByteArray &octets);
+
 QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce) {
     if (modele.isEmpty()) {
         *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
         return QString();
+    }
+    // une dictée déjà transcrite par segments, pendant qu'on parlait (12 novembre 2026) : son texte, sans refaire la passe ;
+    // avec une amorce, la passe complète, qui seule en tient compte
+    if (amorce.isEmpty()) {
+        if (const std::shared_ptr<Dictee> d = dictee_promise(octets)) {
+            QString t;
+            if (d->attendre(&t) && !QString(t).remove(QChar(MARQUE_TRANSCRIT)).trimmed().isEmpty()) return t;
+        }
     }
     std::vector<float> pcm;
     if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QString();
@@ -209,6 +234,7 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     }
     // le modèle, chargé une fois (environ un gigaoctet en mémoire), gardé pour les transcriptions suivantes
     QMutexLocker garde(&verrou);
+    if (fermeture) { *erreur = "L'application se ferme."; return QString(); }
     if (!ctx || charge != modele) {
         whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);   // pas de journal dans une application
         if (ctx) whisper_free(ctx);
@@ -217,7 +243,7 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
         charge = ctx ? modele : QString();
         static bool inscrit = false;   // une seule fois : libérer à la fermeture de l'application
         if (ctx && !inscrit && QCoreApplication::instance()) {
-            qAddPostRoutine(liberer_transcription);
+            qAddPostRoutine(fermer_transcription);
             inscrit = true;
         }
         if (!ctx) { *erreur = "Le modèle de transcription ne se charge pas : " + modele; return QString(); }
@@ -287,7 +313,7 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     return passages.isEmpty() ? QString() : QString(QChar(MARQUE_TRANSCRIT)) + passages.join('\n');
 }
 
-// --- La transcription en direct (24 octobre 2026) ---
+// --- Le son du micro, en 16 kHz mono (24 octobre 2026) ---
 
 void pcm_en_16k(const std::vector<float> &entree, int frequence, int canaux, std::vector<float> *pcm) {
     std::vector<float> mono;
@@ -306,30 +332,378 @@ void pcm_en_16k(const std::vector<float> &entree, int frequence, int canaux, std
     pcm->insert(pcm->end(), r.begin(), r.end());
 }
 
-void TranscriptionDirecte::ajouter(const std::vector<float> &pcm16k) { son.insert(son.end(), pcm16k.begin(), pcm16k.end()); }
+// --- La dictée par segments (12 novembre 2026) ---
 
-bool TranscriptionDirecte::passe(std::vector<float> *morceau, size_t *fin) const {
-    if (son.size() < debut + (size_t)(16000 * 1.5)) return false;   // moins d'une seconde et demie : rien à dire encore
-    *fin = son.size();
-    morceau->assign(son.begin() + (long)debut, son.begin() + (long)*fin);
-    return true;
+static const size_t TRAME = 320;   // 20 ms à 16 kHz
+
+// Le seuil sous lequel une trame est une pause, en dB : huit décibels au-dessus du bruit de fond (le 2e centile des
+// niveaux reçus, que le « Un instant… » du début donne presque toujours), et dix au moins sous la voix (le 90e centile).
+// Sans contraste (quinze décibels entre les deux), ou avant une seconde de son, aucune pause ne se reconnaît : seule la
+// coupe forcée joue, et rien n'est coupé au milieu d'une voix faible.
+double Dictee::seuil() const {
+    if (trames_comptees_ < 50) return -1000;
+    auto centile = [this](double part) {
+        const int rang = (int)(trames_comptees_ * part);
+        int vus = 0;
+        for (int i = 0; i <= 100; i++) {
+            vus += histogramme_[i];
+            if (vus > rang) return (double)(i - 100);
+        }
+        return 0.0;
+    };
+    const double fond = centile(0.02), voix = centile(0.90);
+    if (voix - fond < 15) return -1000;
+    return std::min(fond + 8, voix - 10);
 }
 
-void TranscriptionDirecte::recevoir(const QString &texte, size_t fin) {
-    QString t = texte;
-    t.remove(QChar(MARQUE_TRANSCRIT)).remove(QChar(DEBUT_DOUTE)).remove(QChar(FIN_DOUTE));
-    t = t.simplified();
-    if (fin - debut >= (size_t)(16000 * fenetre_secondes)) {
-        // une fenêtre pleine : son texte est acquis, la suite repart de là (Whisper ne voit que trente secondes à la fois)
-        if (!t.isEmpty()) acquis = acquis.isEmpty() ? t : acquis + " " + t;
-        debut = fin;
-        courant.clear();
-    } else {
-        courant = t;
+void Dictee::ajouter(const std::vector<float> &pcm16k) {
+    std::lock_guard<std::mutex> garde(verrou_);
+    if (terminee_ || abandonnee_) return;
+    son_.insert(son_.end(), pcm16k.begin(), pcm16k.end());
+    total_ = son_.size();
+    while ((niveaux_.size() + 1) * TRAME <= son_.size()) {
+        const float *t = son_.data() + niveaux_.size() * TRAME;
+        double somme = 0;
+        for (size_t i = 0; i < TRAME; i++) somme += (double)t[i] * t[i];
+        const double efficace = std::sqrt(somme / TRAME);
+        const double db = efficace > 1e-5 ? std::max(-100.0, 20 * std::log10(efficace)) : -100.0;
+        niveaux_.push_back((float)db);
+        if (db > -90) {   // le silence numérique (un micro pas encore ouvert) ne dit rien du bruit de fond
+            histogramme_[std::min(100, std::max(0, (int)std::lround(db + 100)))]++;
+            trames_comptees_++;
+        }
+    }
+    const size_t avant = segments_.size();
+    couper();
+    if (segments_.size() != avant) signal_.notify_all();
+}
+
+// Ferme les segments finis : à la première pause assez longue qui suit de la voix, en son milieu, à deux secondes au
+// moins du début ; sinon, à la durée maximale, au creux le plus calme de ses dix dernières secondes.
+void Dictee::couper() {
+    const size_t pause = std::max<size_t>(2, (size_t)(pause_secondes * 50)), voix_requise = 15;
+    const size_t minimum = (size_t)(minimum_secondes * 16000), maximum = (size_t)(maximum_secondes * 16000);
+    for (;;) {
+        const double s = seuil();
+        const size_t premiere = (debut_ + TRAME - 1) / TRAME;
+        size_t coupe = 0, voisees = 0, suite = 0;
+        for (size_t f = premiere; f < niveaux_.size() && !coupe; f++) {
+            const bool calme = niveaux_[f] < s || niveaux_[f] <= -90;
+            if (!calme) { voisees++; suite = 0; continue; }
+            suite++;
+            if (suite < pause || voisees < voix_requise) continue;
+            // au milieu de la pause exigée, jamais avant la durée minimale, et toujours avec une demi-pause de calme après
+            const size_t voulue = std::max(f + 1 - suite + pause / 2, (debut_ + minimum + TRAME - 1) / TRAME);
+            if (voulue + pause / 2 <= f + 1) coupe = voulue * TRAME;
+        }
+        if (!coupe && son_.size() - debut_ >= maximum) {
+            const size_t de = (debut_ + std::max(minimum, maximum > 160000 ? maximum - 160000 : minimum)) / TRAME,
+                         a = (debut_ + maximum) / TRAME;
+            size_t meilleure = a;
+            double plus_calme = 1e9;
+            for (size_t f = de; f + 10 <= a && f + 10 <= niveaux_.size(); f++) {
+                double somme = 0;
+                for (size_t k = 0; k < 10; k++) somme += niveaux_[f + k];
+                if (somme <= plus_calme) { plus_calme = somme; meilleure = f + 5; }   // à égalité, le plus tard
+            }
+            coupe = meilleure * TRAME;
+        }
+        if (!coupe || coupe <= debut_ || coupe > son_.size()) return;
+        Segment g;
+        g.debut = debut_;
+        g.fin = coupe;
+        g.apercu = courant_;
+        segments_.push_back(g);
+        courant_.clear();
+        debut_ = coupe;
     }
 }
 
-QString TranscriptionDirecte::texte() const {
-    if (acquis.isEmpty()) return courant;
-    return courant.isEmpty() ? acquis : acquis + " " + courant;
+void Dictee::finir() {
+    std::lock_guard<std::mutex> garde(verrou_);
+    if (terminee_ || abandonnee_) return;
+    terminee_ = true;
+    if (son_.size() > debut_) {
+        const size_t minimum = (size_t)(minimum_secondes * 16000);
+        // une fin trop courte pour être transcrite seule rejoint le segment d'avant, refait (trente secondes au plus :
+        // ce que Whisper voit d'un coup)
+        if (son_.size() - debut_ < minimum && !segments_.empty() && son_.size() - segments_.back().debut <= 29 * 16000) {
+            Segment &g = segments_.back();
+            g.fin = son_.size();
+            g.fait = false;
+            g.texte.clear();
+            g.version++;
+            if (!courant_.isEmpty()) g.apercu = g.apercu.isEmpty() ? courant_ : g.apercu + " " + courant_;
+        } else {
+            Segment g;
+            g.debut = debut_;
+            g.fin = son_.size();
+            g.apercu = courant_;
+            segments_.push_back(g);
+        }
+        courant_.clear();
+        debut_ = son_.size();
+    }
+    signal_.notify_all();
+}
+
+void Dictee::abandonner() {
+    std::lock_guard<std::mutex> garde(verrou_);
+    abandonnee_ = true;
+    signal_.notify_all();
+}
+
+void Dictee::echouer() {
+    std::lock_guard<std::mutex> garde(verrou_);
+    echec_ = true;
+    signal_.notify_all();
+}
+
+bool Dictee::passe(std::vector<float> *morceau, size_t *debut, size_t *fin) const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    if (terminee_ || abandonnee_ || son_.size() < debut_ + (size_t)(16000 * 1.5)) return false;
+    *debut = debut_;
+    *fin = son_.size();
+    morceau->assign(son_.begin() + (long)debut_, son_.end());
+    return true;
+}
+
+static QString sans_marques(const QString &texte) {
+    QString t = texte;
+    t.remove(QChar(MARQUE_TRANSCRIT)).remove(QChar(DEBUT_DOUTE)).remove(QChar(FIN_DOUTE));
+    return t.simplified();
+}
+
+static QString sans_marques_par_ligne(const QString &texte) {
+    QString t = texte;
+    t.remove(QChar(MARQUE_TRANSCRIT)).remove(QChar(DEBUT_DOUTE)).remove(QChar(FIN_DOUTE));
+    return t + "\n";
+}
+
+void Dictee::recevoir(const QString &texte, size_t debut) {
+    std::lock_guard<std::mutex> garde(verrou_);
+    const QString t = sans_marques(texte);
+    if (debut == debut_ && !terminee_) { courant_ = t; return; }
+    for (Segment &g : segments_)   // le segment s'est fermé pendant la passe : son aperçu, en attendant son texte
+        if (g.debut == debut && !g.fait) g.apercu = t;
+}
+
+bool Dictee::segment_a_faire(int *rang, int *version, std::vector<float> *morceau) const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    if (abandonnee_ || echec_) return false;
+    for (size_t k = 0; k < segments_.size(); k++) {
+        const Segment &g = segments_[k];
+        if (g.fait) continue;
+        *rang = (int)k;
+        *version = g.version;
+        morceau->assign(son_.begin() + (long)g.debut, son_.begin() + (long)g.fin);
+        return true;
+    }
+    return false;
+}
+
+void Dictee::recevoir_segment(int rang, int version, const QString &texte) {
+    std::lock_guard<std::mutex> garde(verrou_);
+    if (rang < 0 || rang >= (int)segments_.size() || segments_[(size_t)rang].version != version) return;   // refait depuis
+    Segment &g = segments_[(size_t)rang];
+    g.texte = texte;
+    g.fait = true;
+    if (terminee_ && tout_fait()) { son_.clear(); son_.shrink_to_fit(); niveaux_.clear(); niveaux_.shrink_to_fit(); }
+    signal_.notify_all();
+}
+
+bool Dictee::tout_fait() const {
+    for (const Segment &g : segments_)
+        if (!g.fait) return false;
+    return true;
+}
+
+bool Dictee::en_retard() const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    return !tout_fait();
+}
+
+bool Dictee::finie() const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    return terminee_ && tout_fait();
+}
+
+QString Dictee::texte() const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    QStringList parts;
+    for (const Segment &g : segments_) {
+        const QString t = g.fait ? sans_marques(g.texte) : g.apercu;
+        if (!t.isEmpty()) parts << t;
+    }
+    if (!courant_.isEmpty()) parts << courant_;
+    return parts.join(' ');
+}
+
+QString Dictee::texte_final() const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    QStringList passages;
+    for (const Segment &g : segments_) {
+        QString t = g.texte;
+        t.remove(QChar(MARQUE_TRANSCRIT));   // une seule marque, en tête du tout ; les doutes restent
+        if (!t.trimmed().isEmpty()) passages << t.trimmed();
+    }
+    return passages.isEmpty() ? QString() : QString(QChar(MARQUE_TRANSCRIT)) + passages.join('\n');
+}
+
+bool Dictee::attendre(QString *texte) {
+    {
+        std::unique_lock<std::mutex> garde(verrou_);
+        signal_.wait(garde, [this] { return abandonnee_ || echec_ || (terminee_ && tout_fait()); });
+        if (abandonnee_ || echec_) return false;
+    }
+    *texte = texte_final();
+    return true;
+}
+
+void Dictee::travailler(const QString &modele) {
+    for (;;) {
+        {
+            std::unique_lock<std::mutex> garde(verrou_);
+            signal_.wait(garde, [this] { return abandonnee_ || echec_ || !tout_fait() || terminee_; });
+            if (abandonnee_ || echec_ || (terminee_ && tout_fait())) return;
+        }
+        int rang = 0, version = 0;
+        std::vector<float> morceau;
+        if (!segment_a_faire(&rang, &version, &morceau)) return;
+        QString probleme;
+        const QString texte = transcrire_pcm(std::move(morceau), modele, &probleme, false);
+        if (!probleme.isEmpty()) { echouer(); return; }
+        recevoir_segment(rang, version, texte);
+    }
+}
+
+std::vector<std::pair<size_t, size_t>> Dictee::bornes() const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    std::vector<std::pair<size_t, size_t>> b;
+    for (const Segment &g : segments_) b.push_back({g.debut, g.fin});
+    return b;
+}
+
+size_t Dictee::echantillons() const {
+    std::lock_guard<std::mutex> garde(verrou_);
+    return total_;
+}
+
+// Les dictées promises, par l'empreinte de leur enregistrement ; les huit dernières.
+static QMutex verrou_promesses;
+static QList<QPair<QByteArray, std::shared_ptr<Dictee>>> promesses;
+
+void promettre_transcription(const QByteArray &octets, std::shared_ptr<Dictee> dictee) {
+    if (!dictee || octets.isEmpty()) return;
+    const QByteArray cle = QCryptographicHash::hash(octets, QCryptographicHash::Sha256);
+    QMutexLocker garde(&verrou_promesses);
+    promesses.append({cle, std::move(dictee)});
+    while (promesses.size() > 8) promesses.removeFirst();
+}
+
+static std::shared_ptr<Dictee> dictee_promise(const QByteArray &octets) {
+    {
+        QMutexLocker garde(&verrou_promesses);
+        if (promesses.isEmpty()) return nullptr;
+    }
+    const QByteArray cle = QCryptographicHash::hash(octets, QCryptographicHash::Sha256);
+    QMutexLocker garde(&verrou_promesses);
+    for (qsizetype k = promesses.size() - 1; k >= 0; k--)
+        if (promesses[k].first == cle) return promesses[k].second;
+    return nullptr;
+}
+
+bool dictee_par_segments() { return !qEnvironmentVariableIsSet("GRYMOIR_DICTEE_ENTIERE"); }
+
+// Les mots d'un texte, pour les comparer : sans marques, sans ponctuation, en minuscules.
+static QStringList mots_nus(const QString &texte) {
+    QString t = sans_marques(texte).toLower();
+    for (QChar &c : t)
+        if (!c.isLetterOrNumber() && c != QChar('\'') && c != QChar(0x2019)) c = QChar(' ');
+    return t.split(' ', Qt::SkipEmptyParts);
+}
+
+int comparer_dictee(const QString &chemin) {
+    QFile f(chemin);
+    if (!f.open(QIODevice::ReadOnly)) { std::fprintf(stderr, "« %s » ne s'ouvre pas.\n", qPrintable(chemin)); return 1; }
+    const QByteArray octets = f.readAll();
+    const QString modele = modele_de_transcription();
+    if (modele.isEmpty()) { std::fprintf(stderr, "Le modèle de transcription est introuvable.\n"); return 1; }
+    std::vector<float> pcm;
+    QString probleme;
+    if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, &probleme)) {
+        std::fprintf(stderr, "%s\n", qPrintable(probleme.isEmpty() ? QString::fromUtf8("Ce son ne se lit pas.") : probleme));
+        return 1;
+    }
+    const double duree = pcm.size() / 16000.0;
+    std::printf("Son : %.0f secondes.\n", duree);
+    std::fflush(stdout);
+    auto ecrire = [&](const QString &suffixe, const QString &texte) {
+        QFile s(chemin + suffixe);
+        if (s.open(QIODevice::WriteOnly)) s.write(sans_marques_par_ligne(texte).toUtf8());
+        return s.fileName();
+    };
+    QElapsedTimer chrono;
+    chrono.start();
+    const QString bloc = transcrire_pcm(pcm, modele, &probleme, false);
+    if (!probleme.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(probleme)); return 1; }
+    const double temps_bloc = chrono.elapsed() / 1000.0;
+    std::printf("D'un bloc : %.1f s de calcul, écrit dans %s\n", temps_bloc, qPrintable(ecrire("-bloc.txt", bloc)));
+    std::fflush(stdout);
+    // par segments : le son arrive par dixièmes de seconde, comme du micro ; chaque segment est transcrit à sa fermeture
+    Dictee d;
+    chrono.restart();
+    double dernier = 0, plus_long = 0;
+    QStringList textes;   // le texte de chaque segment, pour la liste des coupes
+    auto vider = [&](bool fin) {
+        int rang = 0, version = 0;
+        std::vector<float> morceau;
+        while (d.segment_a_faire(&rang, &version, &morceau)) {
+            QElapsedTimer un;
+            un.start();
+            plus_long = std::max(plus_long, morceau.size() / 16000.0);
+            const QString t = transcrire_pcm(std::move(morceau), modele, &probleme, false);
+            if (!probleme.isEmpty()) return false;
+            d.recevoir_segment(rang, version, t);
+            while (textes.size() <= rang) textes << QString();
+            textes[rang] = sans_marques(t);
+            if (fin) dernier = un.elapsed() / 1000.0;
+            morceau.clear();
+        }
+        return true;
+    };
+    for (size_t i = 0; i < pcm.size(); i += 1600) {
+        d.ajouter(std::vector<float>(pcm.begin() + (long)i, pcm.begin() + (long)std::min(pcm.size(), i + 1600)));
+        if (!vider(false)) { std::fprintf(stderr, "%s\n", qPrintable(probleme)); return 1; }
+    }
+    d.finir();
+    if (!vider(true)) { std::fprintf(stderr, "%s\n", qPrintable(probleme)); return 1; }
+    const QString segments = d.texte_final();
+    std::printf("Par segments : %d segments (le plus long : %.1f s), %.1f s de calcul en tout, %.1f s pour le dernier "
+                "(l'attente à l'arrêt), écrit dans %s\n",
+                (int)d.bornes().size(), plus_long, chrono.elapsed() / 1000.0, dernier, qPrintable(ecrire("-segments.txt", segments)));
+    // les coupes : où chaque segment commence et finit, et ce qu'il a donné (pour voir une coupe mal tombée)
+    {
+        QString coupes;
+        const auto bornes = d.bornes();
+        for (size_t k = 0; k < bornes.size(); k++)
+            coupes += QString("%1 à %2 s : %3\n").arg(bornes[k].first / 16000.0, 0, 'f', 2).arg(bornes[k].second / 16000.0, 0, 'f', 2)
+                          .arg((qsizetype)k < textes.size() ? textes[(qsizetype)k] : QString());
+        QFile c(chemin + "-coupes.txt");
+        if (c.open(QIODevice::WriteOnly)) c.write(coupes.toUtf8());
+        std::printf("Les coupes : %s\n", qPrintable(c.fileName()));
+    }
+    // l'écart : les mots communs aux deux textes, dans l'ordre (plus longue sous-suite commune)
+    const QStringList a = mots_nus(bloc), b = mots_nus(segments);
+    std::vector<int> avant((size_t)b.size() + 1, 0), ligne((size_t)b.size() + 1, 0);
+    for (qsizetype i = 0; i < a.size(); i++) {
+        for (qsizetype j = 0; j < b.size(); j++)
+            ligne[(size_t)j + 1] = a[i] == b[j] ? avant[(size_t)j] + 1 : std::max(avant[(size_t)j + 1], ligne[(size_t)j]);
+        std::swap(avant, ligne);
+    }
+    const int communs = avant[(size_t)b.size()];
+    const qsizetype plus = std::max(a.size(), b.size());
+    std::printf("Mots : %d d'un bloc, %d par segments, %d communs dans l'ordre ; écart : %.1f %%\n", (int)a.size(), (int)b.size(),
+                communs, plus ? 100.0 * (double)(plus - communs) / (double)plus : 0.0);
+    return 0;
 }

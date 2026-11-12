@@ -13,6 +13,9 @@
 #include <QTextEdit>
 #include <QPlainTextEdit>
 #include <cmath>
+#include <memory>
+#include <thread>
+#include <QThread>
 #include "transcription.h"
 #include <QFontMetrics>
 #include "relecture.h"
@@ -1620,26 +1623,194 @@ int main(int argc, char **argv) {
         attendre(300);
     }
 
-    // Le direct (24 octobre 2026) : les passes, la fenêtre acquise à vingt-cinq secondes, la suite raccordée
+    // La dictée par segments (12 novembre 2026) : les coupes aux pauses, la durée minimale, la coupe forcée, la fin trop
+    // courte recollée, l'aperçu du segment ouvert, le texte final, la promesse tenue par transcrire_son
     {
-        TranscriptionDirecte d;
-        std::vector<float> m;
-        size_t fin = 0;
-        d.ajouter(std::vector<float>(16000, 0.f));
-        VERIFIER(!d.passe(&m, &fin));   // une seconde : trop tôt
-        d.ajouter(std::vector<float>(32000, 0.f));
-        VERIFIER(d.passe(&m, &fin) && m.size() == 48000 && fin == 48000);
-        d.recevoir(QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("bonjour ") + QChar(DEBUT_DOUTE) + "Nicolas" + QChar(FIN_DOUTE), fin);
-        VERIFIER(d.texte() == QString::fromUtf8("bonjour Nicolas"));   // les marques de relecture n'ont rien à faire ici
-        d.ajouter(std::vector<float>(16000 * 23, 0.f));   // 26 secondes en tout : la fenêtre est pleine
-        VERIFIER(d.passe(&m, &fin) && m.size() == 16000 * 26);
-        d.recevoir(QString::fromUtf8("bonjour Nicolas, la séance de ce matin"), fin);
-        VERIFIER(d.debut == 16000 * 26 && d.acquis == QString::fromUtf8("bonjour Nicolas, la séance de ce matin"));
-        d.ajouter(std::vector<float>(32000, 0.f));
-        VERIFIER(d.passe(&m, &fin) && m.size() == 32000);   // la suite seulement
-        d.recevoir(QString::fromUtf8("s'est bien passée"), fin);
-        VERIFIER(d.texte() == QString::fromUtf8("bonjour Nicolas, la séance de ce matin s'est bien passée"));
-        std::vector<float> stereo{0.5f, -0.5f, 1.f, 1.f};   // 48 kHz stéréo : une moyenne, puis un rééchantillonnage
+        auto voix = [](double secondes, float amplitude = 0.3f) {   // 440 Hz, à 16 kHz
+            std::vector<float> v((size_t)(16000 * secondes));
+            for (size_t i = 0; i < v.size(); i++) v[i] = amplitude * (float)std::sin(2 * 3.14159265 * 440 * (double)i / 16000.0);
+            return v;
+        };
+        auto souffle = [](double secondes) {   // un bruit de fond faible (−60 dB), jamais nul
+            std::vector<float> v((size_t)(16000 * secondes));
+            unsigned graine = 12345;
+            for (float &x : v) { graine = graine * 1103515245u + 12345u; x = ((float)((graine >> 16) & 0x7FFF) / 16384.0f - 1.0f) * 0.0017f; }
+            return v;
+        };
+        auto donner = [](Dictee &d, const std::vector<float> &v) {   // par dixièmes de seconde, comme le micro
+            for (size_t i = 0; i < v.size(); i += 1600)
+                d.ajouter(std::vector<float>(v.begin() + (long)i, v.begin() + (long)std::min(v.size(), i + 1600)));
+        };
+        auto sans_trou = [](const Dictee &d) {   // les segments se suivent du premier échantillon au dernier
+            size_t ou = 0;
+            for (const auto &b : d.bornes()) { if (b.first != ou || b.second <= b.first) return false; ou = b.second; }
+            return ou == d.echantillons();
+        };
+        {   // une pause après la voix : le segment se ferme au milieu de la pause
+            Dictee d;
+            donner(d, souffle(1));
+            donner(d, voix(3));
+            VERIFIER(d.bornes().empty());           // on parle encore
+            donner(d, souffle(0.5));
+            VERIFIER(d.bornes().empty());           // une demi-seconde : pas encore une pause
+            donner(d, souffle(0.5));
+            VERIFIER(d.bornes().size() == 1);
+            const size_t coupe = d.bornes()[0].second;
+            VERIFIER(d.bornes()[0].first == 0 && coupe > 16000 * 4.2 && coupe < 16000 * 4.5);   // 4 s de son, puis 0,35 s de pause
+            donner(d, souffle(5));
+            VERIFIER(d.bornes().size() == 1);       // du silence seul ne fait pas un segment
+            donner(d, voix(3));
+            donner(d, souffle(1));
+            VERIFIER(d.bornes().size() == 2 && d.bornes()[1].first == coupe);
+            int rang = -1, version = -1;
+            std::vector<float> m;
+            VERIFIER(d.en_retard() && d.segment_a_faire(&rang, &version, &m) && rang == 0 && m.size() == coupe);
+            d.recevoir_segment(0, version, QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("Bonjour ") + QChar(DEBUT_DOUTE)
+                                               + "Nicolas" + QChar(FIN_DOUTE) + ".");
+            VERIFIER(d.segment_a_faire(&rang, &version, &m) && rang == 1);
+            // l'aperçu : le segment ouvert seulement, une seconde et demie au moins
+            size_t debut = 0, fin = 0;
+            VERIFIER(!d.passe(&m, &debut, &fin));
+            donner(d, voix(2));
+            VERIFIER(d.passe(&m, &debut, &fin) && debut == d.bornes()[1].second && fin == d.echantillons() && m.size() == fin - debut);
+            d.recevoir(QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("la suite"), debut);
+            VERIFIER(d.texte() == QString::fromUtf8("Bonjour Nicolas. la suite"));   // sans marques de relecture, ici
+            d.recevoir_segment(1, version, QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("La séance de ce matin."));
+            VERIFIER(!d.en_retard() && !d.finie());
+            d.finir();                              // deux secondes de voix : un dernier segment, à lui seul
+            VERIFIER(d.bornes().size() == 3 && sans_trou(d) && !d.finie());
+            VERIFIER(d.segment_a_faire(&rang, &version, &m) && rang == 2);
+            d.recevoir_segment(2, version, QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("S'est bien passée."));
+            VERIFIER(d.finie());
+            QString t;
+            VERIFIER(d.attendre(&t));
+            VERIFIER(t == QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("Bonjour ") + QChar(DEBUT_DOUTE) + "Nicolas" + QChar(FIN_DOUTE)
+                              + QString::fromUtf8(".\nLa séance de ce matin.\nS'est bien passée."));   // une marque en tête, les doutes gardés
+            d.ajouter(voix(1));                     // après l'arrêt, plus rien n'entre
+            VERIFIER(d.echantillons() == (size_t)(16000 * 16));
+        }
+        {   // un mot puis une pause, tout au début : pas de segment de moins de deux secondes
+            Dictee d;
+            donner(d, souffle(0.4));
+            donner(d, voix(0.6));
+            donner(d, souffle(1.2));
+            VERIFIER(d.bornes().empty());
+            donner(d, souffle(0.4));
+            VERIFIER(d.bornes().size() == 1 && d.bornes()[0].second == 32000);   // à deux secondes juste, en pleine pause
+        }
+        {   // une minute sans respirer : coupée de force, vingt-cinq secondes au plus, au creux le plus calme
+            Dictee d;
+            donner(d, souffle(1));
+            std::vector<float> flot = voix(60);
+            for (size_t i = 16000 * 20; i < 16000 * 20 + 4800; i++) flot[i] *= 0.2f;   // un creux de 0,3 s vers la 21e seconde
+            donner(d, flot);
+            VERIFIER(d.bornes().size() == 2);
+            for (const auto &b : d.bornes()) VERIFIER(b.second - b.first <= 16000 * 25 && b.second - b.first >= 16000 * 15);
+            VERIFIER(d.bornes()[0].second > 16000 * 21 && d.bornes()[0].second < 16000 * 21.4);   // dans le creux
+            d.finir();
+            VERIFIER(sans_trou(d));
+        }
+        {   // un micro qui ne donne que des zéros : rien n'est écarté, la coupe forcée seule
+            Dictee d;
+            donner(d, std::vector<float>(16000 * 40, 0.f));
+            d.finir();
+            VERIFIER(d.bornes().size() == 2 && sans_trou(d));
+        }
+        {   // une fin trop courte rejoint le segment d'avant, qui est refait : son premier texte ne compte plus
+            Dictee d;
+            donner(d, souffle(1));
+            donner(d, voix(3));
+            donner(d, souffle(1));
+            int rang = -1, version = -1, apres = -1;
+            std::vector<float> m;
+            VERIFIER(d.bornes().size() == 1 && d.segment_a_faire(&rang, &version, &m));
+            donner(d, voix(0.5));
+            d.finir();
+            VERIFIER(d.bornes().size() == 1 && d.bornes()[0].second == d.echantillons() && sans_trou(d));
+            d.recevoir_segment(0, version, QString::fromUtf8("l'ancien texte"));   // parti avant l'arrêt, arrivé après
+            VERIFIER(!d.finie() && d.segment_a_faire(&rang, &apres, &m) && apres != version && m.size() == d.echantillons());
+            d.recevoir_segment(0, apres, QString::fromUtf8("le texte entier"));
+            VERIFIER(d.finie() && d.texte_final() == QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("le texte entier"));
+        }
+        {   // une voix sans contraste avec le fond (un souffle fort) : aucune pause reconnue, donc aucune coupe hasardeuse
+            Dictee d;
+            donner(d, voix(10, 0.05f));
+            donner(d, voix(1, 0.02f));
+            donner(d, voix(5, 0.05f));
+            VERIFIER(d.bornes().empty());
+        }
+        {   // la promesse : transcrire_son rend le texte de la dictée sans refaire la passe ; une amorce, un abandon ou un
+            // texte vide ramènent à la passe complète (ici le modèle d'essai, qui ne rend rien d'utile)
+            auto wav16 = [&](double secondes, float amplitude) {
+                const std::vector<float> v = voix(secondes, amplitude);
+                QByteArray o;
+                auto u32 = [&](quint32 x) { for (int k = 0; k < 4; k++) o.append(char((x >> (8 * k)) & 0xFF)); };
+                auto u16 = [&](quint16 x) { o.append(char(x & 0xFF)); o.append(char(x >> 8)); };
+                o.append("RIFF"); u32((quint32)(36 + v.size() * 2)); o.append("WAVEfmt "); u32(16); u16(1); u16(1);
+                u32(16000); u32(32000); u16(2); u16(16); o.append("data"); u32((quint32)(v.size() * 2));
+                for (float x : v) u16((quint16)(qint16)(x * 32767));
+                return o;
+            };
+            const QString promis = QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("Le texte promis.");
+            const QByteArray octets = wav16(2, 0.3f);
+            auto dictee = std::make_shared<Dictee>();
+            donner(*dictee, voix(3));
+            dictee->finir();
+            promettre_transcription(octets, dictee);
+            QString recu, erreur;
+            std::thread attente([&] { recu = transcrire_son(octets, MODELE_ESSAI, &erreur); });   // attend le dernier segment
+            QThread::msleep(100);
+            int rang = -1, version = -1;
+            std::vector<float> m;
+            VERIFIER(dictee->segment_a_faire(&rang, &version, &m));
+            dictee->recevoir_segment(rang, version, promis);
+            attente.join();
+            VERIFIER(erreur.isEmpty() && recu == promis);
+            VERIFIER(transcrire_son(octets, MODELE_ESSAI, &erreur) == promis);   // une seconde demande (le champ de l'entité) : pareil
+            VERIFIER(transcrire_son(octets, MODELE_ESSAI, &erreur, QString::fromUtf8("HB9XYZ")) != promis && erreur.isEmpty());   // la passe
+            VERIFIER(transcrire_son(wav16(2, 0.2f), MODELE_ESSAI, &erreur) != promis);   // un autre son : rien de promis
+            const QByteArray autres = wav16(2, 0.25f);
+            auto perdue = std::make_shared<Dictee>();
+            donner(*perdue, voix(3));
+            promettre_transcription(autres, perdue);
+            perdue->abandonner();
+            QString t;
+            VERIFIER(!perdue->attendre(&t));
+            VERIFIER(transcrire_son(autres, MODELE_ESSAI, &erreur) != promis && erreur.isEmpty());   // n'attend pas : la passe complète
+            const QByteArray vides = wav16(2, 0.15f);
+            auto muette = std::make_shared<Dictee>();
+            donner(*muette, voix(3));
+            muette->finir();
+            VERIFIER(muette->segment_a_faire(&rang, &version, &m));
+            muette->recevoir_segment(rang, version, QString());
+            promettre_transcription(vides, muette);
+            VERIFIER(muette->attendre(&t) && t.isEmpty());
+            VERIFIER(transcrire_son(vides, MODELE_ESSAI, &erreur) != promis && erreur.isEmpty());
+            for (int k = 0; k < 8; k++) promettre_transcription(wav16(1, 0.01f * (float)(k + 1)), muette);   // huit promesses de plus
+            VERIFIER(transcrire_son(octets, MODELE_ESSAI, &erreur) != promis);   // la plus ancienne est oubliée
+            liberer_transcription();
+        }
+        {   // le fil des segments, avec le modèle d'essai : il transcrit chaque segment et finit avec la dictée
+            auto dictee = std::make_shared<Dictee>();
+            std::thread fil([dictee] { dictee->travailler(MODELE_ESSAI); });
+            donner(*dictee, souffle(1));
+            donner(*dictee, voix(3));
+            donner(*dictee, souffle(1));
+            donner(*dictee, voix(3));
+            dictee->finir();
+            QString t;
+            VERIFIER(dictee->attendre(&t));
+            fil.join();
+            VERIFIER(dictee->finie() && dictee->bornes().size() == 2 && dictee->echantillons() == (size_t)(16000 * 8));
+            auto echec = std::make_shared<Dictee>();   // un modèle qui ne se charge pas : la dictée échoue, qui attend repart
+            std::thread fil2([echec] { echec->travailler("/nulle/part/modele.bin"); });
+            donner(*echec, voix(3));
+            echec->finir();
+            VERIFIER(!echec->attendre(&t));
+            fil2.join();
+            liberer_transcription();
+        }
+        std::vector<float> stereo{0.5f, -0.5f, 1.f, 1.f};   // stéréo : une moyenne
         std::vector<float> r;
         pcm_en_16k(stereo, 16000, 2, &r);
         VERIFIER(r.size() == 2 && r[0] == 0.f && r[1] == 1.f);
@@ -1648,7 +1819,7 @@ int main(int argc, char **argv) {
         QElapsedTimer z;
         z.start();
         while (z.elapsed() < 3000) QApplication::processEvents(QEventLoop::AllEvents, 20);
-        VERIFIER(true);
+        VERIFIER(e.dictee() && e.dictee()->echantillons() == 32000);
     }
 
     // L'écoute (2.69) : le découpage en passages, le WAV, et le bandeau nourri à la main

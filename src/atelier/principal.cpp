@@ -5,6 +5,7 @@
 #include "fabrication.h"
 #include "fenetre.h"
 #include "theme.h"
+#include "transcription.h"
 
 #include "projet.h"
 
@@ -261,6 +262,12 @@ int main(int argc, char **argv) {
                        || std::strcmp(argv[1], "--icone-ico") == 0))
         || (argc == 3 && std::strcmp(argv[1], "--identite") == 0))
         return sans_fenetre(argc, argv);
+    // grym-atelier --comparer-dictee son : le même son transcrit d'un bloc puis par segments, comme une dictée (12 novembre
+    // 2026) ; les deux textes sont écrits à côté du son, les durées et l'écart en mots affichés
+    if (argc == 3 && std::strcmp(argv[1], "--comparer-dictee") == 0) {
+        QCoreApplication app(argc, argv);
+        return comparer_dictee(QFileInfo(QString::fromLocal8Bit(argv[2])).absoluteFilePath());
+    }
     // grym-atelier --essai-plantage dossier : installe le journal des plantages dans le dossier, puis plante (les essais)
     if (argc == 3 && std::strcmp(argv[1], "--essai-plantage") == 0) {
         QCoreApplication app(argc, argv);

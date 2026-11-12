@@ -5,6 +5,10 @@
 
 #include <QByteArray>
 #include <QString>
+#include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <utility>
 #include <vector>
 
 // Le modèle : à côté de l'application (Contents/Resources/modeles sur Mac, modeles/ ailleurs), sinon dans le dossier
@@ -37,17 +41,62 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
 // Le texte d'un son déjà en 16 kHz mono ; rapide : la recherche gloutonne (pour le direct).
 QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide, const QString &amorce = QString());
 
-// La transcription en direct (24 octobre 2026) : pendant qu'on parle, le son arrive par morceaux ; à chaque passe, tout ce
-// qui suit le dernier point acquis est retranscrit (moins de vingt-cinq secondes : pas de mot coupé à raccorder) ; une
-// fenêtre pleine devient acquise et la suivante repart de sa fin. Le texte final, à l'arrêt, reprend tout le son.
+// Du son brut (n'importe quelle fréquence, mono ou stéréo entrelacé) ajouté à « pcm », en 16 kHz mono.
 void pcm_en_16k(const std::vector<float> &entree, int frequence, int canaux, std::vector<float> *pcm);
-struct TranscriptionDirecte {
-    double fenetre_secondes = 25;
-    std::vector<float> son;   // 16 kHz mono, depuis le début de l'enregistrement
-    size_t debut = 0;         // le début de la fenêtre en cours
-    QString acquis, courant;
-    void ajouter(const std::vector<float> &pcm16k);
-    bool passe(std::vector<float> *morceau, size_t *fin) const;   // le morceau à transcrire maintenant, s'il y en a un
-    void recevoir(const QString &texte, size_t fin);            // le texte du morceau qui finissait à « fin »
-    QString texte() const;                                      // ce qu'on montre
+
+// La dictée par segments (12 novembre 2026) : pendant qu'on parle, le son est coupé à chaque pause (0,7 seconde sous le
+// seuil, le seuil tiré du bruit de fond de l'enregistrement même), au plus tard à vingt-cinq secondes, à l'endroit le plus
+// calme ; chaque segment fermé part aussitôt dans Whisper en recherche en faisceau, la qualité du texte final, dans un fil
+// à part. À l'arrêt, il ne reste que le dernier segment à transcrire : le texte final n'attend plus une passe sur tout le
+// son. Aucun son n'est écarté : les segments se suivent sans trou, du premier échantillon au dernier. Un segment ne fait
+// jamais moins de deux secondes (Whisper invente sur un son trop court) ; la fin de la dictée, si elle est plus courte,
+// rejoint le segment d'avant, refait. Le direct (l'aperçu en italique) ne porte plus que sur le segment ouvert.
+// Tout est protégé par un verrou : l'interface, le fil des segments et celui qui attend le texte s'y croisent.
+struct Dictee {
+    double pause_secondes = 0.7, minimum_secondes = 2, maximum_secondes = 25;
+    void ajouter(const std::vector<float> &pcm16k);   // du son ; ferme les segments finis
+    void finir();                                     // l'arrêt : ce qui reste devient le dernier segment
+    void abandonner();                                // rien ne sera lu : le fil s'arrête, qui attend repart sans texte
+    // le direct : le segment ouvert, à retranscrire en entier (une seconde et demie au moins)
+    bool passe(std::vector<float> *morceau, size_t *debut, size_t *fin) const;
+    void recevoir(const QString &texte, size_t debut);   // l'aperçu du morceau qui commençait à « debut »
+    // les segments fermés : le premier qui n'a pas son texte ; sa version change s'il est refait entre-temps
+    bool segment_a_faire(int *rang, int *version, std::vector<float> *morceau) const;
+    void recevoir_segment(int rang, int version, const QString &texte);
+    void echouer();                                   // Whisper a échoué : le texte viendra de la passe complète
+    bool en_retard() const;                           // un segment fermé attend son texte : le direct lui laisse la place
+    QString texte() const;                            // ce qu'on montre pendant la dictée
+    QString texte_final() const;                      // les textes des segments, avec leurs marques de relecture
+    bool attendre(QString *texte);                    // jusqu'au dernier segment ; faux : abandon ou échec
+    void travailler(const QString &modele);           // le fil des segments, jusqu'au dernier
+    std::vector<std::pair<size_t, size_t>> bornes() const;   // début et fin de chaque segment fermé
+    size_t echantillons() const;                      // tout le son reçu
+    bool finie() const;
+
+private:
+    struct Segment { size_t debut = 0, fin = 0; QString apercu, texte; bool fait = false; int version = 0; };
+    mutable std::mutex verrou_;
+    std::condition_variable signal_;
+    std::vector<float> son_;          // 16 kHz mono, depuis le début
+    std::vector<float> niveaux_;      // le niveau efficace de chaque trame de 20 ms, en dB
+    int histogramme_[101] = {0};      // les niveaux, de −100 à 0 dB, hors silence numérique
+    int trames_comptees_ = 0;
+    size_t total_ = 0;                // le son reçu (son_ est rendu une fois la dictée transcrite)
+    size_t debut_ = 0;                // le début du segment ouvert
+    std::vector<Segment> segments_;
+    QString courant_;
+    bool terminee_ = false, abandonnee_ = false, echec_ = false;
+    double seuil() const;
+    void couper();
+    bool tout_fait() const;
 };
+
+// Une dictée promise pour un enregistrement : transcrire_son, appelé plus tard avec ces octets et sans amorce, attend
+// son texte au lieu de refaire la passe complète (les huit dernières dictées sont gardées). Sans texte (abandon, échec,
+// rien reconnu), la passe complète a lieu, comme avant.
+void promettre_transcription(const QByteArray &octets, std::shared_ptr<Dictee> dictee);
+// GRYMOIR_DICTEE_ENTIERE : la dictée transcrite d'un bloc à l'arrêt, comme avant le 12 novembre 2026 (pour comparer).
+bool dictee_par_segments();
+// grym-atelier --comparer-dictee son : le même son transcrit d'un bloc puis par segments, les deux textes écrits à côté
+// du son, les durées et l'écart en mots affichés. Rend 0 si tout a tourné.
+int comparer_dictee(const QString &chemin);

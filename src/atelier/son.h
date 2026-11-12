@@ -5,6 +5,7 @@
 #include <QString>
 #include <QWidget>
 #include <functional>
+#include <memory>
 #include <vector>
 
 class QAudioInput;
@@ -81,17 +82,23 @@ private:
     QTemporaryDir *dossier = nullptr;
     QString extension;
     bool muet_ = false;   // arrêté faute de son (24 octobre 2026) : rien n'est gardé
-    // le direct (24 octobre 2026) : le micro lu aussi en PCM, transcrit par passes pendant qu'on parle, montré à côté
+    // le direct (24 octobre 2026) : le micro lu aussi en PCM, transcrit pendant qu'on parle, montré à côté ; par segments
+    // depuis le 12 novembre 2026 : à l'arrêt, le texte final est presque prêt (transcription.h, Dictee)
     class QAudioSource *source_directe = nullptr;
     class QIODevice *flux_direct = nullptr;
     class QTimer *minuterie_directe = nullptr;
-    struct TranscriptionDirecte *direct = nullptr;
+    std::shared_ptr<struct Dictee> direct;
     int frequence_directe = 0, canaux_directs = 1, format_direct = 0;
     bool passe_en_cours = false;
+    qint64 duree_ms_ = 0;   // la durée que l'enregistreur annonce : le direct doit avoir reçu le même son
     void demarrer_direct(const class QAudioDevice &micro);
-    void arreter_direct();
+    void lire_direct();      // ce que le micro a donné depuis la dernière lecture
+    void figer_direct();     // l'arrêt demandé : le micro du direct se ferme, la dictée reste
+    void arreter_direct();   // tout s'arrête, la dictée est abandonnée
     void lancer_passe();
+    void montrer_direct();
 public:
     QString texte_direct() const;   // ce que le direct montre en ce moment (pour les essais)
     void nourrir_direct(const std::vector<float> &pcm16k);   // pour les essais : du son, comme s'il venait du micro
+    std::shared_ptr<struct Dictee> dictee() const { return direct; }   // pour les essais
 };
