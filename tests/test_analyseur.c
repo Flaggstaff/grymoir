@@ -757,7 +757,12 @@ int main(void) {
     VE(CL "Afficher le nombre de clients conservés dont le nom est positif.", 2, 53, "« nom » : positif, négatif et nul s'appliquent à un nombre.");
     VE(CL "Le a vaut 1.\nAfficher le nombre de clients conservés dont le parrain > a.", 3, 57, "« parrain » : ce champ ne se compare que par égalité.");
     VE(CL "Afficher le nombre de clients conservés dont le solde est « a ».", 2, 59, "Le champ « solde » attend un nombre, pas un texte.");
-    VE(CL "Afficher le nombre de clients conservés dont le solde = le nom.", 2, 46, "Une condition « dont » compare un champ du client");
+    /* 3.26 : deux champs se comparent, de même type ; un nombre et un texte, non */
+    VE(CL "Afficher le nombre de clients conservés dont le solde = le nom.", 2, 55, "« solde » (nombre) et « nom » (texte) ne se comparent pas");
+    VE(CL "Afficher le nombre de clients conservés dont le solde < le solde.", 2, 55, "« solde » se compare à lui-même");
+    VE(CL "Afficher le nombre de clients conservés dont l'actif < l'actif du parrain.", 2, 54, "ce champ ne se compare que par égalité");
+    VE(CL "Afficher le nombre de clients conservés dont le nom contient le nom du parrain.", 2, 53, "Deux champs se comparent par");
+    VE(CL "Afficher le nombre de clients conservés dont le solde < le solde du parrain + 1.", 2, 46, "pas à un calcul qui lit un champ");
     /* un calcul lit la base (décidé le 28 septembre 2026, § 9.4) ; il n'y écrit pas (plus haut : « ne conserve pas ») */
     VE(CL "Le client vaut 1.\nPour chaque client conservé, afficher 1.", 3, 13, "« client » existe déjà : renomme-le");
     VE(CL "Pour chaque client conservé, par âge, afficher 1.", 2, 34, "« âge » n'est pas un champ du client.");

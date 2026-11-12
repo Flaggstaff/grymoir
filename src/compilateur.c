@@ -225,7 +225,12 @@ static void condition_dont(Compilation *c, const Noeud *n, Chaine *d, int *param
     }
     chaine_ajouter(d, n->enfants[0]->texte);
     chaine_ajouter(d, "]");
-    if (n->nb_enfants == 2) {
+    if (n->nb_enfants == 2 && n->enfants[1]->type == N_CHAMP_DONT) {   /* un second champ (3.26) : « [montant] » */
+        chaine_ajouter(d, "[");
+        if (n->enfants[1]->texte2) { chaine_ajouter(d, n->enfants[1]->texte2); chaine_ajouter(d, "\x1c"); }
+        chaine_ajouter(d, n->enfants[1]->texte);
+        chaine_ajouter(d, "]");
+    } else if (n->nb_enfants == 2) {
         expression(c, n->enfants[1]);
         char t[16];
         snprintf(t, sizeof t, "?%d", ++*parametres);

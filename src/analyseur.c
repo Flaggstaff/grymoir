@@ -1825,6 +1825,55 @@ static Classe *entite_conservee(Analyse *a, size_t k, int pluriel, size_t *apres
 }
 
 /* Une condition « dont » compare un champ de l'objet examiné à une valeur (§ 16.4). */
+/* Le type d'un champ de condition « dont », au bout de son chemin (« le nom de la catégorie du membre »), ou NULL. */
+static const char *type_champ_dont(Analyse *a, const Classe *e, const Noeud *champ) {
+    const Classe *ec = e;
+    if (champ->texte2) {
+        char *copie = grym_dupliquer(champ->texte2);
+        for (char *s1 = copie, *s2; ec && s1; s1 = s2) {
+            s2 = strchr(s1, '\x1c');
+            if (s2) *s2++ = '\0';
+            ec = classe_liee(a->portee, ec, s1);
+        }
+        free(copie);
+    }
+    return ec ? type_du_champ(a->portee, ec, champ->texte) : NULL;
+}
+
+/* « dont le payé < le montant » (3.26) : deux champs de l'objet examiné, de même type (un nombre entier se compare à un
+ * nombre), par égalité ; et par ordre, des nombres, des dates, des heures, des années ou des textes. Rend 0 sur erreur. */
+static int verifier_deux_champs(Analyse *a, const Classe *e, const Noeud *n) {
+    const Noeud *g = n->enfants[0], *d = n->enfants[1];
+    const char *t1 = type_champ_dont(a, e, g), *t2 = type_champ_dont(a, e, d);
+    const int ordre = n->op == '<' || n->op == '>' || n->op == 'l' || n->op == 'g';
+    if (n->op != '=' && n->op != '!' && !ordre) {
+        erreur_a(a, n->op_ligne, n->op_colonne, grym_dupliquer("Deux champs se comparent par =, ≠, <, >, ≤ ou ≥."));
+        return 0;
+    }
+    if (strcmp(g->texte, d->texte) == 0 && ((!g->texte2 && !d->texte2) || (g->texte2 && d->texte2 && strcmp(g->texte2, d->texte2) == 0))) {
+        erreur_a(a, n->op_ligne, n->op_colonne, grym_formater("« %s » se compare à lui-même : écris un autre champ, ou une valeur.", g->texte));
+        return 0;
+    }
+    if (!t1 || !t2) return 1;   /* un champ inconnu : déjà dit par la lecture */
+    const int n1 = strcmp(t1, "nombre") == 0 || strcmp(t1, "nombre entier") == 0;
+    const int n2 = strcmp(t2, "nombre") == 0 || strcmp(t2, "nombre entier") == 0;
+    const int memes = strcmp(t1, t2) == 0 || (n1 && n2) || (type_textuel(t1) && type_textuel(t2));
+    const char *refus = NULL;
+    if (type_fichier(t1) || type_fichier(t2)) refus = "un fichier ne se compare pas";
+    else if (!memes) refus = NULL;
+    else if (ordre && (strcmp(t1, "vrai ou faux") == 0 || !type_de_base(t1))) refus = "ce champ ne se compare que par égalité";
+    if (!refus && !memes) {
+        erreur_a(a, n->op_ligne, n->op_colonne, grym_formater("« %s » (%s) et « %s » (%s) ne se comparent pas : deux champs de même type.",
+                                                            g->texte, t1, d->texte, t2));
+        return 0;
+    }
+    if (refus) {
+        erreur_a(a, n->op_ligne, n->op_colonne, grym_formater("« %s » : %s.", g->texte, refus));
+        return 0;
+    }
+    return 1;
+}
+
 static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
     if (n->type == N_GROUPE) return verifier_dont(a, e, n->enfants[0]);
     if (n->type == N_LOGIQUE) return verifier_dont(a, e, n->enfants[0]) && verifier_dont(a, e, n->enfants[1]);
@@ -1838,6 +1887,10 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
             n->op = n->op == '<' ? '>' : n->op == '>' ? '<' : n->op == 'l' ? 'g' : n->op == 'g' ? 'l' : n->op;
         }
         const Noeud *champ = n->enfants[0];
+        /* deux champs face à face (3.26) ; « dont le nom est nom », une variable qui porte le nom d'un champ, reste refusé */
+        if (n->op != 'p' && n->nb_enfants == 2 && champ->type == N_CHAMP_DONT && n->enfants[1]->type == N_CHAMP_DONT
+            && !visible(a, n->enfants[1]->texte))
+            return verifier_deux_champs(a, e, n);
         if (n->op == 'p') {   /* « dont baroque est parmi les genres » : déjà vérifié à la lecture (§ 16.13) */
             const char *t = NULL;
             classe_multiple(a->portee, e, champ->texte, &t, NULL);
@@ -1891,7 +1944,8 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
         return 0;
     }
     erreur_a(a, n->ligne, n->colonne, grym_formater(
-        "Une condition « dont » compare un champ %s%s à une valeur : « dont le solde est négatif ».",
+        "Une condition « dont » compare un champ %s%s à une valeur, « dont le solde est négatif », ou à un autre champ, "
+        "« dont le payé < le montant » ; pas à un calcul qui lit un champ.",
         voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom));
     return 0;
 }

@@ -2860,6 +2860,46 @@ int main(void) {
          "ERREUR 4:22 « abc » n'est pas un nombre.");
     PROG("Le x vaut 1.\nEssayer :\n    Essayer :\n        Le x devient 2.\n        Afficher 1 ÷ 0.\n    En cas d'échec d'unicité, afficher 0.\n"
          "En cas d'échec de division, afficher x.", "1");
+    /* 3.26 : deux champs du même objet dans une condition « dont » ; un absent rend faux ; 10 ≥ 9,5 en décimal */
+    PROG("Une catégorie, conservée, a :\n" \
+         "    un nom (texte), unique,\n" \
+         "    un plafond (nombre).\n" \
+         "Une facture, conservée, a :\n" \
+         "    un numéro (texte), unique,\n" \
+         "    un montant (nombre),\n" \
+         "    un payé (nombre), facultatif,\n" \
+         "    un rang (nombre entier),\n" \
+         "    une échéance (date),\n" \
+         "    un envoi (date), facultatif,\n" \
+         "    une catégorie (catégorie), facultative.\n" \
+         "La c vaut une nouvelle catégorie :\n" \
+         "    Le nom vaut « A ».\n" \
+         "    Le plafond vaut 75.\n" \
+         "Conserver la c.\n" \
+         "Pour créer un numéro et un montant et un payé et un rang et une échéance et un envoi :\n" \
+         "    La f vaut une nouvelle facture :\n" \
+         "        Le numéro vaut numéro.\n" \
+         "        Le montant vaut montant.\n" \
+         "        Le payé vaut payé.\n" \
+         "        Le rang vaut rang.\n" \
+         "        L'échéance vaut échéance.\n" \
+         "        L'envoi vaut envoi.\n" \
+         "        La catégorie vaut c.\n" \
+         "    Conserver la f.\n" \
+         "Créer « F1 » et 100 et 40 et 100 et 01.10.2026 et 20.10.2026.\n" \
+         "Créer « F2 » et 100 et 100 et 9 et 01.10.2026 et 01.09.2026.\n" \
+         "Créer « F3 » et 9,5 et 10 et 9 et 01.11.2026 et absent.\n" \
+         "Créer « F4 » et 80 et absent et 80 et 01.12.2026 et 01.12.2026.\n" \
+         "Afficher « payé < montant : » puis le nombre de factures conservées dont le payé < le montant.\n" \
+         "Afficher « payé ≥ montant : » puis le nombre de factures conservées dont le payé ≥ le montant.\n" \
+         "Afficher « rang = montant : » puis le nombre de factures conservées dont le rang = le montant.\n" \
+         "Afficher « rang > montant : » puis le nombre de factures conservées dont le rang > le montant.\n" \
+         "Afficher « envoi > échéance : » puis le nombre de factures conservées dont l'envoi > l'échéance.\n" \
+         "Afficher « montant > plafond : » puis le nombre de factures conservées dont le montant > le plafond de la catégorie.\n" \
+         "Afficher « à travers et et : » puis le nombre de factures conservées dont le payé < le montant et l'envoi > l'échéance.\n" \
+         "Pour chaque facture conservée dont l'échéance > l'envoi, par numéro :\n" \
+         "    Afficher le numéro de la facture.\n",
+         "payé < montant : 1\npayé ≥ montant : 2\nrang = montant : 2\nrang > montant : 0\nenvoi > échéance : 1\nmontant > plafond : 3\nà travers et et : 1\nF2");
     /* Tables (§ 13.11) */
     PROG("Les tarifs valent la table où « 7601 » vaut 24 et « 7602 » vaut 12.\nLes compteurs valent une table vide.\n"
          "Dans les compteurs, « CQ » vaut 0.\nDans les compteurs, « CQ » devient la valeur de « CQ » dans les compteurs + 1.\n"

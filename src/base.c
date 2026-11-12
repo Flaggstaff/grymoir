@@ -3341,6 +3341,43 @@ static int lire_condition(Recherche *r) {
         int nombre = strcmp(t, "nombre") == 0, entier = strcmp(t, "nombre entier") == 0;
         const char *sqlop = op == '=' ? " = " : op == '!' ? " <> " : op == '<' ? " < " : op == '>' ? " > "
                           : op == 'l' ? " <= " : op == 'g' ? " >= " : NULL;
+        if (*r->p == '[') {   /* deux champs de l'objet (3.26) : « dont le payé < le montant » ; un absent rend faux (NULL) */
+            const char *fin2 = strchr(r->p, ']');
+            if (!fin2 || !sqlop) { free(expr); r->erreur = grym_dupliquer("second champ mal décrit"); return 0; }
+            char *champ2 = grym_formater("%.*s", (int)(fin2 - r->p - 1), r->p + 1);
+            r->p = fin2 + 1;
+            long k2;
+            const char *t2 = NULL, *nom2 = NULL;
+            char *expr2 = expression_champ(r, champ2, &t2, &nom2, &k2);
+            free(champ2);
+            if (!expr2 || (k2 >= 0 && multiple(r->e, (size_t)k2))) {
+                free(expr); free(expr2);
+                r->erreur = grym_dupliquer("second champ inconnu");
+                return 0;
+            }
+            const int nombre2 = strcmp(t2, "nombre") == 0, entier2 = strcmp(t2, "nombre entier") == 0;
+            chaine_ajouter(&r->sql, "(");
+            if ((nombre || entier) && (nombre2 || entier2) && !(entier && entier2)) {
+                /* des nombres décimaux, rangés en texte canonique : la collation des nombres ; un entier passe en texte */
+                if (entier) { chaine_ajouter(&r->sql, "CAST("); chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, " AS TEXT)"); }
+                else chaine_ajouter(&r->sql, expr);
+                chaine_ajouter(&r->sql, sqlop);
+                if (entier2) { chaine_ajouter(&r->sql, "CAST("); chaine_ajouter(&r->sql, expr2); chaine_ajouter(&r->sql, " AS TEXT)"); }
+                else chaine_ajouter(&r->sql, expr2);
+                chaine_ajouter(&r->sql, " COLLATE GRYM_NOMBRE");
+            } else {
+                chaine_ajouter(&r->sql, expr);
+                chaine_ajouter(&r->sql, sqlop);
+                chaine_ajouter(&r->sql, expr2);
+                if (type_textuel(t) && op != '=' && op != '!') chaine_ajouter(&r->sql, " COLLATE GRYM_TEXTE");
+            }
+            chaine_ajouter(&r->sql, ")");
+            free(expr);
+            free(expr2);
+            if (*r->p != ')') { r->erreur = grym_dupliquer("parenthèse attendue"); return 0; }
+            r->p++;
+            return 1;
+        }
         chaine_ajouter(&r->sql, "(");
         if (op == 'c' || op == 'd' || op == 'f') {   /* contient, commence par, finit par (§ 4.5) */
             if (*r->p != '?') { free(expr); r->erreur = grym_dupliquer("paramètre attendu"); return 0; }
