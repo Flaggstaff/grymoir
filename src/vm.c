@@ -8053,6 +8053,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     break;
                 }
                 aujourdhui = m->jour_fixe = vj.jours;
+                valeur_liberer(&vj);   /* une date porte un décimal vide : il fuyait (3.21) */
                 break;
             }
             const char *s1 = strchr(d, '\x1f'), *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL, *s3 = s2 ? strchr(s2 + 1, '\x1f') : NULL;
