@@ -5116,9 +5116,17 @@ static Noeud *essayer(Analyse *a, int colonne) {
             if (q == sizeof SORTES / sizeof *SORTES) {
                 free(chaine_rendre(&sortes));
                 noeud_liberer(n);
-                return erreur(a, ts, grym_formater("« %s » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, "
-                                                   "rang, texte, unicité, lien, fichier, réseau, port, saisie, refus, commande ou autre.",
-                                                   ts->valeur));
+                /* la liste vient de SORTES : elle ne peut plus oublier une sorte ajoutée (natif, conflit : 3.24) */
+                const size_t nb_sortes = sizeof SORTES / sizeof *SORTES;
+                Chaine liste = {0};
+                for (size_t k = 0; k < nb_sortes; k++) {
+                    if (k) chaine_ajouter(&liste, k + 1 == nb_sortes ? " ou " : ", ");
+                    chaine_ajouter(&liste, SORTES[k]);
+                }
+                char *l = chaine_rendre(&liste);
+                char *message = grym_formater("« %s » n'est pas une sorte d'échec : %s.", ts->valeur, l);
+                free(l);
+                return erreur(a, ts, message);
             }
             if (ligne_vue[q]) {
                 free(chaine_rendre(&sortes));

@@ -1,0 +1,34 @@
+#!/bin/sh
+# Les sortes d'échec (grammaire, § 18.2 ; 3.24) : la machine pose chaque sorte avec son motif (grym_echec) ou par son
+# instruction (sorte_fixee), jamais d'après ses mots. Ce script vérifie que toute sorte écrite dans src/ est l'une
+# des sortes promises, celles que l'analyse accepte dans « En cas d'échec de … » et que le § 18.2 énumère : une faute
+# de frappe (« unicite ») donnerait une sorte qu'aucun programme ne peut rattraper.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+total=0; echecs=0
+# les sortes promises, d'après l'analyse (la liste qu'elle accepte)
+promises=$(sed -n '/static const char \*const SORTES\[\] = {/,/};/p' "$racine/src/analyseur.c" | grep -o '"[^"]*"' | tr -d '"')
+if [ -z "$promises" ]; then echo "ÉCHEC : la liste des sortes de src/analyseur.c est introuvable"; exit 1; fi
+# les sortes écrites dans le code : grym_echec("…", sorte_fixee = "…", et la sorte des ABSENCE
+ecrites=$( (cat "$racine"/src/*.c | grep -o 'grym_echec("[^"]*"' | sed 's/grym_echec("//; s/"$//'
+            cat "$racine"/src/*.c | grep -o 'sorte_fixee = "[^"]*"' | sed 's/sorte_fixee = "//; s/"$//'
+            cat "$racine"/src/*.c | grep '^#define ABSENCE' | grep -o '? "[^"]*"' | sed 's/? "//; s/"$//') | sort -u)
+for s in $ecrites; do
+    total=$((total + 1))
+    if ! printf '%s\n' "$promises" | grep -qx "$s"; then
+        echecs=$((echecs + 1)); echo "ÉCHEC : la sorte « $s », écrite dans src/, n'est pas une sorte promise (src/analyseur.c, SORTES)"
+    fi
+done
+# chaque sorte promise figure dans le tableau du § 18.2 de la grammaire
+for s in $promises; do
+    total=$((total + 1))
+    if ! grep -q "^| \`$s\` |" "$racine/docs/grammaire.md"; then
+        echecs=$((echecs + 1)); echo "ÉCHEC : la sorte « $s » manque au tableau du § 18.2 (docs/grammaire.md)"
+    fi
+done
+# plus aucune sorte ne se lit dans les mots d'un motif : ni table de fragments, ni recherche dans le motif
+total=$((total + 1))
+if grep -n 'sorte_du_motif' "$racine"/src/*.c > /dev/null; then
+    echecs=$((echecs + 1)); echo "ÉCHEC : sorte_du_motif est revenue dans src/ : la sorte se pose avec le motif (grym_echec)"
+fi
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

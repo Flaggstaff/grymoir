@@ -909,7 +909,7 @@ int base_secourir_coffre(const char *coffre, const unsigned char secrete[32], co
     if (existe) {
         fclose(existe);
         free(o);
-        *erreur = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", destination);
+        *erreur = grym_echec("fichier", "« %s » existe déjà : il n'est jamais écrasé.", destination);
         return 0;
     }
     unsigned char cle[32], *cles = NULL;
@@ -2286,14 +2286,14 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
     } else {
         if (!v->objet->id) {
             char *qui = un(v->objet->classe);
-            *erreur = grym_formater("Le champ « %s » désigne %s qui n'est pas conservé%s : conserve-%s d'abord.", champ,
+            *erreur = grym_echec("lien", "Le champ « %s » désigne %s qui n'est pas conservé%s : conserve-%s d'abord.", champ,
                                     qui, v->objet->classe->feminin ? "e" : "", v->objet->classe->feminin ? "la" : "le");
             free(qui);
             return 0;
         }
         if (base_est_supprime(b, v->objet->id)) {   /* règle 3 : pas de nouveau lien vers la corbeille (§ 16.12) */
             const ClasseVM *c = v->objet->classe;
-            *erreur = grym_formater("Le champ « %s » désignerait %s %s supprimé%s : rétablis-%s d'abord.", champ,
+            *erreur = grym_echec("lien", "Le champ « %s » désignerait %s %s supprimé%s : rétablis-%s d'abord.", champ,
                                     c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "", c->feminin ? "la" : "le");
             return 0;
         }
@@ -2340,17 +2340,17 @@ static char *message_contrainte(Base *b, const Objet *o) {
             free(texte);
         }
         char *r = dans_corbeille
-            ? grym_formater("« %s » est unique : %s appartient à %s %s supprimé%s. Rétablis-%s, ou supprime-%s "
+            ? grym_echec("unicité", "« %s » est unique : %s appartient à %s %s supprimé%s. Rétablis-%s, ou supprime-%s "
                             "définitivement.", p + 3, valeur ? valeur : "cette valeur", c->feminin ? "une" : "un", c->nom,
                             c->feminin ? "e" : "", c->feminin ? "la" : "le", c->feminin ? "la" : "le")
-            : grym_formater("« %s » est unique : %s %s conservé%s a déjà %s.", p + 3,
+            : grym_echec("unicité", "« %s » est unique : %s %s conservé%s a déjà %s.", p + 3,
                             c->feminin ? "une autre" : "un autre", c->nom, c->feminin ? "e" : "",
                             valeur ? valeur : "cette valeur");
         free(valeur);
         return r;
     }
     if (code == SQLITE_CONSTRAINT_FOREIGNKEY)
-        return grym_dupliquer("Un lien désigne un objet qui n'est plus conservé.");
+        return grym_echec("lien", "Un lien désigne un objet qui n'est plus conservé.");
     return grym_formater("Base « %s » : %s.", b->chemin, m);
 }
 
@@ -2456,10 +2456,10 @@ static int fichier_unique(Base *b, const Objet *o, size_t k, long id, char **err
     if (!ok) return 0;
     if (!pris) return 1;
     *erreur = corbeille
-        ? grym_formater("« %s » est unique : ce fichier appartient à %s %s supprimé%s. Rétablis-%s, ou supprime-%s "
+        ? grym_echec("unicité", "« %s » est unique : ce fichier appartient à %s %s supprimé%s. Rétablis-%s, ou supprime-%s "
                         "définitivement.", c->champs[k], c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "",
                         c->feminin ? "la" : "le", c->feminin ? "la" : "le")
-        : grym_formater("« %s » est unique : %s %s conservé%s a déjà ce fichier.", c->champs[k],
+        : grym_echec("unicité", "« %s » est unique : %s %s conservé%s a déjà ce fichier.", c->champs[k],
                         c->feminin ? "une autre" : "un autre", c->nom, c->feminin ? "e" : "");
     return 0;
 }
@@ -2750,9 +2750,9 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
                                                 : " supprimé : supprime-le définitivement d'abord"))
                     : "";
                 *erreur = dehors > 1
-                    ? grym_formater("%s %s est encore désigné%s par le champ « %s » de %ld %s%s.", ce(c), c->nom,
+                    ? grym_echec("lien", "%s %s est encore désigné%s par le champ « %s » de %ld %s%s.", ce(c), c->nom,
                                     c->feminin ? "e" : "", x->champs[k], dehors, qui, suite)
-                    : grym_formater("%s %s est encore désigné%s par le champ « %s » d'%s%s.", ce(c), c->nom,
+                    : grym_echec("lien", "%s %s est encore désigné%s par le champ « %s » d'%s%s.", ce(c), c->nom,
                                     c->feminin ? "e" : "", x->champs[k], qui, suite);
                 free(qui);
                 ens_liberer(&e);
@@ -3040,7 +3040,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
                 long id = (long)sqlite3_column_int64(st, col);
                 char *classe = classe_en_base(b, id);
                 Objet *lie = classe ? machine_objet_en_base(m, id, classe, erreur) : NULL;
-                if (!classe && !*erreur) *erreur = grym_formater("Base « %s » : lien vers un objet absent.", b->chemin);
+                if (!classe && !*erreur) *erreur = grym_echec("lien", "Base « %s » : lien vers un objet absent.", b->chemin);
                 free(classe);
                 if (!lie) { rendre(b, st); return 0; }
                 v = vi_objet(lie);
@@ -3182,8 +3182,8 @@ static int lire_condition(Recherche *r) {
         const Valeur *v = &r->params[i - 1];
         if (v->type == V_ABSENT) {
             free(nomme);
-            r->erreur = v->texte ? grym_formater("Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
-                                 : grym_dupliquer("La valeur est absente.");
+            r->erreur = v->texte ? grym_echec("absence", "Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
+                                 : grym_echec("absence", "La valeur est absente.");
             return 0;
         }
         if (v->type != V_OBJET) {
@@ -3658,7 +3658,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         if (statut != DEC_OK) {
             dec_liberer(&total);
             dec_liberer(&extreme);
-            *erreur = grym_dupliquer("Nombre trop grand : un résultat est limité à 1000 chiffres.");
+            *erreur = grym_echec("nombre", "Nombre trop grand : un résultat est limité à 1000 chiffres.");
             return 0;
         }
         if (agregat != 's' && !nb) {   /* une moyenne, un plus grand sur rien : pas de valeur, jamais 0 en silence */

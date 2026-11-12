@@ -36,6 +36,54 @@ char *grym_formater(const char *fmt, ...) {
     return s;
 }
 
+/* Le registre des sortes (§ 18.2) : un motif se reconnaît à son adresse, sa longueur et son empreinte (FNV-1a, 64 bits),
+ * pour qu'un motif libéré dont l'adresse resservirait ne prête jamais sa sorte à un autre texte. Aucune allocation. */
+#define SORTES_RETENUES 64
+static struct { const char *motif; size_t longueur; uint64_t empreinte; const char *sorte; } sortes_retenues[SORTES_RETENUES];
+static unsigned sorte_suivante;
+
+static uint64_t empreinte_fnv(const char *s, size_t *longueur) {
+    uint64_t h = 1469598103934665603u;
+    size_t n = 0;
+    for (; s[n]; n++) { h ^= (unsigned char)s[n]; h *= 1099511628211u; }
+    *longueur = n;
+    return h;
+}
+
+char *grym_echec_poser(const char *sorte, char *motif) {
+    if (!sorte || !motif) return motif;
+    unsigned k = sorte_suivante++ % SORTES_RETENUES;
+    sortes_retenues[k].motif = motif;
+    sortes_retenues[k].empreinte = empreinte_fnv(motif, &sortes_retenues[k].longueur);
+    sortes_retenues[k].sorte = sorte;
+    return motif;
+}
+
+char *grym_echec(const char *sorte, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(NULL, 0, fmt, ap);
+    va_end(ap);
+    if (n < 0) n = 0;
+    char *s = grym_allouer((size_t)n + 1);
+    va_start(ap, fmt);
+    vsnprintf(s, (size_t)n + 1, fmt, ap);
+    va_end(ap);
+    return grym_echec_poser(sorte, s);
+}
+
+const char *grym_echec_sorte(const char *motif) {
+    if (!motif) return NULL;
+    size_t longueur;
+    uint64_t h = empreinte_fnv(motif, &longueur);
+    for (unsigned i = 0; i < SORTES_RETENUES; i++) {   /* du plus récent au plus ancien */
+        unsigned k = (sorte_suivante - 1 - i) % SORTES_RETENUES;
+        if (sortes_retenues[k].motif == motif && sortes_retenues[k].longueur == longueur && sortes_retenues[k].empreinte == h)
+            return sortes_retenues[k].sorte;
+    }
+    return NULL;
+}
+
 void chaine_ajouter(Chaine *c, const char *s) {
     size_t n = strlen(s);
     if (c->n + n + 1 > c->cap) {

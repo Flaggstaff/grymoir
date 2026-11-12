@@ -36,6 +36,10 @@ static char *morceau_de_zone(const char *s2, char sep);   /* plus bas, avec les 
 /* ---------------------------------------------------------------- */
 
 
+/* La sorte d'un échec qui nomme une valeur (grammaire, § 18.2) : « absence » si elle est absente, sinon aucune. */
+#define ABSENCE(t) ((t) == V_ABSENT ? "absence" : NULL)
+#define ABSENCE_2(a, b) ((a) == V_ABSENT || (b) == V_ABSENT ? "absence" : NULL)
+
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
          : t == V_DATE ? "une date" : t == V_HEURE ? "une heure" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
@@ -217,7 +221,7 @@ typedef struct {
 
 struct Machine {
     long minuterie;   /* MINUTERIE (3.03) : l'intervalle, en secondes, pour l'ÉCRAN_ATTENDRE qui suit ; remis à 0 par lui */
-    const char *sorte_fixee;   /* la sorte d'un échec, fixée par son instruction (§ 18.2) ; NULL : la table SORTES décide */
+    const char *sorte_fixee;   /* la sorte d'un échec, fixée par son instruction (§ 18.2) ; NULL : celle de son motif */
     char *sorte_echec;         /* la sorte du dernier échec rattrapé, pour SORTE_ÉCHEC */
     char *sorte_relancee;      /* la sorte d'un échec qui remonte (RELANCER) */
     int echec_ligne, echec_colonne;   /* la position d'origine du dernier échec rattrapé, pour RELANCER */
@@ -1201,7 +1205,7 @@ static char *natif_appeler(Machine *m, const char *bib, const char *fonction, Va
         case V_BOOLEEN: va[q].sorte = GRYM_VERITE; va[q].vrai = args[q].vrai != 0; break;
         case V_ABSENT: va[q].sorte = GRYM_ABSENT; break;
         default:
-            if (!mp) mp = grym_formater("L'argument %lu de la fonction C « %s » est %s : une fonction C reçoit un nombre, un "
+            if (!mp) mp = grym_echec(ABSENCE(args[q].type), "L'argument %lu de la fonction C « %s » est %s : une fonction C reçoit un nombre, un "
                                         "texte, vrai ou faux, ou absent.", (unsigned long)q + 1, fonction, nom_type(args[q].type));
         }
     }
@@ -1237,39 +1241,15 @@ static int echouer(Diagnostic *d, const Bloc *b, size_t decalage, char *message)
     return 0;
 }
 
-/* Les sortes d'échec (grammaire, § 18.2) : un fragment du motif et sa sorte, dans l'ordre où on les cherche. La sorte est
- * promise, le motif non : reformuler un motif oblige à tenir cette table à jour ; chaque sorte a son essai (test_machine). */
-static const struct { const char *fragment, *sorte; } SORTES[] = {
-    { "n'est pas une clé des", "clé" }, { "est déjà une clé des", "clé" },
-    { "est unique :", "unicité" },
-    { "désign", "lien" }, { "lien vers un objet", "lien" },
-    { " élément : ", "rang" }, { " caractère : ", "rang" }, { "la première borne dépasse", "rang" },
-    { "d'abord avec « contient »", "texte" },
-    { "Division par zéro", "division" },
-    { "Nombre trop grand", "nombre" }, { "Exposant non entier", "nombre" }, { "Un rang est un nombre entier", "nombre" },
-    { "Un nombre de caractères est", "nombre" },
-    { "n'est pas un nombre", "lecture" }, { "n'est pas une date", "lecture" }, { "n'est pas une heure", "lecture" },
-    { "n'est pas une année", "lecture" }, { "Un texte vide n'est pas", "lecture" }, { "Réponds par oui ou non", "lecture" },
-    { "introuvable ou illisible", "fichier" }, { "n'est jamais écrasé", "fichier" }, { "ce fichier est absent", "fichier" },
-    { "Saisie annulée", "saisie" },
-    { "pas de racine carrée réelle", "nombre" }, { "d'une liste vide n'existe pas", "absence" },   /* § 3.7 */
-    { "absent", "absence" },
-};
-
-static const char *sorte_du_motif(const char *motif) {
-    for (size_t k = 0; motif && k < sizeof SORTES / sizeof *SORTES; k++) if (strstr(motif, SORTES[k].fragment)) return SORTES[k].sorte;
-    return "autre";
-}
-
 static char *message_statut(StatutDecimal st) {
     switch (st) {
     case DEC_DIVISION_PAR_ZERO:
-        return grym_dupliquer("Division par zéro.");
+        return grym_echec("division", "Division par zéro.");
     case DEC_TROP_GRAND:
-        return grym_formater("Nombre trop grand : un résultat est limité à %d chiffres.", DEC_CHIFFRES_MAX);
+        return grym_echec("nombre", "Nombre trop grand : un résultat est limité à %d chiffres.", DEC_CHIFFRES_MAX);
     case DEC_EXPOSANT_NON_ENTIER:
-        return grym_dupliquer("Exposant non entier : en v0.1, la puissance n'accepte qu'un exposant "
-                              "entier (2 ^ 3, 2 ^ −1).");
+        return grym_echec_poser("nombre", grym_dupliquer("Exposant non entier : en v0.1, la puissance n'accepte qu'un exposant "
+                              "entier (2 ^ 3, 2 ^ −1)."));
     default:
         return grym_dupliquer("Erreur interne de calcul.");
     }
@@ -1507,7 +1487,7 @@ static Fichier *lire_fichier(const Machine *m, const char *ecrit, char **erreur)
     char *chemin = chemin_effectif(m, ecrit);
     FILE *f = grym_fopen(chemin, "rb");
     free(chemin);
-    if (!f) { *erreur = grym_formater("Fichier « %s » introuvable ou illisible.", ecrit); return NULL; }
+    if (!f) { *erreur = grym_echec("fichier", "Fichier « %s » introuvable ou illisible.", ecrit); return NULL; }
     Fichier *x = grym_allouer(sizeof *x);
     x->base = NULL;
     x->cle = 0;
@@ -1583,7 +1563,7 @@ static char *ecrire_sur_le_disque(Machine *m) {
         FILE *existe = grym_fopen(e->chemin, "rb");
         if (existe) {
             fclose(existe);
-            erreur = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", e->ecrit);
+            erreur = grym_echec("fichier", "« %s » existe déjà : il n'est jamais écrasé.", e->ecrit);
             break;
         }
         grym_creer_dossiers(e->chemin);   /* un dossier qui manque se crée (2.30) : un dossier synchronisé, une clé neuve */
@@ -1704,7 +1684,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
         int non = strcmp(t, "non") == 0 || strcmp(t, "faux") == 0;
         free(t);
         if (!oui && !non) {
-            *probleme = grym_dupliquer("Réponds par oui ou non.");
+            *probleme = grym_echec("lecture", "Réponds par oui ou non.");
             return 0;
         }
         *v = vi_booleen(oui);
@@ -1731,7 +1711,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
                 bon = heure_lire(r, &mi);
             }
         }
-        if (!bon) *probleme = grym_formater("« %s » n'est pas une heure : écris heures:minutes (14:30).", t);
+        if (!bon) *probleme = grym_echec("lecture", "« %s » n'est pas une heure : écris heures:minutes (14:30).", t);
         else *v = valeur_heure(mi);
         free(t);
         return bon;
@@ -1752,7 +1732,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
     char *valeur = bon ? grym_dupliquer(j.valeur) : NULL;
     if (lx) { jeton_liberer(&j); jeton_liberer(&f); lexeur_detruire(lx); }
     if (!bon) {
-        *probleme = grym_formater(date ? "« %s » n'est pas une date : écris jour.mois.année (21.09.2026)."
+        *probleme = grym_echec("lecture", date ? "« %s » n'est pas une date : écris jour.mois.année (21.09.2026)."
                                        : "« %s » n'est pas un nombre.", t);
         free(t);
         free(valeur);
@@ -1769,14 +1749,14 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
         long a = 0;
         int entier = strcmp(type, "nombre entier") == 0, an = strcmp(type, "année") == 0;
         if ((entier || an) && !dec_est_entier(&d)) {
-            *probleme = grym_formater("« %s » n'est pas un nombre entier.", t);
+            *probleme = grym_echec("lecture", "« %s » n'est pas un nombre entier.", t);
             dec_liberer(&d);
             free(t);
             free(valeur);
             return 0;
         }
         if (an && !dec_en_long_borne(&d, 1, 9999, &a)) {
-            *probleme = grym_formater("« %s » n'est pas une année : de 1 à 9999.", t);
+            *probleme = grym_echec("lecture", "« %s » n'est pas une année : de 1 à 9999.", t);
             dec_liberer(&d);
             free(t);
             free(valeur);
@@ -2248,8 +2228,8 @@ Valeur vi_absent(const char *champ) {
 
 /* « Le champ « date » est absent. » : une valeur absente ne se laisse pas utiliser par mégarde (§ 16.9). */
 static char *message_absent(const Valeur *v) {
-    return v->texte ? grym_formater("Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
-                    : grym_dupliquer("La valeur est absente : vérifie-la d'abord avec « est présent ».");
+    return v->texte ? grym_echec("absence", "Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
+                    : grym_echec("absence", "La valeur est absente : vérifie-la d'abord avec « est présent ».");
 }
 
 Valeur vi_objet(Objet *o) {
@@ -2471,7 +2451,7 @@ static int valeur_permise(const char *valeurs, const char *t) {
 static char *verifier_type_champ(const Machine *m, const char *champ, const char *type, const Valeur *v, int facultatif,
                                  const char *valeurs) {
     if (v->type == V_ABSENT)
-        return facultatif ? NULL : grym_formater("Le champ « %s » n'est pas facultatif : il ne devient pas absent.", champ);
+        return facultatif ? NULL : grym_echec("absence", "Le champ « %s » n'est pas facultatif : il ne devient pas absent.", champ);
     if (!type) return NULL;
     if (valeurs && v->type == V_TEXTE && !valeur_permise(valeurs, v->texte ? v->texte : "")) {
         char *l = lister_valeurs(valeurs);
@@ -2564,7 +2544,7 @@ static Formule *choisir_version_depuis(Machine *m, const char *nom, const Valeur
         return NULL;
     }
     if (!premier || premier->type != V_OBJET) {
-        *pourquoi = grym_formater("« %s » choisit sa version selon la classe de son premier argument : "
+        *pourquoi = grym_echec(ABSENCE(premier ? premier->type : V_ABSENT), "« %s » choisit sa version selon la classe de son premier argument : "
                                   "celui-ci n'est pas un objet, c'est %s.", nom,
                                   premier ? nom_type(premier->type) : "absent");
         return NULL;
@@ -2878,7 +2858,7 @@ static char *poser(Machine *m, Chaine *sortie, Cadre *cadres, Champ *champs, siz
     }
     probleme = fermer_attente(m);   /* le verrou reprend : l'essai qui rattrape retrouve une transaction */
     if (probleme) { a->fatal = 1; return probleme; }
-    if (issue == ISSUE_ANNULE) return grym_dupliquer("Saisie annulée.");
+    if (issue == ISSUE_ANNULE) return grym_echec("saisie", "Saisie annulée.");
     return NULL;
 }
 
@@ -4051,7 +4031,7 @@ static char *planifier_ecriture(Machine *m, const char *ecrit, Fichier *f) {
     FILE *existe = grym_fopen(chemin, "rb");
     if (existe) {
         fclose(existe);
-        probleme = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", ecrit);
+        probleme = grym_echec("fichier", "« %s » existe déjà : il n'est jamais écrasé.", ecrit);
     }
     for (size_t k = 0; k < m->nb_a_ecrire && !probleme; k++)
         if (strcmp(m->a_ecrire[k].chemin, chemin) == 0)
@@ -4586,7 +4566,7 @@ static char *json_de_valeur(Chaine *c, const Valeur *v, int profondeur) {
             if (cl->type == V_TEXTE) json_chaine(c, cl->texte ? cl->texte : "");
             else if (cl->type == V_NOMBRE) { char *s = dec_canonique(&cl->nombre); json_chaine(c, s); free(s); }
             else if (cl->type == V_DATE) { char *s = date_iso(cl->jours); json_chaine(c, s); free(s); }
-            else return grym_formater("Une clé JSON est un texte, un nombre ou une date, pas %s.", nom_type(cl->type));
+            else return grym_echec(ABSENCE(cl->type), "Une clé JSON est un texte, un nombre ou une date, pas %s.", nom_type(cl->type));
             chaine_ajouter(c, ": ");
             char *e = json_de_valeur(c, &v->liste->valeurs[k + 1], profondeur + 1);
             if (e) return e;
@@ -4595,7 +4575,7 @@ static char *json_de_valeur(Chaine *c, const Valeur *v, int profondeur) {
         return NULL;
     }
     case V_OBJET: return grym_dupliquer("Un objet ne s'écrit pas en JSON : range ses champs dans une table.");
-    default: return grym_formater("%s ne s'écrit pas en JSON.", nom_type(v->type));
+    default: return grym_echec(ABSENCE(v->type), "%s ne s'écrit pas en JSON.", nom_type(v->type));
     }
 }
 
@@ -5718,7 +5698,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (x->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(x)); break; }
             if (x->type == V_ANNEE) { ok = echouer(diag, b, debut, grym_dupliquer("On ne prend pas l'opposé d'une année.")); break; }
             if (x->type != V_NOMBRE) {
-                ok = echouer(diag, b, debut, grym_formater("Opposé impossible : la valeur est %s.",
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(x->type), "Opposé impossible : la valeur est %s.",
                                                            nom_type(x->type)));
                 break;
             }
@@ -5750,7 +5730,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     if (code == I_ADDITION) probleme = grym_dupliquer("On n'additionne pas deux années.");
                     else { dec_liberer(&r.nombre); r = valeur_nombre(dec_depuis_long(va.jours - vb.jours)); }
                 } else if (x->type != V_NOMBRE)
-                    probleme = grym_formater("%s impossible entre une année et %s.", instruction_nom(code), nom_type(x->type));
+                    probleme = grym_echec(ABSENCE(x->type), "%s impossible entre une année et %s.", instruction_nom(code), nom_type(x->type));
                 else if (code == I_SOUSTRACTION && vb.type == V_ANNEE)
                     probleme = grym_dupliquer("On ne soustrait pas une année d'un nombre.");
                 else if (!dec_en_long_borne(&x->nombre, -99999, 99999, &n))
@@ -5796,7 +5776,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 } else {
                     const Valeur *d = va.type == V_DATE ? &va : &vb, *x = va.type == V_DATE ? &vb : &va;
                     if (x->type != V_NOMBRE)
-                        probleme = grym_formater("%s impossible entre une date et %s.", instruction_nom(code),
+                        probleme = grym_echec(ABSENCE(x->type), "%s impossible entre une date et %s.", instruction_nom(code),
                                                  nom_type(x->type));
                     else if (code == I_SOUSTRACTION && vb.type == V_DATE)
                         probleme = grym_dupliquer("On ne soustrait pas une date d'un nombre.");
@@ -5822,7 +5802,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (va.type != V_NOMBRE || vb.type != V_NOMBRE) {
                 valeur_liberer(&va);
                 valeur_liberer(&vb);
-                ok = echouer(diag, b, debut, grym_formater(
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(va.type != V_NOMBRE ? va.type : vb.type),
                     "%s impossible : un des opérandes est %s.", instruction_nom(code),
                     nom_type(va.type != V_NOMBRE ? va.type : vb.type)));
                 break;
@@ -6020,9 +6000,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (va.type != vb.type || (!egalite && va.type != V_NOMBRE && va.type != V_DATE && va.type != V_HEURE)) {
                 ok = echouer(diag, b, debut, va.type != vb.type
-                    ? grym_formater("Comparaison impossible entre %s et %s.",
+                    ? grym_echec(ABSENCE_2(va.type, vb.type), "Comparaison impossible entre %s et %s.",
                                     nom_type(va.type), nom_type(vb.type))
-                    : grym_formater("Seuls deux nombres ou deux dates se comparent par ordre : la valeur est %s.",
+                    : grym_echec(ABSENCE(va.type), "Seuls deux nombres ou deux dates se comparent par ordre : la valeur est %s.",
                                     nom_type(va.type)));
             } else if (va.type == V_NOMBRE || va.type == V_DATE || va.type == V_HEURE) {
                 int c = va.type != V_NOMBRE ? (va.jours > vb.jours) - (va.jours < vb.jours)
@@ -6046,7 +6026,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_NON: {
             Valeur *x = &pile.v[pile.n - 1];
             if (x->type != V_BOOLEEN) {
-                ok = echouer(diag, b, debut, grym_formater("Négation impossible : la valeur est %s, "
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(x->type), "Négation impossible : la valeur est %s, "
                                                            "ni vraie ni fausse.", nom_type(x->type)));
                 break;
             }
@@ -6078,7 +6058,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_SAUTER_SI_FAUX: {
             Valeur v = depiler(&pile);
             if (v.type != V_BOOLEEN) {
-                ok = echouer(diag, b, debut, grym_formater(
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(v.type),
                     "Condition ni vraie ni fausse : la valeur est %s.", nom_type(v.type)));
             } else if (!v.vrai) {
                 cadre->ip = cible;
@@ -6089,7 +6069,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_LIRE_FICHIER: {
             Valeur c = depiler(&pile);
             if (c.type != V_TEXTE) {
-                ok = echouer(diag, b, debut, grym_formater("Le chemin d'un fichier est un texte, pas %s.",
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(c.type), "Le chemin d'un fichier est un texte, pas %s.",
                                                            nom_type(c.type)));
                 valeur_liberer(&c);
                 break;
@@ -6107,9 +6087,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_ENREGISTRER: {
             Valeur c = depiler(&pile), v = depiler(&pile);
             char *probleme = NULL;
-            if (v.type != V_FICHIER) probleme = grym_formater("Seul un fichier s'enregistre : la valeur est %s.",
+            if (v.type != V_FICHIER) probleme = grym_echec(ABSENCE(v.type), "Seul un fichier s'enregistre : la valeur est %s.",
                                                               nom_type(v.type));
-            else if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.",
+            else if (c.type != V_TEXTE) probleme = grym_echec(ABSENCE(c.type), "Le chemin d'un fichier est un texte, pas %s.",
                                                                   nom_type(c.type));
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
             if (!probleme) probleme = planifier_ecriture(m, c.texte, v.fichier);
@@ -6127,7 +6107,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *probleme = NULL;
             if (code == I_SAUVEGARDER_COFFRE && (mdp.type != V_TEXTE || !mdp.texte || !*mdp.texte))
                 probleme = grym_dupliquer("Le mot de passe d'une sauvegarde est un texte, et pas vide.");
-            if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
+            if (c.type != V_TEXTE) probleme = grym_echec(ABSENCE(c.type), "Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
             else if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : il ne conserve aucune entité.");
             char *prefixe = NULL, aujourdhui_t[11] = "";
@@ -6233,7 +6213,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 n = src.fichier->taille;
             } else if (src.type == V_ABSENT) probleme = grym_dupliquer(verifier ? "Aucune sauvegarde à vérifier."
                                                                                : "Choisis d'abord la sauvegarde à restaurer.");
-            else probleme = grym_formater(verifier ? "On vérifie une sauvegarde par son chemin ou son fichier, pas %s."
+            else probleme = grym_echec(ABSENCE(src.type), verifier ? "On vérifie une sauvegarde par son chemin ou son fichier, pas %s."
                                                    : "On restaure depuis un chemin ou un fichier, pas %s.", nom_type(src.type));
             unsigned char *clair = NULL;
             size_t nc = 0;
@@ -6305,7 +6285,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *probleme = NULL;
             if (!op && x.type == V_ABSENT) { empiler(&pile, x); break; }
             if (!op && x.type != V_OBJET)
-                probleme = grym_formater("« l'historique de » attend un objet, pas %s.", nom_type(x.type));
+                probleme = grym_echec(ABSENCE(x.type), "« l'historique de » attend un objet, pas %s.", nom_type(x.type));
             else if (!op && !x.objet->classe->journal) {
                 char *qui = article_classe(x.objet->classe);
                 qui[0] = (char)(qui[0] - 32);
@@ -6416,7 +6396,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_EXPORTER: {   /* « Exporter les membres conservés … dans « m.csv ». » (§ 15.4) */
             Valeur c = depiler(&pile), l = depiler(&pile);
             char *probleme = NULL;
-            if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
+            if (c.type != V_TEXTE) probleme = grym_echec(ABSENCE(c.type), "Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
             else if (l.type != V_LISTE) probleme = grym_dupliquer("Export invalide.");
             Fichier *f = NULL;
@@ -6556,7 +6536,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             const char *verbe = code == I_CONSERVER ? "conserve" : code == I_RETABLIR ? "rétablit" : "supprime";
             char *probleme = NULL;
             if (v.type != V_OBJET)
-                probleme = grym_formater("Seul un objet se %s : la valeur est %s.", verbe, nom_type(v.type));
+                probleme = grym_echec(ABSENCE(v.type), "Seul un objet se %s : la valeur est %s.", verbe, nom_type(v.type));
             else if (!v.objet->classe->conserve)
                 probleme = grym_formater("« %s » n'est pas une entité : ses objets ne se %s pas. "
                                          "Déclare « %s %s, %s, a : ».", v.objet->classe->nom,
@@ -6616,7 +6596,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             /* « la réponse en nombre à « Âge ? » » (grammaire, § 17) : un formulaire d'un seul champ */
             Valeur q = depiler(&pile);
             if (q.type != V_TEXTE) {
-                char *m2 = grym_formater("La question se pose en texte : la valeur est %s.", nom_type(q.type));
+                char *m2 = grym_echec(ABSENCE(q.type), "La question se pose en texte : la valeur est %s.", nom_type(q.type));
                 valeur_liberer(&q);
                 ok = echouer(diag, b, debut, m2);
                 break;
@@ -7004,7 +6984,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_CODE_QR: {   /* « le code QR suisse de t » (2.27) : le texte, écrit comme Afficher, en image PNG */
             Valeur v = depiler(&pile);
             char *probleme = NULL;
-            if (v.type == V_ABSENT) probleme = grym_dupliquer("Un code QR se fait d'un texte : celui-ci est absent.");
+            if (v.type == V_ABSENT) probleme = grym_echec("absence", "Un code QR se fait d'un texte : celui-ci est absent.");
             unsigned char *png = NULL;
             size_t taille = 0;
             if (!probleme) {
@@ -7023,7 +7003,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (op == 2) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier tel qu'il est rangé */
                 Valeur v = depiler(&pile);
                 char *probleme = NULL;
-                if (v.type == V_ABSENT) probleme = grym_dupliquer("Rien à ouvrir : ce fichier est absent.");
+                if (v.type == V_ABSENT) probleme = grym_echec("fichier", "Rien à ouvrir : ce fichier est absent.");
                 else if (v.type == V_TEXTE) {   /* une adresse web, dans le navigateur du système (2.41) */
                     if (strncmp(v.texte, "https://", 8) != 0 && strncmp(v.texte, "http://", 7) != 0)
                         probleme = grym_formater("« Ouvrir » montre une adresse web qui commence par https:// : « %s » n'en est pas une.",
@@ -7504,7 +7484,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (vt.type == V_ABSENT || vp.type == V_ABSENT)
                 probleme = message_absent(vt.type == V_ABSENT ? &vt : &vp);
             else if (vt.type != V_TEXTE || vp.type != V_TEXTE)
-                probleme = grym_formater("« %s » compare deux textes, pas %s.", VERBES[op < 3 ? op : 0],
+                probleme = grym_echec(ABSENCE(vt.type != V_TEXTE ? vt.type : vp.type), "« %s » compare deux textes, pas %s.", VERBES[op < 3 ? op : 0],
                                          nom_type(vt.type != V_TEXTE ? vt.type : vp.type));
             int r = probleme ? 0 : texte_contient(vt.texte ? vt.texte : "", vp.texte ? vp.texte : "", "cdf"[op < 3 ? op : 0]);
             valeur_liberer(&vt);
@@ -7558,7 +7538,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Valeur vt = depiler(&pile);
                 if (vt.type != V_TEXTE) {
                     char *mp = vt.type == V_ABSENT ? message_absent(&vt)
-                             : grym_formater("« en fichier » s'applique à un texte, pas à %s.", nom_type(vt.type));
+                             : grym_echec(ABSENCE(vt.type), "« en fichier » s'applique à un texte, pas à %s.", nom_type(vt.type));
                     valeur_liberer(&vt);
                     ok = echouer(diag, b, debut, mp);
                     break;
@@ -7600,7 +7580,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Valeur vt = depiler(&pile);
                 if (vt.type != V_TEXTE) {
                     char *mp = vt.type == V_ABSENT ? message_absent(&vt)
-                             : grym_formater("« en IBAN » s'applique à un texte, pas à %s.", nom_type(vt.type));
+                             : grym_echec(ABSENCE(vt.type), "« en IBAN » s'applique à un texte, pas à %s.", nom_type(vt.type));
                     valeur_liberer(&vt);
                     ok = echouer(diag, b, debut, mp);
                     break;
@@ -7682,7 +7662,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Valeur vd = depiler(&pile);
                 if (vd.type != V_DATE) {
                     char *mp = vd.type == V_ABSENT ? message_absent(&vd)
-                             : grym_formater("« en toutes lettres » s'applique à une date, pas à %s.", nom_type(vd.type));
+                             : grym_echec(ABSENCE(vd.type), "« en toutes lettres » s'applique à une date, pas à %s.", nom_type(vd.type));
                     valeur_liberer(&vd);
                     ok = echouer(diag, b, debut, mp);
                     break;
@@ -7705,7 +7685,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (vx.type == V_ABSENT)
                 probleme = message_absent(&vx);
             else if (vx.type != V_TEXTE)
-                probleme = grym_formater("« en %s » s'applique à un texte, pas à %s.", CIBLES[op], nom_type(vx.type));
+                probleme = grym_echec(ABSENCE(vx.type), "« en %s » s'applique à un texte, pas à %s.", CIBLES[op], nom_type(vx.type));
             else if (op <= 1) {
                 valeur_liberer(&r);
                 char *t = op == 0 ? texte_majuscules(vx.texte ? vx.texte : "") : texte_minuscules(vx.texte ? vx.texte : "");
@@ -7715,7 +7695,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const char *s = vx.texte ? vx.texte : "";
                 const char *p = s;
                 while (*p == ' ' || *p == '\t') p++;
-                if (!*p) probleme = grym_formater("Un texte vide n'est pas %s.", NOMS[op]);
+                if (!*p) probleme = grym_echec("lecture", "Un texte vide n'est pas %s.", NOMS[op]);
                 else {
                     valeur_liberer(&r);
                     if (!lire_reponse(CIBLES[op], s, &r, &probleme)) r = valeur_nombre(dec_zero());
@@ -7737,7 +7717,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (va.type == V_ABSENT || vb.type == V_ABSENT)
                 probleme = message_absent(va.type == V_ABSENT ? &va : &vb);
             else if (va.type != V_NOMBRE || vb.type != V_NOMBRE)
-                probleme = grym_formater("Le reste se calcule entre deux nombres, pas avec %s.",
+                probleme = grym_echec(ABSENCE(va.type != V_NOMBRE ? va.type : vb.type), "Le reste se calcule entre deux nombres, pas avec %s.",
                                          nom_type(va.type != V_NOMBRE ? va.type : vb.type));
             else {
                 dec_liberer(&r);
@@ -7759,7 +7739,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Valeur w2 = depiler(&pile), w1 = depiler(&pile);
                 if (w1.type != V_DATE || w2.type != V_DATE) {
                     char *mp = w1.type == V_ABSENT || w2.type == V_ABSENT ? message_absent(w1.type == V_ABSENT ? &w1 : &w2)
-                             : grym_formater("Un écart se mesure entre deux dates, pas avec %s.", nom_type(w1.type != V_DATE ? w1.type : w2.type));
+                             : grym_echec(ABSENCE(w1.type != V_DATE ? w1.type : w2.type), "Un écart se mesure entre deux dates, pas avec %s.",
+                                          nom_type(w1.type != V_DATE ? w1.type : w2.type));
                     valeur_liberer(&w1);
                     valeur_liberer(&w2);
                     ok = echouer(diag, b, debut, mp);
@@ -7780,12 +7761,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (v1.type == V_ABSENT || v2.type == V_ABSENT) mp = message_absent(v1.type == V_ABSENT ? &v1 : &v2);
             else if (op >= 4) {   /* minutes, heures entre deux heures (§ 14.7) */
                 if (v1.type != V_HEURE || v2.type != V_HEURE)
-                    mp = grym_formater("Des %s se comptent entre deux heures, pas avec %s.", op == 4 ? "minutes" : "heures",
+                    mp = grym_echec(ABSENCE(v1.type != V_HEURE ? v1.type : v2.type), "Des %s se comptent entre deux heures, pas avec %s.", op == 4 ? "minutes" : "heures",
                                        nom_type(v1.type != V_HEURE ? v1.type : v2.type));
                 else r = op == 4 ? v2.jours - v1.jours : (v2.jours - v1.jours) / 60;
             }
             else if (v1.type != V_DATE || v2.type != V_DATE)
-                mp = grym_formater("Un écart se mesure entre deux dates, pas avec %s.", nom_type(v1.type != V_DATE ? v1.type : v2.type));
+                mp = grym_echec(ABSENCE(v1.type != V_DATE ? v1.type : v2.type), "Un écart se mesure entre deux dates, pas avec %s.",
+                                nom_type(v1.type != V_DATE ? v1.type : v2.type));
             else if (op <= 1) {
                 long j = v2.jours - v1.jours;
                 r = op == 0 ? j : j / 7;   /* semaines entières, vers zéro */
@@ -7809,7 +7791,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (op) {
                 Valeur e = depiler(&pile);
                 char *mp = NULL;
-                if (e.type != V_ENSEMBLE) mp = grym_formater("Un élément au hasard se tire d'un ensemble, pas de %s.", nom_type(e.type));
+                if (e.type != V_ENSEMBLE) mp = grym_echec(ABSENCE(e.type), "Un élément au hasard se tire d'un ensemble, pas de %s.", nom_type(e.type));
                 else if (!e.liste->n) mp = grym_dupliquer("Un élément au hasard ne se tire pas d'un ensemble vide.");
                 Valeur r = mp ? vi_absent(NULL) : valeur_copier(&e.liste->valeurs[hasard_jusqua(m, e.liste->n)]);
                 valeur_liberer(&e);
@@ -7914,13 +7896,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             long r = 0;
             if (e.type != V_ENSEMBLE)
                 mp = e.type == V_ABSENT ? message_absent(&e)
-                     : grym_formater("« le 3e élément de » se lit dans une liste ou un ensemble, pas dans %s.", nom_type(e.type));
+                     : grym_echec(ABSENCE(e.type), "« le 3e élément de » se lit dans une liste ou un ensemble, pas dans %s.", nom_type(e.type));
             else if (op == 0) {
                 Decimal zero = dec_zero();
                 if (k.type == V_ABSENT) mp = message_absent(&k);
                 else if (k.type != V_NOMBRE || !dec_est_entier(&k.nombre) || dec_comparer(&k.nombre, &zero) <= 0) {
                     char *v = k.type == V_NOMBRE ? dec_afficher(&k.nombre) : grym_dupliquer(nom_type(k.type));
-                    mp = grym_formater("Un rang est un nombre entier à partir de 1, pas %s.", v);
+                    mp = grym_echec("nombre", "Un rang est un nombre entier à partir de 1, pas %s.", v);
                     free(v);
                 } else {
                     char *c = dec_canonique(&k.nombre), *v = dec_afficher(&k.nombre);
@@ -7928,16 +7910,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     const size_t chiffres = point ? (size_t)(point - c) : strlen(c);
                     r = chiffres > 15 ? -1 : strtol(c, NULL, 10);
                     if (r < 0 || (size_t)r > e.liste->n) {
-                        if (e.liste->n) mp = grym_formater("Pas de %s%s élément : il n'y en a que %lu.", v, r == 1 ? "er" : "e",
+                        if (e.liste->n) mp = grym_echec("rang", "Pas de %s%s élément : il n'y en a que %lu.", v, r == 1 ? "er" : "e",
                                                            (unsigned long)e.liste->n);
-                        else mp = grym_formater("Pas de %s%s élément : la liste est vide.", v, r == 1 ? "er" : "e");
+                        else mp = grym_echec("rang", "Pas de %s%s élément : la liste est vide.", v, r == 1 ? "er" : "e");
                     }
                     free(c);
                     free(v);
                 }
                 dec_liberer(&zero);
             } else if (e.liste->n == 0)
-                mp = grym_formater("Pas de %s élément : la liste est vide.", op == 1 ? "premier" : "dernier");
+                mp = grym_echec("rang", "Pas de %s élément : la liste est vide.", op == 1 ? "premier" : "dernier");
             Valeur x = mp ? valeur_nombre(dec_zero()) : valeur_copier(&e.liste->valeurs[op == 1 ? 0 : op == 2 ? e.liste->n - 1 : (size_t)r - 1]);
             valeur_liberer(&k);
             valeur_liberer(&e);
@@ -7953,7 +7935,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             size_t nb = 0;
             if (pr.type == V_ABSENT) mp = message_absent(&pr);
             else if (pr.type != V_TEXTE || !pr.texte || !*pr.texte) mp = grym_dupliquer("Le programme d'une commande est un texte, son nom : « rigctl ».");
-            else if (op && l.type != V_ENSEMBLE) mp = grym_formater("Les arguments d'une commande sont une liste, pas %s.", nom_type(l.type));
+            else if (op && l.type != V_ENSEMBLE) mp = grym_echec(ABSENCE(l.type), "Les arguments d'une commande sont une liste, pas %s.", nom_type(l.type));
             if (!mp && op) {
                 nb = l.liste->n;
                 args = grym_allouer((nb ? nb : 1) * sizeof *args);
@@ -7963,7 +7945,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     a_liberer[q] = NULL;
                     if (x->type == V_TEXTE) args[q] = x->texte ? x->texte : "";
                     else if (x->type == V_NOMBRE) { a_liberer[q] = dec_canonique(&x->nombre); args[q] = a_liberer[q]; }
-                    else mp = grym_formater("L'argument %lu d'une commande est un texte ou un nombre, pas %s.", (unsigned long)q + 1, nom_type(x->type));
+                    else mp = grym_echec(ABSENCE(x->type), "L'argument %lu d'une commande est un texte ou un nombre, pas %s.", (unsigned long)q + 1, nom_type(x->type));
                 }
             }
             Valeur r = vi_absent(NULL);
@@ -8096,7 +8078,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur v = depiler(&pile);
             char *mp = NULL;
             if (v.type == V_ABSENT) mp = message_absent(&v);
-            else if (v.type != V_BOOLEEN) mp = grym_formater("« Vérifier que » attend vrai ou faux, pas %s.", nom_type(v.type));
+            else if (v.type != V_BOOLEEN) mp = grym_echec(ABSENCE(v.type), "« Vérifier que » attend vrai ou faux, pas %s.", nom_type(v.type));
             else if (!v.vrai) mp = grym_formater("Vérification fausse : %s.", b->constantes[op].texte);
             valeur_liberer(&v);
             if (mp) ok = echouer(diag, b, debut, mp);
@@ -8117,7 +8099,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (!x.fichier->octets || !utf8_bien_forme(x.fichier->octets, x.fichier->taille))
                     mp = grym_formater("Le fichier « %s » n'est pas un texte en UTF-8.", x.fichier->nom ? x.fichier->nom : "");
                 else { s = (const char *)x.fichier->octets; n = x.fichier->taille; }
-            } else mp = grym_formater("« les lignes de » se lisent dans un texte ou un fichier, pas dans %s.", nom_type(x.type));
+            } else mp = grym_echec(ABSENCE(x.type), "« les lignes de » se lisent dans un texte ou un fichier, pas dans %s.", nom_type(x.type));
             Valeur r = valeur_nombre(dec_zero());
             if (!mp) {
                 valeur_liberer(&r);
@@ -8165,7 +8147,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     if (strlen(T[q].nom) == lt && strncmp(T[q].nom, d + 1, lt) == 0) bon = v->type == T[q].t;
                 if (bon) break;
                 if (v->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(v)); break; }
-                ok = echouer(diag, b, debut, grym_formater("« %s » est déclaré (%.*s) : il ne reçoit pas %s.", s2 + 1, (int)lt, d + 1,
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(v->type), "« %s » est déclaré (%.*s) : il ne reçoit pas %s.", s2 + 1, (int)lt, d + 1,
                                                            nom_type(v->type)));
                 break;
             }
@@ -8184,7 +8166,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *mp = NULL;
             const char *nc = !(op & 4) && champ.type == V_TEXTE && champ.texte ? champ.texte : NULL;
             if (l.type == V_ABSENT) mp = message_absent(&l);
-            else if (l.type != V_ENSEMBLE) mp = grym_formater("Seule une liste ou un ensemble se trie, pas %s.", nom_type(l.type));
+            else if (l.type != V_ENSEMBLE) mp = grym_echec(ABSENCE(l.type), "Seule une liste ou un ensemble se trie, pas %s.", nom_type(l.type));
             const size_t n = mp ? 0 : l.liste->n;
             const Valeur **cles = grym_allouer((n ? n : 1) * sizeof *cles);
             if (!mp && (op & 4) && (champ.type != V_ENSEMBLE || champ.liste->n != n))
@@ -8197,15 +8179,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     if (x->type != V_OBJET || k == x->objet->classe->nb_champs)
                         mp = grym_formater("« %s » : l'élément %lu n'a pas ce champ.", nc, (unsigned long)q + 1);
                     else if (!x->objet->definis[k] || x->objet->champs[k].type == V_ABSENT)
-                        mp = grym_formater("Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", nc);
+                        mp = grym_echec("absence", "Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", nc);
                     else x = &x->objet->champs[k];
                 }
                 if (mp) break;
                 if (x->type == V_ABSENT) { mp = message_absent(x); break; }
                 if (x->type != V_NOMBRE && x->type != V_TEXTE && x->type != V_DATE && x->type != V_HEURE)
-                    mp = grym_formater("Tri impossible : %s ne se trie pas.", nom_type(x->type));
+                    mp = grym_echec(ABSENCE(x->type), "Tri impossible : %s ne se trie pas.", nom_type(x->type));
                 else if (q && x->type != cles[0]->type)
-                    mp = grym_formater("Tri impossible : %s et %s ne se comparent pas.", nom_type(cles[0]->type), nom_type(x->type));
+                    mp = grym_echec(ABSENCE_2(cles[0]->type, x->type), "Tri impossible : %s et %s ne se comparent pas.", nom_type(cles[0]->type), nom_type(x->type));
                 cles[q] = x;
             }
             Valeur r = valeur_nombre(dec_zero());
@@ -8235,12 +8217,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur r = valeur_nombre(dec_zero());
             for (size_t q = 0; q < n && !mp; q++) if (v[q].type == V_ABSENT) mp = message_absent(&v[q]);
             if (!mp && forme == 0) {   /* la racine carrée */
-                if (v[0].type != V_NOMBRE) mp = grym_formater("La racine carrée se calcule d'un nombre : la valeur est %s.", nom_type(v[0].type));
+                if (v[0].type != V_NOMBRE) mp = grym_echec(ABSENCE(v[0].type), "La racine carrée se calcule d'un nombre : la valeur est %s.", nom_type(v[0].type));
                 else {
                     Decimal x;
                     if (dec_racine(&v[0].nombre, &x) != DEC_OK) {
                         char *t = dec_afficher(&v[0].nombre);
-                        mp = grym_formater("La racine carrée de %s n'existe pas : un nombre négatif n'a pas de racine carrée réelle.", t);
+                        mp = grym_echec("nombre", "La racine carrée de %s n'existe pas : un nombre négatif n'a pas de racine carrée réelle.", t);
                         free(t);
                     } else { valeur_liberer(&r); r = valeur_nombre(x); }
                 }
@@ -8248,10 +8230,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 size_t meilleur = 0;
                 for (size_t q = 0; q < n && !mp; q++) {
                     if (v[q].type != V_NOMBRE && v[q].type != V_DATE && v[q].type != V_HEURE)
-                        mp = grym_formater("Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est %s.",
+                        mp = grym_echec(ABSENCE(v[q].type), "Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est %s.",
                                            nom_type(v[q].type));
                     else if (q && v[q].type != v[0].type)
-                        mp = grym_formater("Comparaison impossible entre %s et %s.", nom_type(v[0].type), nom_type(v[q].type));
+                        mp = grym_echec(ABSENCE_2(v[0].type, v[q].type), "Comparaison impossible entre %s et %s.", nom_type(v[0].type), nom_type(v[q].type));
                     else if (q) {
                         const int c = v[q].type != V_NOMBRE ? (v[q].jours > v[meilleur].jours) - (v[q].jours < v[meilleur].jours)
                                                            : dec_comparer(&v[q].nombre, &v[meilleur].nombre);
@@ -8261,10 +8243,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (!mp) { valeur_liberer(&r); r = valeur_copier(&v[meilleur]); }
             } else if (!mp) {   /* sur une liste ou un ensemble */
                 static const char *const QUOI[] = { "", "", "", "La somme", "La moyenne", "Le plus grand élément", "Le plus petit élément" };
-                if (v[0].type != V_ENSEMBLE) mp = grym_formater("%s se lit dans une liste ou un ensemble, pas dans %s.", QUOI[forme], nom_type(v[0].type));
+                if (v[0].type != V_ENSEMBLE) mp = grym_echec(ABSENCE(v[0].type), "%s se lit dans une liste ou un ensemble, pas dans %s.",
+                                                             QUOI[forme], nom_type(v[0].type));
                 else {
                     const Liste *l = v[0].liste;
-                    if (l->n == 0 && forme != 3) mp = grym_formater("%s d'une liste vide n'existe pas.", QUOI[forme]);
+                    if (l->n == 0 && forme != 3) mp = grym_echec("absence", "%s d'une liste vide n'existe pas.", QUOI[forme]);
                     size_t meilleur = 0;
                     Decimal somme = dec_zero();
                     for (size_t q = 0; q < l->n && !mp; q++) {
@@ -8272,7 +8255,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                         if (forme <= 4) {
                             if (x->type != V_NOMBRE) {
                                 char *t = texte_valeur(m, x);
-                                mp = grym_formater("%s d'une liste : « %s » est %s, pas un nombre.", QUOI[forme], t, nom_type(x->type));
+                                mp = grym_echec(ABSENCE(x->type), "%s d'une liste : « %s » est %s, pas un nombre.", QUOI[forme], t, nom_type(x->type));
                                 free(t);
                             } else {
                                 Decimal s2;
@@ -8280,9 +8263,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                 else { dec_liberer(&somme); somme = s2; }
                             }
                         } else if (x->type != V_NOMBRE && x->type != V_DATE && x->type != V_HEURE)
-                            mp = grym_formater("Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est %s.", nom_type(x->type));
+                            mp = grym_echec(ABSENCE(x->type), "Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est %s.", nom_type(x->type));
                         else if (q && x->type != l->valeurs[0].type)
-                            mp = grym_formater("Comparaison impossible entre %s et %s.", nom_type(l->valeurs[0].type), nom_type(x->type));
+                            mp = grym_echec(ABSENCE_2(l->valeurs[0].type, x->type), "Comparaison impossible entre %s et %s.",
+                                            nom_type(l->valeurs[0].type), nom_type(x->type));
                         else if (q) {
                             const Valeur *y = &l->valeurs[meilleur];
                             const int c = x->type != V_NOMBRE ? (x->jours > y->jours) - (x->jours < y->jours) : dec_comparer(&x->nombre, &y->nombre);
@@ -8315,10 +8299,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             for (int q = 0; q < 3 && !mp; q++)
                 if (tous[q]->type == V_ABSENT) mp = message_absent(tous[q]);
                 else if (tous[q]->type != V_TEXTE)
-                    mp = grym_formater("%s d'un courriel est un texte, pas %s.", q == 0 ? "L'adresse" : q == 1 ? "L'objet" : "Le texte",
+                    mp = grym_echec(ABSENCE(tous[q]->type), "%s d'un courriel est un texte, pas %s.", q == 0 ? "L'adresse" : q == 1 ? "L'objet" : "Le texte",
                                        nom_type(tous[q]->type));
             if (!mp && mess.type != V_OBJET)
-                mp = grym_formater("La messagerie d'un courriel est un objet, avec ses champs « adresse de courriel », « serveur de "
+                mp = grym_echec(ABSENCE(mess.type), "La messagerie d'un courriel est un objet, avec ses champs « adresse de courriel », « serveur de "
                                    "courriel », « compte de courriel » et « clé de courriel », pas %s.", nom_type(mess.type));
             size_t rang[4] = { 0, 0, 0, 0 };
             for (int q = 0; q < 4 && !mp; q++) {   /* la forme de la messagerie d'abord, ses valeurs ensuite */
@@ -8387,7 +8371,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (!mp && (x->type == V_ABSENT || y->type == V_ABSENT)) mp = message_absent(x->type == V_ABSENT ? x : y);
                 else if (!mp && table_rang(&e, x) >= 0) {
                     char *c = cle_ecrite(m, x);
-                    mp = grym_formater("%s est déjà une clé des %s.", c, nom.texte ? nom.texte : "");
+                    mp = grym_echec("clé", "%s est déjà une clé des %s.", c, nom.texte ? nom.texte : "");
                     free(c);
                 }
                 if (mp) { valeur_liberer(x); valeur_liberer(y); }
@@ -8404,10 +8388,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *mp = NULL;
             long k = -1;
             if (x.type == V_ABSENT) mp = message_absent(&x);
-            else if (e.type != V_TABLE) mp = grym_formater("« la valeur de » se lit dans une table, pas dans %s.", nom_type(e.type));
+            else if (e.type != V_TABLE) mp = grym_echec(ABSENCE(e.type), "« la valeur de » se lit dans une table, pas dans %s.", nom_type(e.type));
             else if ((k = table_rang(&e, &x)) < 0) {
                 char *c = cle_ecrite(m, &x);
-                mp = grym_formater("%s n'est pas une clé des %s.", c, nom.texte ? nom.texte : "");
+                mp = grym_echec("clé", "%s n'est pas une clé des %s.", c, nom.texte ? nom.texte : "");
                 free(c);
             }
             Valeur r = mp ? valeur_nombre(dec_zero()) : valeur_copier(&e.liste->valeurs[k + 1]);
@@ -8424,16 +8408,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur x = depiler(&pile), e = depiler(&pile);
             char *mp = NULL;
             const char *n = nom.type == V_TEXTE && nom.texte ? nom.texte : "";
-            if (e.type != V_TABLE) mp = grym_formater("Seule une table a des clés, pas %s.", nom_type(e.type));
+            if (e.type != V_TABLE) mp = grym_echec(ABSENCE(e.type), "Seule une table a des clés, pas %s.", nom_type(e.type));
             else if (x.type == V_ABSENT) mp = message_absent(&x);
             else if (op != 2 && v.type == V_ABSENT) mp = message_absent(&v);
             if (!mp) {
                 const long k = table_rang(&e, &x);
                 char *c = cle_ecrite(m, &x);
                 if (op == 0 && k >= 0)
-                    mp = grym_formater("%s est déjà une clé des %s. Pour changer sa valeur, écris : Dans les %s, %s devient …", c, n, n, c);
+                    mp = grym_echec("clé", "%s est déjà une clé des %s. Pour changer sa valeur, écris : Dans les %s, %s devient …", c, n, n, c);
                 else if (op == 1 && k < 0)
-                    mp = grym_formater("%s n'est pas une clé des %s. Pour l'ajouter, écris : Dans les %s, %s vaut …", c, n, n, c);
+                    mp = grym_echec("clé", "%s n'est pas une clé des %s. Pour l'ajouter, écris : Dans les %s, %s vaut …", c, n, n, c);
                 else if (op == 0) { table_ajouter(&e, x, v); x = vi_absent(NULL); v = vi_absent(NULL); }
                 else if (op == 1) {
                     ensemble_seul(&e);
@@ -8459,7 +8443,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_TABLE_LISTE: {   /* « les clés des t » (0), « les valeurs des t » (1) : des listes (§ 13.11) */
             Valeur e = depiler(&pile);
             if (e.type != V_TABLE) {
-                char *mp = grym_formater("« les %s des » se lisent dans une table, pas dans %s.", op ? "valeurs" : "clés", nom_type(e.type));
+                char *mp = grym_echec(ABSENCE(e.type), "« les %s des » se lisent dans une table, pas dans %s.", op ? "valeurs" : "clés", nom_type(e.type));
                 valeur_liberer(&e);
                 ok = echouer(diag, b, debut, mp);
                 break;
@@ -8483,7 +8467,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur r = valeur_nombre(dec_zero());
             for (size_t q = 0; q < nb && !mp; q++) if (v[q].type == V_ABSENT) mp = message_absent(&v[q]);
             if (!mp && v[it].type != V_TEXTE)
-                mp = grym_formater("« %s » s'applique à un texte, pas à %s.", TOURNURE[op], nom_type(v[it].type));
+                mp = grym_echec(ABSENCE(v[it].type), "« %s » s'applique à un texte, pas à %s.", TOURNURE[op], nom_type(v[it].type));
             const char *s = !mp && v[it].texte ? v[it].texte : "";
             const size_t lg = mp ? 0 : caracteres_compter(s);
             /* un rang, un nombre de caractères ou une borne : un entier ; plancher 1 (rang) ou 0 (nombre) */
@@ -8495,7 +8479,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Decimal pl = dec_depuis_long(plancher);
                 if (k->type != V_NOMBRE || !dec_est_entier(&k->nombre) || dec_comparer(&k->nombre, &pl) < 0) {
                     char *x = k->type == V_NOMBRE ? dec_afficher(&k->nombre) : grym_dupliquer(nom_type(k->type));
-                    mp = grym_formater(plancher ? "Un rang est un nombre entier à partir de 1, pas %s."
+                    mp = grym_echec("nombre", plancher ? "Un rang est un nombre entier à partir de 1, pas %s."
                                                 : "Un nombre de caractères est un nombre entier positif ou nul, pas %s.", x);
                     free(x);
                 } else {
@@ -8511,8 +8495,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const long k = op == 2 ? 1 : op == 3 ? (long)lg : e[0];
                 char *quel = op == 2 ? grym_dupliquer("premier") : op == 3 ? grym_dupliquer("dernier")
                                                                  : grym_formater("%ld%s", k, k == 1 ? "er" : "e");
-                if (lg == 0) mp = grym_formater("Pas de %s caractère : le texte est vide.", quel);
-                else if ((size_t)k > lg) mp = grym_formater("Pas de %s caractère : le texte n'en a que %lu.", quel, (unsigned long)lg);
+                if (lg == 0) mp = grym_echec("rang", "Pas de %s caractère : le texte est vide.", quel);
+                else if ((size_t)k > lg) mp = grym_echec("rang", "Pas de %s caractère : le texte n'en a que %lu.", quel, (unsigned long)lg);
                 else { valeur_liberer(&r); r = vi_texte_pris(caracteres_extraire(s, (size_t)k - 1, (size_t)k)); }
                 free(quel);
                 break;
@@ -8524,16 +8508,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             case 6:
-                if (e[0] > e[1]) mp = grym_formater("Les caractères %ld à %ld : la première borne dépasse la seconde.", e[0], e[1]);
+                if (e[0] > e[1]) mp = grym_echec("rang", "Les caractères %ld à %ld : la première borne dépasse la seconde.", e[0], e[1]);
                 else if ((size_t)e[1] > lg)
-                    mp = lg ? grym_formater("Pas de %ld%s caractère : le texte n'en a que %lu.", e[1], e[1] == 1 ? "er" : "e", (unsigned long)lg)
-                            : grym_formater("Pas de %ld%s caractère : le texte est vide.", e[1], e[1] == 1 ? "er" : "e");
+                    mp = lg ? grym_echec("rang", "Pas de %ld%s caractère : le texte n'en a que %lu.", e[1], e[1] == 1 ? "er" : "e", (unsigned long)lg)
+                            : grym_echec("rang", "Pas de %ld%s caractère : le texte est vide.", e[1], e[1] == 1 ? "er" : "e");
                 else { valeur_liberer(&r); r = vi_texte_pris(caracteres_extraire(s, (size_t)e[0] - 1, (size_t)e[1])); }
                 break;
             case 7: case 8: case 9: case 10: {
                 const Valeur *x = &v[op == 9 ? 0 : 1];
                 const char *quoi = op == 10 ? "« séparés par »" : op == 9 ? "« la position de »" : op == 7 ? "« après »" : "« avant »";
-                if (x->type != V_TEXTE) { mp = grym_formater("%s cherche un texte, pas %s.", quoi, nom_type(x->type)); break; }
+                if (x->type != V_TEXTE) { mp = grym_echec(ABSENCE(x->type), "%s cherche un texte, pas %s.", quoi, nom_type(x->type)); break; }
                 const char *m = x->texte ? x->texte : "";
                 if (!*m) {
                     mp = op == 10 ? grym_dupliquer("« séparés par » attend un séparateur, pas un texte vide.")
@@ -8559,7 +8543,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                         p = q + strlen(m);
                     }
                 } else if (!o) {
-                    mp = grym_formater("« %s » n'est pas dans « %s » : vérifie-le d'abord avec « contient ».", m, s);
+                    mp = grym_echec("texte", "« %s » n'est pas dans « %s » : vérifie-le d'abord avec « contient ».", m, s);
                 } else {
                     valeur_liberer(&r);
                     if (op == 7) r = vi_texte(o + strlen(m));
@@ -8581,7 +8565,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_AJOUTER: {   /* « Les élus gagnent m. », « perdent » */
             Valeur x = depiler(&pile), e = depiler(&pile);
             if (e.type != V_ENSEMBLE || x.type == V_ABSENT) {
-                char *mp = x.type == V_ABSENT ? message_absent(&x) : grym_formater("Seul un ensemble gagne ou perd un élément, pas %s.", nom_type(e.type));
+                char *mp = x.type == V_ABSENT ? message_absent(&x) : grym_echec(ABSENCE(e.type), "Seul un ensemble gagne ou perd un élément, pas %s.", nom_type(e.type));
                 valeur_liberer(&x);
                 valeur_liberer(&e);
                 ok = echouer(diag, b, debut, mp);
@@ -8625,11 +8609,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             int r = 0;
             if (x.type == V_ABSENT) mp = message_absent(&x);
             else if (e.type == V_LISTE && e.liste && !e.liste->valeurs) {   /* une recherche : des identifiants */
-                if (x.type != V_OBJET) mp = grym_formater("« parmi » cherche un objet dans ces objets, pas %s.", nom_type(x.type));
+                if (x.type != V_OBJET) mp = grym_echec(ABSENCE(x.type), "« parmi » cherche un objet dans ces objets, pas %s.", nom_type(x.type));
                 else if (x.objet->id)
                     for (size_t k = 0; k < e.liste->n && !r; k++) r = e.liste->ids[k] == x.objet->id;
             } else if (e.type != V_ENSEMBLE && e.type != V_LISTE)
-                mp = grym_formater("« parmi » cherche dans un ensemble, pas dans %s.", nom_type(e.type));
+                mp = grym_echec(ABSENCE(e.type), "« parmi » cherche dans un ensemble, pas dans %s.", nom_type(e.type));
             else r = ensemble_rang(&e, &x) >= 0;
             valeur_liberer(&x);
             valeur_liberer(&e);
@@ -8646,7 +8630,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             if (e.type != V_ENSEMBLE) {
-                char *mp = grym_formater("« le nombre de » compte un ensemble, pas %s.", nom_type(e.type));
+                char *mp = grym_echec(ABSENCE(e.type), "« le nombre de » compte un ensemble, pas %s.", nom_type(e.type));
                 valeur_liberer(&e);
                 ok = echouer(diag, b, debut, mp);
                 break;
@@ -8660,11 +8644,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur y = depiler(&pile), x = depiler(&pile), t = depiler(&pile);
             char *mp = NULL;
             if (t.type == V_ABSENT) mp = message_absent(&t);
-            else if (t.type != V_TEXTE) mp = grym_formater("« en remplaçant » s'applique à un texte, pas à %s.", nom_type(t.type));
-            else if (x.type != V_TEXTE) mp = grym_formater("Ce qu'on remplace est un texte, pas %s.", nom_type(x.type));
+            else if (t.type != V_TEXTE) mp = grym_echec(ABSENCE(t.type), "« en remplaçant » s'applique à un texte, pas à %s.", nom_type(t.type));
+            else if (x.type != V_TEXTE) mp = grym_echec(ABSENCE(x.type), "Ce qu'on remplace est un texte, pas %s.", nom_type(x.type));
             else if (!x.texte || !*x.texte) mp = grym_dupliquer("« en remplaçant » cherche un texte vide : rien à remplacer.");
             else if (y.type == V_ABSENT) mp = message_absent(&y);
-            else if (y.type != V_TEXTE) mp = grym_formater("Ce qui remplace est un texte, pas %s.", nom_type(y.type));
+            else if (y.type != V_TEXTE) mp = grym_echec(ABSENCE(y.type), "Ce qui remplace est un texte, pas %s.", nom_type(y.type));
             Chaine c = {0};
             if (!mp) {
                 const char *p = t.texte ? t.texte : "";
@@ -8696,7 +8680,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur t = depiler(&pile);
             if (t.type != V_TEXTE) {
                 char *mp = t.type == V_ABSENT ? message_absent(&t)
-                                              : grym_formater("« les mots de » s'applique à un texte, pas à %s.", nom_type(t.type));
+                                              : grym_echec(ABSENCE(t.type), "« les mots de » s'applique à un texte, pas à %s.", nom_type(t.type));
                 valeur_liberer(&t);
                 ok = echouer(diag, b, debut, mp);
                 break;
@@ -8782,9 +8766,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_RETIRER: {   /* « le numéro AVS sans « . » » : chaque occurrence retirée, de gauche à droite (2.64) */
             Valeur x = depiler(&pile), t = depiler(&pile);
             char *mp = NULL;
-            if (t.type == V_ABSENT) mp = grym_dupliquer("La valeur est absente : vérifie-la d'abord avec « est présent ».");
-            else if (t.type != V_TEXTE) mp = grym_formater("« sans » s'applique à un texte, pas à %s.", nom_type(t.type));
-            else if (x.type != V_TEXTE) mp = grym_formater("Ce que « sans » retire est un texte, pas %s.", nom_type(x.type));
+            if (t.type == V_ABSENT) mp = grym_echec("absence", "La valeur est absente : vérifie-la d'abord avec « est présent ».");
+            else if (t.type != V_TEXTE) mp = grym_echec(ABSENCE(t.type), "« sans » s'applique à un texte, pas à %s.", nom_type(t.type));
+            else if (x.type != V_TEXTE) mp = grym_echec(ABSENCE(x.type), "Ce que « sans » retire est un texte, pas %s.", nom_type(x.type));
             else if (!x.texte || !*x.texte) mp = grym_dupliquer("« sans » retire un texte vide : rien à retirer.");
             Chaine c = {0};
             if (!mp) {
@@ -8812,8 +8796,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_JOINDRE: {   /* « les couleurs jointes par « , » » */
             Valeur s = depiler(&pile), e = depiler(&pile);
             char *mp = NULL;
-            if (e.type != V_ENSEMBLE) mp = grym_formater("Seul un ensemble se joint, pas %s.", nom_type(e.type));
-            else if (s.type != V_TEXTE) mp = grym_formater("Le séparateur est un texte, pas %s.", nom_type(s.type));
+            if (e.type != V_ENSEMBLE) mp = grym_echec(ABSENCE(e.type), "Seul un ensemble se joint, pas %s.", nom_type(e.type));
+            else if (s.type != V_TEXTE) mp = grym_echec(ABSENCE(s.type), "Le séparateur est un texte, pas %s.", nom_type(s.type));
             Chaine c = {0};
             for (size_t k = 0; !mp && k < e.liste->n; k++) {
                 if (k) chaine_ajouter(&c, s.texte ? s.texte : "");
@@ -8835,7 +8819,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur f = depiler(&pile);
             char *probleme = NULL;
             Valeur r = vi_texte("");
-            if (f.type != V_FICHIER) probleme = grym_formater("Un tableau se lit dans un fichier, pas dans %s.", nom_type(f.type));
+            if (f.type != V_FICHIER) probleme = grym_echec(ABSENCE(f.type), "Un tableau se lit dans un fichier, pas dans %s.", nom_type(f.type));
             else {
                 free(r.texte);
                 r.texte = octets_du_fichier(f.fichier, &probleme) ? lire_csv(f.fichier, &probleme) : NULL;
@@ -8851,9 +8835,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *probleme = NULL;
             Valeur r = vi_absent(NULL);
             if (l.type == V_ABSENT) probleme = message_absent(&l);
-            else if (l.type != V_LIGNE) probleme = grym_formater("« la colonne » se lit dans une ligne de tableau, pas dans %s.",
+            else if (l.type != V_LIGNE) probleme = grym_echec(ABSENCE(l.type), "« la colonne » se lit dans une ligne de tableau, pas dans %s.",
                                                                  nom_type(l.type));
-            else if (titre.type != V_TEXTE) probleme = grym_formater("Le titre d'une colonne est un texte, pas %s.",
+            else if (titre.type != V_TEXTE) probleme = grym_echec(ABSENCE(titre.type), "Le titre d'une colonne est un texte, pas %s.",
                                                                      nom_type(titre.type));
             else {
                 const char *sep = strchr(l.texte, '\x1e');
@@ -8902,9 +8886,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (vx.type == V_ABSENT || vp.type == V_ABSENT)
                 probleme = message_absent(vx.type == V_ABSENT ? &vx : &vp);
             else if (vx.type != V_NOMBRE)
-                probleme = grym_formater("On n'arrondit qu'un nombre, pas %s.", nom_type(vx.type));
+                probleme = grym_echec(ABSENCE(vx.type), "On n'arrondit qu'un nombre, pas %s.", nom_type(vx.type));
             else if (vp.type != V_NOMBRE)
-                probleme = grym_formater("Le pas d'un arrondi est un nombre, pas %s.", nom_type(vp.type));
+                probleme = grym_echec(ABSENCE(vp.type), "Le pas d'un arrondi est un nombre, pas %s.", nom_type(vp.type));
             else if (!vp.nombre.n || vp.nombre.negatif) {
                 char *x = dec_afficher(&vp.nombre);
                 probleme = grym_formater("Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à %s.", x);
@@ -9141,7 +9125,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *probleme = NULL;
             if (vo.type == V_ABSENT) probleme = message_absent(&vo);
             else if (vo.type != V_OBJET)
-                probleme = grym_formater("Une fiche montre un objet : la valeur est %s.", nom_type(vo.type));
+                probleme = grym_echec(ABSENCE(vo.type), "Une fiche montre un objet : la valeur est %s.", nom_type(vo.type));
             else
                 probleme = afficher_fiche(m, vo.objet, sortie);
             valeur_liberer(&vo);
@@ -9170,7 +9154,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             long k = ob.type == V_OBJET ? index_champ(ob.objet->classe, champ) : -1;
             if (ob.type == V_ABSENT) probleme = message_absent(&ob);
             else if (ob.type != V_OBJET)
-                probleme = grym_formater("« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(ob.type));
+                probleme = grym_echec(ABSENCE(ob.type), "« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(ob.type));
             else if (k < 0 || !(ob.objet->classe->uniques[k] & 8)) {
                 char *qui = article_classe(ob.objet->classe);
                 qui[0] = (char)(qui[0] - 32);
@@ -9242,7 +9226,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 long n = 0;
                 if (vh.type == V_ABSENT || vn.type == V_ABSENT) mp = message_absent(vh.type == V_ABSENT ? &vh : &vn);
                 else if (vh.type != V_HEURE)
-                    mp = grym_formater("Des %s s'ajoutent à une heure, pas à %s.", UNITE[op], nom_type(vh.type));
+                    mp = grym_echec(ABSENCE(vh.type), "Des %s s'ajoutent à une heure, pas à %s.", UNITE[op], nom_type(vh.type));
                 else if (op < 4)
                     mp = grym_formater("Une heure se décale de minutes ou d'heures, pas de %s.", UNITE[op]);
                 else if (vn.type != V_NOMBRE || !dec_en_long_borne(&vn.nombre, -1000000000L, 1000000000L, &n))
@@ -9267,7 +9251,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             else if (vd.type != V_DATE && !(vd.type == V_ANNEE && op == 3))
                 probleme = vd.type == V_ANNEE
                     ? grym_formater("Une année se décale d'années, pas de %s.", UNITE[op])
-                    : grym_formater("Des %s s'ajoutent à une date, pas à %s.", UNITE[op], nom_type(vd.type));
+                    : grym_echec(ABSENCE(vd.type), "Des %s s'ajoutent à une date, pas à %s.", UNITE[op], nom_type(vd.type));
             else if (vn.type != V_NOMBRE || !dec_est_entier(&vn.nombre))
                 probleme = grym_formater("%s se décale d'un nombre entier de %s.",
                                          vd.type == V_ANNEE ? "Une année" : "Une date", UNITE[op]);
@@ -9419,7 +9403,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (vo->type == V_ABSENT && m->absent_permis && code == I_LIRE_CHAMP) break;   /* reste absent (§ 22.8) */
             if (vo->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(vo)); break; }
             if (vo->type != V_OBJET) {
-                ok = echouer(diag, b, debut, grym_formater(
+                ok = echouer(diag, b, debut, grym_echec(ABSENCE(vo->type),
                     "« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(vo->type)));
                 break;
             }
@@ -9655,9 +9639,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             restaurer_photo(&e, &cadres[e.cadre]);
             oublier_photo(&e);
-            /* la sorte (§ 18.2) : fixée par l'instruction, sinon d'après le motif ; la position, pour un échec qui remonte */
+            /* la sorte (§ 18.2) : fixée par l'instruction, sinon posée avec le motif (grym_echec), jamais lue dans ses
+             * mots ; un motif qui n'en porte pas est « autre ». La position, pour un échec qui remonte. */
             free(m->sorte_echec);
-            m->sorte_echec = grym_dupliquer(m->sorte_fixee ? m->sorte_fixee : sorte_du_motif(diag->message));
+            const char *posee = m->sorte_fixee ? m->sorte_fixee : grym_echec_sorte(diag->message);
+            m->sorte_echec = grym_dupliquer(posee ? posee : "autre");
             m->sorte_fixee = NULL;
             m->echec_ligne = diag->ligne;
             m->echec_colonne = diag->colonne;

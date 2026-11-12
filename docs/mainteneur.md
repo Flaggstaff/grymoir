@@ -1,6 +1,6 @@
 # GrymoiR : manuel du mainteneur
 
-Version 1.13, révisée le 10 novembre 2026 (rédigée le 24 septembre 2026).
+Version 1.14, révisée le 12 novembre 2026 (rédigée le 24 septembre 2026).
 Référence : Charte de GrymoiR v1.38, art. 14 ; grammaire 1.38 ; `docs/vm.md` 1.33.
 Toute modification passe par une révision numérotée. Ce manuel se révise à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 
@@ -264,6 +264,7 @@ Pour chaque phrase nouvelle, cocher :
 6. `compilateur.c` : les instructions émises.
 7. Si instruction nouvelle : `bytecode.h`, `bytecode.c` (nom, vérification, `VERSION_FORMAT`), `vm.c`, `docs/vm.md`.
 8. Les essais, dont chaque message d'erreur.
+   Un échec à l'exécution qu'un programme peut rattraper s'écrit avec sa sorte : `grym_echec("lecture", "« %s » n'est pas …", t)`, ou `grym_echec(ABSENCE(v.type), …)` s'il nomme une valeur qui peut être absente (grammaire, § 18.2). Sans sorte, il est `autre`. `tests/sortes` refuse une sorte qui n'est pas promise.
 9. La coloration des deux éditeurs.
 10. `make test`, les sanitizers, `ctest`, puis la charte si un jalon change.
 
@@ -281,7 +282,7 @@ Elles viennent de la charte. Chacune a une raison, qu'un changement pressé oubl
 
 Certaines évolutions ne touchent que les documents ou des listes de mots :
 
-- corriger ou préciser un message d'erreur : chercher son texte dans `src/` avec `grep`, le modifier, puis l'essai qui l'attend ;
+- corriger ou préciser un message d'erreur : chercher son texte dans `src/` avec `grep`, le modifier, puis l'essai qui l'attend. Depuis la grammaire 3.24, reformuler un motif ne change jamais sa sorte : elle ne se lit plus dans ses mots ;
 - corriger la grammaire, l'aide ou ce manuel : du texte seulement.
 
 Le reste du vocabulaire (mots de construction, synonymes) est encore dans le code C. Le déplacer dans des tables de données est prévu (`docs/atelier.md`, § 6.6).
@@ -306,3 +307,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.11 | 2026-11-07 | § 2 : `outils/banc-de-mesure` |
 | 1.12 | 2026-11-10 | § 2 : `outils/essais-par-mutation` |
 | 1.13 | 2026-11-10 | § 2 : `outils/essais-du-serveur` |
+| 1.14 | 2026-11-12 | § 4.10 et § 6 : la sorte d'un échec se pose avec son motif (`grym_echec`, grammaire 3.24) ; `tests/sortes` |

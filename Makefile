@@ -105,6 +105,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/bibliotheques
 	CC="$(CC)" sh tests/natif
 	sh tests/listes-sur-place
+	sh tests/sortes
 	sh tests/recherche-par-cle
 	sh tests/conflits
 	sh tests/connexion

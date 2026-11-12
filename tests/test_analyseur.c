@@ -261,7 +261,7 @@ int main(void) {
       "(essayer (bloc (afficher 1)) échec-de unicité|réseau (bloc (afficher (sorte-échec))) échec (bloc (afficher 2)))");
     VE("Essayer :\n    Afficher 1.\nEn cas d'échec de unicite, afficher 2.", 3, 19,
        "« unicite » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, rang, texte, unicité, lien, fichier, "
-       "réseau, port, saisie, refus, commande ou autre.");
+       "réseau, port, saisie, refus, commande, natif, conflit ou autre.");
     VE("Essayer :\n    Afficher 1.\nEn cas d'échec de réseau, afficher 2.\nEn cas d'échec de fichier ou de réseau, afficher 3.", 4, 33,
        "La sorte « réseau » a déjà son bloc, ligne 3.");
     VE("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher 2.\nEn cas d'échec de réseau, afficher 3.", 4, 1,

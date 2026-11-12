@@ -2816,6 +2816,21 @@ int main(void) {
     PROG("Essayer :\n    Afficher la réponse de « grymoir-pas-de-port » à « FA; », à 4800 bauds.\nEn cas d'échec, afficher la sorte de l'échec.", "port");
     PROG("Essayer :\n    Refuser « non ».\nEn cas d'échec, afficher la sorte de l'échec.", "refus");
     PROG("Le x vaut « a ».\nEssayer :\n    Afficher x + 1.\nEn cas d'échec, afficher la sorte de l'échec.", "autre");
+    /* 3.24 : la sorte se pose avec le motif, jamais d'après ses mots. Jusqu'à la 3.23, une table cherchait des fragments
+     * dans le motif, données du programme comprises : « désignation » en faisait un lien, « absent » une absence. */
+    PROG("Essayer :\n    Afficher « désignation » en nombre.\nEn cas d'échec, afficher la sorte de l'échec.", "lecture");
+    PROG("Essayer :\n    Afficher « est unique : » en date.\nEn cas d'échec, afficher la sorte de l'échec.", "lecture");
+    PROG("Les t valent une table vide.\nEssayer :\n    Afficher la valeur de « Division par zéro » dans les t.\n"
+         "En cas d'échec, afficher la sorte de l'échec.", "clé");
+    PROG("Essayer :\n    Afficher « absent » après « désign ».\nEn cas d'échec, afficher la sorte de l'échec.", "texte");
+    PROG("Les l valent la liste « absent ».\nEssayer :\n    Afficher le 2e élément des l.\nEn cas d'échec, afficher la sorte de l'échec.",
+         "rang");
+    PROG("Essayer :\n    Afficher « Saisie annulée » en vrai ou faux.\nEn cas d'échec, afficher la sorte de l'échec.", "lecture");
+    PROG("Le x vaut « absent ».\nEssayer :\n    Afficher x + 1.\nEn cas d'échec, afficher la sorte de l'échec.", "autre");
+    PROG("Le x vaut absent.\nEssayer :\n    Afficher x + 1.\nEn cas d'échec, afficher la sorte de l'échec.", "absence");
+    PROG("Les l valent une liste vide.\nEssayer :\n    Afficher la moyenne des l.\nEn cas d'échec, afficher la sorte de l'échec.", "absence");
+    PROG("Essayer :\n    Afficher la racine carrée de (0 − 4).\nEn cas d'échec, afficher la sorte de l'échec.", "nombre");
+    PROG("Essayer :\n    Afficher les caractères 3 à 2 de « absent ».\nEn cas d'échec, afficher la sorte de l'échec.", "rang");
     PROG("Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec de clé :\n    Afficher « clé ».\nEn cas d'échec de division ou de nombre :\n"
          "    Afficher « division : » puis la sorte de l'échec.\nEn cas d'échec :\n    Afficher « autre ».\n"
          "Essayer :\n    Essayer :\n        Refuser « Stock vide ».\n    En cas d'échec de division :\n        Afficher « jamais ».\n"

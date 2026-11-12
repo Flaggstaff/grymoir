@@ -13,6 +13,14 @@ void *grym_allouer(size_t taille);       /* quitte le programme si la mémoire m
 char *grym_dupliquer(const char *s);
 char *grym_formater(const char *fmt, ...);
 
+/* Les sortes d'échec (grammaire, § 18.2) : la sorte se pose là où le motif s'écrit, jamais d'après ses mots. grym_echec
+ * écrit le motif comme grym_formater et retient sa sorte (une constante : « lecture », « rang »…) ; une sorte NULL
+ * n'en retient aucune. grym_echec_sorte la retrouve, pour ce motif-là, tel qu'il a été écrit : un motif recopié ou
+ * changé n'a plus de sorte (NULL). Le registre ne garde que les derniers motifs : la machine lit la sorte à l'échec. */
+char *grym_echec(const char *sorte, const char *fmt, ...);
+char *grym_echec_poser(const char *sorte, char *motif);   /* un motif déjà écrit ; le rend tel quel */
+const char *grym_echec_sorte(const char *motif);
+
 /* Distance d'édition de Levenshtein, calculée sur les points de code. */
 size_t distance_edition(const char *a, const char *b);
 size_t longueur_utf8(const char *s);    /* en points de code */

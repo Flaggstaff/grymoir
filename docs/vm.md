@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 2.10 de la spécification, révisée le 8 novembre 2026.
+Version 2.11 de la spécification, révisée le 12 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -150,7 +150,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 130 | `TABLE_LIRE` | aucun | dépile le nom, la table, puis la clé ; empile sa valeur ; une clé absente est une erreur |
 | 131 | `TABLE_ECRIRE` | 0 vaut, 1 devient, 2 perdre | formes 0 et 1 : dépile le nom, la valeur, la clé, puis la table ; 0 exige une clé nouvelle, 1 une clé présente ; forme 2 : dépile la clé, puis la table, et retire la paire si elle y est ; empile la table changée |
 | 132 | `TABLE_LISTE` | 0 les clés, 1 les valeurs | remplace la table par la liste de ses clés ou de ses valeurs, dans l'ordre d'arrivée des clés |
-| 133 | `SORTE_ÉCHEC` | aucun | empile la sorte du dernier échec rattrapé, un texte (grammaire, § 18.2) : fixée par l'instruction qui a échoué (`ENVOI` : réseau ; `PORTS`, `PORT_SERIE`, `WSJTX` : port ; `REFUSER` : refus ; `LIRE_FICHIER`, `ENREGISTRER` : fichier), sinon tirée du motif par la table `SORTES` de `src/vm.c` |
+| 133 | `SORTE_ÉCHEC` | aucun | empile la sorte du dernier échec rattrapé, un texte (grammaire, § 18.2) : fixée par l'instruction qui a échoué (`ENVOI`, `COURRIEL` : réseau ; `PORTS`, `PORT_SERIE`, `WSJTX` : port ; `REFUSER` : refus ; `LIRE_FICHIER`, `ENREGISTRER` : fichier ; `COMMANDE` : commande ; `NATIF` : natif), sinon celle que le motif a reçue à sa naissance (`grym_echec`, grammaire 3.24), sinon `autre` |
 | 134 | `RELANCER` | aucun | dépile la sorte, puis le motif : l'échec repart, rattrapable par l'essai englobant, avec la position d'origine du dernier échec rattrapé |
 | 135 | `COURRIEL` | aucun | dépile le texte, la messagerie, l'objet, puis le destinataire ; vérifie la messagerie (ses quatre champs, la clé en secret) puis les valeurs, et envoie par la fonction d'interface `courriel` ; sans elle (console, navigateur), refuse ; tout refus est de sorte `réseau` (grammaire 2.94, § 22.27) |
 | 136 | `MATH` | forme (3 bits) + nombre d'arguments × 8 | 0 la racine carrée (`dec_racine`, exacte si finie, sinon 28 chiffres) ; 1, 2 le plus grand, le plus petit de n arguments ; 3, 4 la somme, la moyenne d'une liste ; 5, 6 son plus grand, son plus petit élément (grammaire 2.95, § 3.7) |
@@ -512,3 +512,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 2.08 | 2026-11-07 | Index `"n <entité>.<champ>"` des nombres uniques, en collation des nombres ; un nombre entier cherché par égalité passe par l'index de sa colonne |
 | 2.09 | 2026-11-08 | Instructions `CONNEXION` (147) et `CONNECTÉ` (148) ; la marque « connexion » du module (bit 2 de l'octet des marques) ; format version 72 (grammaire 3.17) |
 | 2.10 | 2026-11-08 | Instruction `POSTES` (149) (grammaire 3.18) |
+| 2.11 | 2026-11-12 | `SORTE_ÉCHEC` : la sorte vient de l'instruction, sinon du motif qui l'a reçue à sa naissance, sinon `autre` ; la table `SORTES` est retirée (grammaire 3.24). Ni instruction ni format changés |
