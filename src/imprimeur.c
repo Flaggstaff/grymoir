@@ -1854,7 +1854,9 @@ static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     if (el->type == N_BOUTON && (el->entier & 512)) aj(im, im->compact ? " _tuile" : ", en tuile");     /* 2.15 */
     if (el->type == N_BOUTON && (el->entier & 1024)) aj(im, im->compact ? " _côté_titre" : ", à côté du titre");   /* 2.17 */
     if (el->type == N_BOUTON && el->destructif) aj(im, im->compact ? " _destructif" : ", destructif");   /* 2.72 */
-    if (el->type == N_BOUTON && (el->entier & 8192)) aj(im, im->compact ? " _ferme" : ", qui ferme l'écran");   /* 3.22 */
+    if (el->type == N_BOUTON && (el->entier & 32768))   /* 3.25 */
+        aj(im, im->compact ? " _enregistre_ferme" : ", qui enregistre et ferme l'écran");
+    else if (el->type == N_BOUTON && (el->entier & 8192)) aj(im, im->compact ? " _ferme" : ", qui ferme l'écran");   /* 3.22 */
     if (el->type == N_BOUTON && el->indication) { aj(im, im->compact ? " _description " : ", avec la description "); ecrire_texte(im, el->indication); }
     if (el->type == N_BOUTON && el->texte2) { aj(im, im->compact ? " _image " : ", avec l'image "); ecrire_texte(im, el->texte2); }
     if (el->type == N_BOUTON && el->confirmation) {   /* 2.65 */
@@ -2048,6 +2050,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
             if (n->titre_calcule) { aj(im, " _titre "); expression(im, n->titre_calcule); }   /* 2.33 */
             if (n->taille_titre) aj(im, n->taille_titre > 0 ? " _en_grand" : " _en_petit");   /* § 22.5 */
+            if (n->texte3) { aj(im, n->forme == 2 ? " _pour _une " : " _pour _un "); ecrire_nom(im, n->texte3, 0); }   /* 3.25 */
             aj(im, "\n");
         } else {
             aj(im, doc ? "Le document " : "L'écran ");
@@ -2057,6 +2060,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
                 if (n->titre_calcule) { aj(im, " "); expression(im, n->titre_calcule); }   /* « (…) », un titre calculé (2.33) */
                 if (n->taille_titre) aj(im, n->taille_titre > 0 ? " en grand" : " en petit");
+                aj(im, ",");
+            }
+            if (n->texte3) {   /* « , pour un salarié, » (3.25) */
+                if (!(n->texte2 || n->taille_titre || n->titre_calcule)) aj(im, ",");
+                aj(im, n->forme == 2 ? " pour une " : " pour un ");
+                aj_sigles(im, n->texte3);
                 aj(im, ",");
             }
             aj(im, " montre :\n");
@@ -2185,6 +2194,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     if (!c) aj(im, " au départ");
                 }
                 if (el->entier & 1) aj(im, c ? " _facultatif" : fz ? ", facultative" : ", facultatif");
+                if (el->entier & 16384) aj(im, c ? " _non_lié" : fz ? ", non liée" : ", non lié");   /* 3.25 */
                 if (el->entier & 2) aj(im, c ? " _plusieurs_lignes" : ", sur plusieurs lignes");
                 if (el->entier & 4) aj(im, c ? " _lecture_seule" : ", en lecture seule");
                 if (el->entier & 8) aj(im, c ? " _interrupteur" : ", en interrupteur");   /* § 22.6 */
@@ -2467,8 +2477,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             else { aj(im, "Ouvrir le document "); aj(im, nd); aj(im, ".\n"); }
             return;
         }
-        if (c) { aj(im, "_ouvrir "); ecrire_nom(im, n->texte, 0); aj(im, "\n"); }
-        else { aj(im, "Ouvrir l'écran "); aj_sigles(im, n->texte); aj(im, ".\n"); }
+        if (c) {
+            aj(im, "_ouvrir ");
+            ecrire_nom(im, n->texte, 0);
+            if (n->forme == 4) { aj(im, " _pour "); expression(im, n->enfants[0]); }   /* 3.25 */
+            aj(im, "\n");
+        } else {
+            aj(im, "Ouvrir l'écran ");
+            aj_sigles(im, n->texte);
+            if (n->forme == 4) { aj(im, " pour "); expression(im, n->enfants[0]); }
+            aj(im, ".\n");
+        }
         return;
     case P_FERMER:
         aj(im, c ? "_fermer\n" : "Fermer l'écran.\n");
@@ -3366,6 +3385,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_ENREGISTRER:
         aj(im, c ? "_enregistrer " : "Enregistrer ");
         expression(im, n->enfants[0]);
+        if (n->forme == 1) { aj(im, c ? "\n" : ".\n"); return; }   /* « Enregistrer le salarié de l'écran. » (3.25) */
         aj(im, c ? " _dans " : " dans ");
         expression(im, n->enfants[1]);
         aj(im, c ? "\n" : ".\n");

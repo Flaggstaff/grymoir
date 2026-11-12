@@ -125,6 +125,11 @@ Mêmes règles que la grammaire, § 11 : mots-clés à souligné, noms à soulig
 | `Quand on ouvre l'écran …`, `Quand on ferme l'écran …` | `_quand _ouvre …`, `_quand _ferme …` |
 | `Ouvrir l'écran des compositeurs.`, `Ouvrir la fiche de c.` | `_ouvrir des_compositeurs`, `_ouvrir _fiche c` |
 | `Fermer l'écran.` | `_fermer` |
+| `L'écran du salarié, pour un salarié, montre :` (grammaire 3.25, § 22.28) | `_écran du_salarié _pour _un salarié` … `_fin` |
+| `une remarque (texte), facultative, non liée` | `_une remarque (texte) _facultatif _non_lié` |
+| `un bouton « Enregistrer », qui enregistre et ferme l'écran` | `_bouton « Enregistrer » _enregistre_ferme` |
+| `Ouvrir l'écran du salarié pour le salarié choisi de l'écran.` | `_ouvrir du_salarié _pour _écran.salarié_choisi` |
+| `Enregistrer le salarié de l'écran.` | `_enregistrer _écran.salarié` |
 
 ### 3.8 Hors de l'atelier *(validé le 25 septembre 2026)*
 
@@ -238,3 +243,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.27 | 2026-10-18 | § 3.2 : le tri d'une colonne par la valeur (nombres, dates, heures), les textes à la française |
 | 0.28 | 2026-10-18 | § 5.1 : l'apparence assouplie, couleur libre, fond, police et logo SVG (charte 1.60, grammaire 2.13) |
 | 0.29 | 2026-10-18 | À l'exécution, l'écran se lit comme une page : centré dans une largeur de 1120 px, en haut de la fenêtre quand rien ne s'étire ; le fil d'exécution se cache sous un écran (`docs/atelier.md` 0.84) |
+| 0.30 | 2026-11-12 | § 3.7 : la forme compacte de l'écran d'un objet (grammaire 3.25, § 22.28) |

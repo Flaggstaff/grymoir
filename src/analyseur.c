@@ -129,6 +129,7 @@ typedef struct EcranConnu {
     size_t nb_ecoutes;
     char **postes;     /* les entités de « les écoutes des … conservés » (2.70) */
     size_t nb_postes;
+    char *objet;       /* « , pour un salarié, » (3.25) : l'entité de l'objet que l'écran montre, ou NULL */
 } EcranConnu;
 
 static void ecran_liberer(EcranConnu *e) {
@@ -139,6 +140,7 @@ static void ecran_liberer(EcranConnu *e) {
     for (size_t k = 0; k < e->nb_ecoutes; k++) free(e->ecoutes[k]);
     for (size_t k = 0; k < e->nb_postes; k++) free(e->postes[k]);
     free(e->postes);
+    free(e->objet);
     free(e->boutons);
     free(e->entites);
     free(e->zones);
@@ -328,7 +330,8 @@ static void portee_copier(Portee *dst, const Portee *src) {
                                        copier_noms(e->entites, e->nb_entites), e->nb_entites, e->ligne,
                                        copier_noms(e->zones, e->nb_zones), e->nb_zones,
                                        copier_noms(e->ecoutes, e->nb_ecoutes), e->nb_ecoutes,
-                                       copier_noms(e->postes, e->nb_postes), e->nb_postes };
+                                       copier_noms(e->postes, e->nb_postes), e->nb_postes,
+                                       e->objet ? grym_dupliquer(e->objet) : NULL };
     }
     dst->nb_types = src->nb_types;   /* § 16.16 */
     dst->types = src->nb_types ? grym_allouer(src->nb_types * sizeof *dst->types) : NULL;
@@ -593,6 +596,7 @@ typedef struct {
     int evenement;           /* dans le corps d'un « Quand on … » (§ 22.2) */
     int essais;              /* blocs « Essayer » englobants (§ 18) */
     const char *ecran;       /* la classe de l'écran que « l'écran » désigne ici (§ 22.2), ou NULL */
+    const char *ecran_objet; /* l'écran déclaré est « pour un salarié » (3.25) : « salarié », sinon NULL */
     int libre;               /* l'élément d'écran en cours est dans un bloc « en position libre : » (§ 22.9) */
     int menu;                /* … dans un menu (§ 22.12) : des boutons seulement */
     int document;            /* … dans un document (2.25) : une taille se dit partout (« l'image « logo.png », large de 40 ») */
@@ -8496,10 +8500,25 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         if (!el->raccourci) attendre_mot(a, a->i + 1, "au clavier «", strlen("au clavier «"));
         if (!el->destructif && !(el->entier & 256)) attendre_mot(a, a->i + 1, "destructif", strlen("destructif"));
         if (!(el->entier & 8192)) attendre_mot(a, a->i + 1, "qui ferme l'écran", strlen("qui ferme l'écran"));
+        if (!(el->entier & 8192) && a->ecran_objet)
+            attendre_mot(a, a->i + 1, "qui enregistre et ferme l'écran", strlen("qui enregistre et ferme l'écran"));
+        if (est_mot(x, "qui") && est_mot(voir(a, 2), "enregistre") && est_mot(voir(a, 3), "et") && est_mot(voir(a, 4), "ferme")
+            && voir(a, 5)->type == J_ELISION && est_mot(voir(a, 6), "écran")) {
+            /* « , qui enregistre et ferme l'écran » (3.25) : « Enregistrer le salarié de l'écran. » puis « Fermer l'écran. » */
+            if (!a->ecran_objet)
+                return erreur(a, x, grym_dupliquer("« qui enregistre » demande un écran qui montre un objet : « L'écran du salarié, "
+                                                   "pour un salarié, montre : » (3.25).")), -1;
+            if (el->entier & 8192) return erreur(a, x, grym_dupliquer("Ce bouton ferme déjà l'écran : un seul « qui … »."))
+                                          , -1;
+            el->entier |= 8192 | 32768;
+            a->i += 7;
+            return 1;
+        }
         if (est_mot(x, "qui") && est_mot(voir(a, 2), "ferme") && voir(a, 3)->type == J_ELISION && est_mot(voir(a, 4), "écran")) {
             /* « , qui ferme l'écran » (3.22) : le bouton ferme son écran, sans « Quand on clique » ; sa confirmation
              * (« à confirmer par « … » si l'écran a changé ») se pose avant, comme pour tout bouton */
-            if (el->entier & 8192) return erreur(a, x, grym_dupliquer("« qui ferme l'écran » est déjà dit.")), -1;
+            if (el->entier & 8192) return erreur(a, x, grym_dupliquer((el->entier & 32768) ? "Ce bouton ferme déjà l'écran : un seul « qui … »."
+                                                                         : "« qui ferme l'écran » est déjà dit.")), -1;
             el->entier |= 8192;
             a->i += 5;
             return 1;
@@ -8893,6 +8912,44 @@ static int conditions_ecran(Analyse *a, Noeud *ecran) {
     return 1;
 }
 
+/* Les zones d'un écran « pour un salarié » (3.25) : une zone qui porte le nom d'un champ du salarié s'y lie (entier
+ * 65536), sauf « , non liée » (16384). Le champ et la zone ont le même type ; un champ facultatif demande une zone
+ * facultative, sans quoi son absence ne s'y montrerait pas. Les champs multiples et les zones d'une partie ne se lient pas. */
+static void lier_zones(Analyse *a, Noeud *ecran) {
+    const Classe *ce = classe_de(a->portee, ecran->texte3);
+    if (!ce) return;
+    for (size_t k = 0; k < ecran->nb_enfants && !a->echec; k++) {
+        Noeud *z = ecran->enfants[k];
+        if (z->type != N_NOM || (z->entier & 16)) continue;
+        const Classe *o = NULL;
+        const int champ = classe_champ(a->portee, ce, z->texte, NULL, &o) && o->types;
+        if (z->entier & 16384) {
+            if (!champ) erreur_a(a, z->ligne, z->colonne, grym_formater("« non %s » : le %s n'a pas de champ « %s » ; retire « non %s ».",
+                                                                        z->forme == 2 ? "liée" : "lié", ecran->texte3, z->texte,
+                                                                        z->forme == 2 ? "liée" : "lié"));
+            continue;
+        }
+        if (!champ) continue;
+        size_t q = 0;
+        while (q < o->nb && strcmp(o->champs[q], z->texte) != 0) q++;
+        if (q == o->nb) continue;
+        const char *tc = o->types[q];
+        if (!tc || strcmp(tc, z->texte2) != 0) {
+            erreur_a(a, z->ligne, z->colonne, grym_formater("La zone « %s » est (%s), le champ « %s » du %s est (%s) : écris la zone "
+                                                            "comme le champ, ou ajoute « , non %s ».", z->texte, z->texte2,
+                                                            z->texte, ecran->texte3, tc ? tc : "?",
+                                                            z->forme == 2 ? "liée" : "lié"));
+            continue;
+        }
+        if (o->facultatifs && o->facultatifs[q] && !(z->entier & 1)) {
+            erreur_a(a, z->ligne, z->colonne, grym_formater("Le champ « %s » du %s est facultatif : sa zone aussi, « , %s ».",
+                                                            z->texte, ecran->texte3, z->forme == 2 ? "facultative" : "facultatif"));
+            continue;
+        }
+        z->entier |= 65536;
+    }
+}
+
 static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     if (!premier_niveau(a, t)) return NULL;
     size_t d = a->i + 2, f;
@@ -8946,9 +9003,51 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             return erreur(a, &a->j[q], grym_dupliquer("« , » attendu après le titre : « L'écran d'accueil, (\"Bonjour \" suivi du prénom) en grand, montre : »."));
         }
     }
+    /* « , pour un salarié, » (3.25) : l'écran montre un objet de cette entité ; ses zones qui portent le nom d'un champ
+     * s'y lient, « le salarié de l'écran » le désigne, « Enregistrer le salarié de l'écran. » l'écrit */
+    char *objet = NULL;
+    Genre genre_objet = GENRE_MASCULIN;
+    /* après un titre, sa virgule est déjà lue : « L'écran x, « Titre », pour un … » ; sans titre : « L'écran x, pour un … » */
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "pour")) avancer(a);
+    if (est_mot(cour(a), "pour") && a->i > 0 && a->j[a->i - 1].type == J_VIRGULE) {
+        a->i--;   /* la virgule : les positions suivantes se comptent depuis elle */
+        const Jeton *tp = voir(a, 1), *art = voir(a, 2);
+        const char *refus = NULL;
+        if (document || partie) refus = "Seul un écran montre un objet : un document ou une partie ne se déclare pas « pour un … ».";
+        else if (!est_mot(art, "un") && !est_mot(art, "une")) refus = "« pour un … » attendu : « L'écran du salarié, pour un salarié, montre : ».";
+        size_t d2 = a->i + 3, q = d2;
+        const int crochets = !refus && a->j[d2].type == J_CROCHETS;   /* venu de la forme compacte : un nom entier */
+        if (crochets) q = d2 + 1;
+        else while (!refus && q < a->n && a->j[q].type == J_MOT && a->j[q].ligne == tp->ligne) q++;
+        if (!refus && (q == d2 || a->j[q].type != J_VIRGULE))
+            refus = "« , » attendu après l'entité : « L'écran du salarié, pour un salarié, montre : ».";
+        const Classe *ce = NULL;
+        if (!refus) {
+            objet = crochets ? grym_dupliquer(a->j[d2].valeur) : cle(a, d2, q);
+            ce = objet ? classe_de(a->portee, objet) : NULL;
+            if (!ce || ce->aptitude || !ce->conserve) {
+                Noeud *r = erreur(a, &a->j[d2], grym_formater("« %s » n'est pas une entité conservée : un écran montre un objet "
+                                                              "conservé, « pour un salarié ».", objet ? objet : ""));
+                free(objet); free(nom); free(titre); noeud_liberer(titre_calcule);
+                return r;
+            }
+            if ((ce->genre == GENRE_FEMININ) != est_mot(art, "une")) {
+                Noeud *r = erreur(a, art, grym_formater("Accord : « pour %s %s ».", ce->genre == GENRE_FEMININ ? "une" : "un", objet));
+                free(objet); free(nom); free(titre); noeud_liberer(titre_calcule);
+                return r;
+            }
+            genre_objet = ce->genre;
+            a->i = q + 1;
+        }
+        if (refus) {
+            free(nom); free(titre); noeud_liberer(titre_calcule);
+            return erreur(a, est_mot(art, "un") || est_mot(art, "une") ? &a->j[q] : art, grym_dupliquer(refus));
+        }
+    }
     if (!est_mot(cour(a), "montre") || voir(a, 1)->type != J_DEUX_POINTS) {
         free(nom);
         free(titre);
+        free(objet);
         noeud_liberer(titre_calcule);
         return erreur(a, cour(a), grym_dupliquer("« montre : » attendu : « L'écran des compositeurs montre : »."));
     }
@@ -8960,13 +9059,21 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     n->op = document ? 'D' : partie ? 'P' : 0;
     a->document = document || partie;   /* une partie se vérifie là où elle sert ; seule, elle a les libertés d'un document */
     n->taille_titre = taille_titre;
-    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0, NULL, 0, NULL, 0 };
+    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0, NULL, 0, NULL, 0, NULL };
     /* Un écran est un objet : sa classe porte ses zones de saisie et la ligne choisie de chaque liste (§ 22.1) */
     char *classe = grym_formater("écran %s", nom);
     ajouter_classe(a->portee, classe, GENRE_MASCULIN, NULL);
     const size_t ic = a->portee->nb_classes - 1;
     a->portee->classes[ic].ligne = t->ligne;
     a->ecran = a->portee->classes[ic].nom;
+    if (objet) {   /* « le salarié de l'écran » (3.25) : un champ de l'écran, absent pour un nouveau salarié */
+        classe_ajouter_zone(&a->portee->classes[ic], objet, genre_objet, objet, 1, NULL);
+        ajouter_nom(&e.zones, &e.nb_zones, objet);
+        e.objet = grym_dupliquer(objet);
+        n->texte3 = objet;
+        n->forme = genre_objet == GENRE_FEMININ ? 2 : 1;
+        a->ecran_objet = n->texte3;
+    }
     int blocs[16], nb_blocs = 0;   /* colonnes des blocs « côte à côte » et « l'un sous l'autre » ouverts (§ 22.1) */
     int formes[16];                /* la forme de chaque bloc ouvert : 4 en position libre (§ 22.9), 5 les onglets (§ 22.10) */
     for (;;) {
@@ -9514,7 +9621,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 free(nomz); free(type);
                 break;
             }
-            for (size_t z = 0; z < e.nb_zones; z++)
+            if (e.objet && strcmp(e.objet, nomz) == 0)   /* 3.25 */
+                erreur(a, u, grym_formater("La zone « %s » porte le nom de l'objet de l'écran (« pour %s %s ») : « le %s de "
+                                           "l'écran » le désigne déjà. Nomme la zone autrement.", nomz,
+                                           n->forme == 2 ? "une" : "un", e.objet, e.objet));
+            else for (size_t z = 0; z < e.nb_zones; z++)
                 if (strcmp(e.zones[z], nomz) == 0) { erreur(a, u, grym_formater("La zone « %s » existe déjà.", nomz)); break; }
             if (a->echec) { free(nomz); free(type); free(valeurs); break; }
             el = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
@@ -9528,6 +9639,23 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             while (cour(a)->type == J_VIRGULE) {
                 const Jeton *x = voir(a, 1);
                 if (est_mot(x, "facultatif") || est_mot(x, "facultative")) { el->entier |= 1; a->i += 2; continue; }
+                if (e.objet) attendre_mot(a, a->i + 1, g == GENRE_FEMININ ? "non liée" : "non lié", strlen(g == GENRE_FEMININ ? "non liée" : "non lié"));
+                if (est_mot(x, "non") && (est_mot(voir(a, 2), "lié") || est_mot(voir(a, 2), "liée"))) {
+                    /* « , non liée » (3.25) : une zone qui porte le nom d'un champ de l'objet sans s'y lier */
+                    if (!e.objet) {
+                        erreur(a, x, grym_formater("« non %s » ne sert que dans un écran « pour un … » (3.25).",
+                                                   g == GENRE_FEMININ ? "liée" : "lié"));
+                        break;
+                    }
+                    if (est_mot(voir(a, 2), "liée") != (g == GENRE_FEMININ)) {
+                        erreur(a, voir(a, 2), grym_formater("Accord : « non %s ».", g == GENRE_FEMININ ? "liée" : "lié"));
+                        break;
+                    }
+                    if (el->entier & 16384) { erreur(a, x, grym_dupliquer("« non liée » est déjà dit.")); break; }
+                    el->entier |= 16384;
+                    a->i += 3;
+                    continue;
+                }
                 const int lu = etat_element(a, el, g, 1, &vus);   /* « sur plusieurs lignes », « actif si … » (§ 22.6) */
                 if (lu < 0) break;
                 if (lu) continue;
@@ -9756,6 +9884,8 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     a->libre = 0;
     a->document = 0;
     a->menu = 0;
+    a->ecran_objet = NULL;
+    if (!a->echec && e.objet) lier_zones(a, n);   /* 3.25 */
     if (!a->echec) conditions_ecran(a, n);   /* « actif si », « visible si » : tout l'écran est connu (§ 22.6) */
     if (!a->echec) raccourcis_ecran(a, n);   /* un raccourci par bouton, distinct dans l'écran (2.68) */
     a->ecran = NULL;
@@ -10142,6 +10272,13 @@ static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom) {
     return trouve;
 }
 
+/* « x » est la classe « y » ou en hérite (3.25). */
+static int est_sous_classe(Portee *p, const char *x, const char *y) {
+    for (const Classe *c = classe_de(p, x); c; c = c->parent ? classe_de(p, c->parent) : NULL)
+        if (strcmp(c->nom, y) == 0) return 1;
+    return 0;
+}
+
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
     if (a->scenario && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "fiche"))   /* 3.09 : écrans et documents, oui ; la fiche, non */
         return erreur(a, t, grym_dupliquer("Un scénario n'ouvre pas de fiche : ses gestes ne se simulent pas. Il ouvre des écrans et des documents."));
@@ -10196,14 +10333,59 @@ static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
         n->fin = fin_jeton(&a->j[a->i - 1]);
         return n;
     }
+    /* « Ouvrir l'écran du salarié pour le salarié choisi de l'écran. » (3.25) : le premier « pour » qui suit un nom
+     * d'écran connu ; un écran dont le nom contient « pour » (« l'écran pour la caisse ») garde son nom entier */
+    size_t pour = 0;
+    {
+        const size_t d3 = a->i + 3;
+        for (size_t k = d3 + 1; !pour && k < a->n && a->j[k].type != J_POINT && a->j[k].type != J_FIN
+                                && a->j[k].ligne == a->j[d3].ligne; k++) {
+            if (!est_mot(&a->j[k], "pour") || a->j[k - 1].type == J_VIRGULE) continue;
+            char *avant = nom_ecran(a, d3, k);
+            if (avant && ecran_connu(a->portee, avant)) pour = k;
+            free(avant);
+        }
+        if (pour) {   /* le nom entier, s'il est celui d'un écran, l'emporte */
+            size_t ff;
+            char *entier = lire_nom_ecran(a, d3, &ff);
+            if (entier && ecran_connu(a->portee, entier)) pour = 0;
+            free(entier);
+        }
+    }
     size_t f;
     char *nom = NULL;
-    EcranConnu *e = ecran_nomme(a, a->i + 1, &f, &nom);
+    EcranConnu *e;
+    if (pour) {
+        nom = nom_ecran(a, a->i + 3, pour);
+        e = ecran_connu(a->portee, nom);
+        f = pour;
+    } else e = ecran_nomme(a, a->i + 1, &f, &nom);
     if (!e) { free(nom); return NULL; }
     a->i = f;
-    if (!fin_phrase(a, 0)) { free(nom); return NULL; }
+    Noeud *pour_objet = NULL;
+    if (pour) {
+        if (!e->objet) {
+            Noeud *r = erreur(a, &a->j[pour], grym_formater("L'écran « %s » ne montre pas d'objet : déclare-le « L'écran %s, pour un …, "
+                                                            "montre : » (3.25).", nom, nom));
+            free(nom);
+            return r;
+        }
+        a->i = pour + 1;
+        pour_objet = expression(a);
+        if (!pour_objet) { free(nom); return NULL; }
+        const char *ty = type_statique(pour_objet);
+        if (ty && (type_de_base(ty) || (classe_de(a->portee, ty) && !est_sous_classe(a->portee, ty, e->objet)))) {
+            Noeud *r = erreur(a, &a->j[pour + 1], grym_formater("L'écran « %s » montre un objet « %s » : « pour » ne reçoit pas une valeur (%s).",
+                                                                nom, e->objet, ty));
+            noeud_liberer(pour_objet);
+            free(nom);
+            return r;
+        }
+    }
+    if (!fin_phrase(a, 0)) { free(nom); noeud_liberer(pour_objet); return NULL; }
     Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
     n->texte = nom;
+    if (pour_objet) { n->forme = 4; noeud_ajouter(n, pour_objet); }   /* 3.25 */
     n->local = a->nb_locaux;
     a->nb_locaux += 2;   /* l'événement reçu, et l'objet qu'il désigne */
     n->fin = fin_jeton(&a->j[a->i - 1]);
@@ -11762,6 +11944,28 @@ static Noeud *phrase(Analyse *a, int colonne) {
         avancer(a);
         Noeud *v = expression_avant(a, "dans", NULL);
         if (!v) return NULL;
+        if (cour(a)->type == J_POINT) {
+            /* « Enregistrer le salarié de l'écran. » (3.25) : les zones liées dans l'objet de l'écran, qui naît s'il est absent */
+            const EcranConnu *ec = a->ecran && strncmp(a->ecran, "écran ", 7) == 0 ? ecran_connu(a->portee, a->ecran + 7) : NULL;
+            const int objet = v->type == N_CHAMP && v->nb_enfants == 1 && v->enfants[0]->type == N_ECRAN && ec && ec->objet
+                              && strcmp(v->texte, ec->objet) == 0;
+            if (!objet) {
+                Noeud *r = erreur(a, t, ec && ec->objet
+                    ? grym_formater("« Enregistrer » attend l'objet de l'écran, « Enregistrer le %s de l'écran. », ou un fichier : "
+                                    "« Enregistrer la photo dans « copie.jpg ». ».", ec->objet)
+                    : grym_dupliquer("« dans » attendu : « Enregistrer la photo dans « copie.jpg ». » ; ou, dans un écran « pour un "
+                                     "salarié », « Enregistrer le salarié de l'écran. » (3.25)."));
+                noeud_liberer(v);
+                return r;
+            }
+            if (!fin_phrase(a, 0)) { noeud_liberer(v); return NULL; }
+            Noeud *n = noeud_creer(P_ENREGISTRER, t->ligne, t->colonne, t->debut);
+            n->forme = 1;
+            n->texte = grym_dupliquer(ec->nom);
+            noeud_ajouter(n, v);
+            n->fin = v->fin;
+            return n;
+        }
         static const char *const DANS[] = { "dans" };
         if (!mots_fixes(a, DANS, 1)) { noeud_liberer(v); return NULL; }
         Noeud *chemin = valeur(a);

@@ -333,6 +333,13 @@ int main(void) {
                  "_quand _clique « B » _dans x\n    _fermer\n_fin\n", NULL);
     /* 2.14 : un bouton principal */
     ALLER_RETOUR("_écran x\n    _bouton « B » _principal\n_fin\n_quand _clique « B » _dans x\n    _fermer\n_fin\n", NULL);
+    /* l'écran d'un objet (3.25) */
+    ALLER_RETOUR("_classe _une note _conservé\n    _une date (date)\n    _une remarque (texte) _facultatif\n_fin\n"
+                 "_écran de_la_note « Note » _pour _une note\n    _une date (date)\n    _une remarque (texte) _facultatif _non_lié\n"
+                 "    _bouton « OK » _enregistre_ferme\n    _bouton « Garder »\n_fin\n"
+                 "_quand _clique « Garder » _dans de_la_note\n    _enregistrer _écran.note\n_fin\n"
+                 "_écran x\n    _liste note _conservé\n_fin\n_quand _choisit _une note _dans x\n    _ouvrir de_la_note _pour _écran.note_choisie\n_fin\n", NULL);
+    ERR("_écran x _pour\n_fin\n", 1, 10, "Forme attendue : « _écran du_salarié _pour _un salarié ».");
     /* § 22.5 (2.13) : la couleur libre, le fond, la police, le logo SVG */
     ALLER_RETOUR("_écrans _couleur « #46433B » _fond « #E8E2D6 » _police "
                  "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » _logo « vendor/lucide/check.svg »\n", NULL);

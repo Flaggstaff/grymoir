@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.24 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.25 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2401,7 +2401,7 @@ Le § 22 a grandi avec les besoins de Praxis et d'Écoutille : il traite des éc
 | Thème | Sections |
 |-------|----------|
 | **Un écran** : le déclarer, ses éléments | 22.1 Déclaration ; 22.4 Mots et forme compacte ; 22.6 États des éléments ; 22.7 Groupes et valeurs permises ; 22.8 Images ; 22.9 Position libre ; 22.10 Onglets ; 22.11 Graphiques ; 22.12 Menus ; 22.13 Courriel, téléphone, adresse web ; 22.14 Mots de passe ; 22.16 Code QR ; 22.23 Bouton destructif ; 22.24 Agenda |
-| **Son déroulement** | 22.2 Événements (minuterie comprise, 3.03) ; 22.3 Ouvrir, fermer, transactions ; 22.22 Signaler |
+| **Son déroulement** | 22.2 Événements (minuterie comprise, 3.03) ; 22.3 Ouvrir, fermer, transactions ; 22.22 Signaler ; 22.28 L'écran d'un objet |
 | **Son apparence** | 22.5 Apparence |
 | **Ce qu'il imprime** | 22.15 Documents |
 | **Les données sensibles** | 22.17 Secrets |
@@ -3021,6 +3021,36 @@ Pour rappeler un patient :
 - `Envoyer` n'est pas un mot réservé : une action déclarée « envoyer un courriel … » l'emporte.
 - En forme compacte : `_envoyer_courriel _à a _objet o _depuis m _texte t`, ou `_texte_suivant` et son bloc à la place de `_texte t`.
 
+### 22.28 L'écran d'un objet *(3.25, implémenté le 12 novembre 2026)*
+Un écran qui montre et modifie un objet conservé le dit dans son en-tête ; ses zones se lient alors aux champs du même nom, sans recopie à écrire dans un sens ni dans l'autre.
+```
+L'écran du salarié, « Salarié », pour un salarié, montre :
+    un nom (texte),
+    un taux d'occupation (nombre), 100 au départ,
+    une remarque (texte), facultative, non liée,
+    un bouton « Enregistrer », qui enregistre et ferme l'écran,
+    un bouton « Supprimer », visible si le salarié de l'écran est présent.
+
+Quand on clique sur « Nouveau salarié » dans l'écran du personnel :
+    Ouvrir l'écran du salarié.
+Quand on choisit un salarié dans l'écran du personnel :
+    Ouvrir l'écran du salarié pour le salarié choisi de l'écran.
+Quand on clique sur « Supprimer » dans l'écran du salarié :
+    Supprimer le salarié de l'écran.
+    Fermer l'écran.
+```
+- **`, pour un salarié,`** se place après le titre (ou à sa place) et avant `montre :`. L'entité est conservée ; l'article s'accorde (`pour une ordonnance`). Un document ou une partie ne se déclare pas ainsi. Sans cette tournure, un écran garde son sens d'avant (charte, art. 13).
+- **`le salarié de l'écran`** désigne l'objet montré : celui reçu par `Ouvrir l'écran … pour …`, ou `absent` pour un nouveau, jusqu'à ce qu'il soit enregistré. Il se lit comme une zone (`visible si le salarié de l'écran est présent`), dans les événements et les actions de l'écran. Une zone ne porte pas ce nom.
+- **Une zone liée** est une zone qui porte le nom d'un champ du salarié (hérités et aptitudes compris). Elle a le type du champ, sinon l'analyse refuse (« La zone « taux » est (texte), le champ « taux » du salarié est (nombre) : … ») ; un champ facultatif demande une zone facultative. Une zone qui porte ce nom sans devoir s'y lier s'écrit **`, non liée`** (`non lié` au masculin). Les autres zones restent des zones ordinaires. Les choix multiples (`des genres (genre)`) et les zones d'une partie ne se lient pas.
+- **`Ouvrir l'écran du salarié pour s.`** : après les valeurs de départ des zones et avant `Quand on ouvre`, chaque zone liée reçoit le champ de `s`. `s` se lit avant l'ouverture, là où `l'écran` désigne encore celui d'où l'on vient (`le salarié choisi de l'écran`). Un `s` absent vaut un nouveau. Le chargement ne compte pas comme une modification : `si l'écran est modifié` (§ 22.6) ne s'allume qu'après une saisie. Un écran qui ne montre pas d'objet refuse `pour` ; un écran dont le nom contient déjà « pour » garde son nom entier s'il est déclaré.
+- **`Enregistrer le salarié de l'écran.`** dans un événement de l'écran : un salarié absent naît des zones liées, se conserve et devient le salarié de l'écran ; présent, il reçoit les zones liées, et ses champs sans zone ne changent pas. L'écriture est celle de l'événement : un `Refuser` écrit avant n'enregistre rien, une règle (§ 16.14) ou une unicité violée annulent tout, **le salarié posé dans l'écran compris** : après le refus, le nouveau reste nouveau, et un second enregistrement ne vise pas un objet jamais conservé. Un champ obligatoire sans zone fait échouer la conservation (« Le champ « … » n'a pas de valeur : un salarié incomplet ne se conserve pas. »).
+- **`, qui enregistre et ferme l'écran`** : le bouton fait `Enregistrer le salarié de l'écran.` puis `Fermer l'écran.`, sans événement écrit, comme `qui ferme l'écran` (3.22) ; écrire aussi l'événement est refusé.
+- **Les valeurs de départ.** Pour un nouveau, chaque zone part de sa propre valeur de départ, écrite dans l'écran. Les valeurs `… au départ` d'une entité ne servent qu'à la migration (§ 16.7) : un objet neuf ne les reçoit pas.
+- **Une zone obligatoire lue dans `Quand on ouvre`** est exigée à l'ouverture, comme dans tout événement : pour un nouveau, l'écran montre « Remplis « Nom » : … ». Pour afficher l'objet à l'ouverture, lire son champ, `le nom du salarié de l'écran`, pas la zone.
+- **Les refus.** « Accord : « pour un salarié ». » ; « « client » n'est pas une entité conservée : … » ; « Seul un écran montre un objet : … » ; « « non lié » ne sert que dans un écran « pour un … » » ; « « non liée » : le salarié n'a pas de champ « remarque » … » ; « La zone « salarié » porte le nom de l'objet de l'écran … » ; « L'écran « x » ne montre pas d'objet : … » ; « L'écran « y » montre un objet « salarié » : « pour » ne reçoit pas une valeur (texte). » ; « « qui enregistre » demande un écran qui montre un objet : … » ; « « Enregistrer » attend l'objet de l'écran, « Enregistrer le salarié de l'écran. », ou un fichier : … ».
+- **Sans instruction nouvelle** : le compilateur écrit le chargement et l'enregistrement avec les instructions existantes (`LIRE_CHAMP`, `ÉCRIRE_CHAMP`, `NOUVEAU`, `INITIALISER_CHAMP`, `CONSERVER`) ; le salarié de l'écran est un champ caché de sa classe. Le format des programmes compilés ne change pas.
+- En forme compacte : `_écran du_salarié « Salarié » _pour _un salarié` ; `_une remarque (texte) _facultatif _non_lié` ; `_bouton « Enregistrer » _enregistre_ferme` ; `_ouvrir du_salarié _pour _écran.salarié_choisi` ; `_enregistrer _écran.salarié`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -3249,3 +3279,4 @@ Pour rappeler un patient :
 | 3.22 | 2026-11-11 | § 22.23 : `, qui ferme l'écran`, un bouton qui ferme son écran sans événement écrit ; l'événement écrit en plus est refusé. Compilé en un événement « Fermer l'écran. » que le programme n'écrit pas : ni instruction nouvelle, ni format changé. Praxis : 51 événements de moins par version |
 | 3.23 | 2026-11-11 | Remise en ordre, sans changement du langage. § 6 : la règle `base` réparée (sa suite était tombée sous `multiple`), `heure`, `maintenant` et les listes ; un résumé des entités, écrans, événements, exemples, scénarios et gestes, renvoyant au paragraphe qui fait foi. Le § 14.8 revient avant le titre du § 15 ; le § 15.5 entre le 15.4 et le 15.6 ; le § 16.17, jamais employé, est dit tel, sans renuméroter ce qui le suit. `grym lsp` s'annonce avec la version de `grym` au lieu de « 0.4 » |
 | 3.24 | 2026-11-12 | § 18.2 : la sorte d'un échec se pose là où son motif s'écrit (`grym_echec`, `src/texte.c`), au lieu d'être cherchée dans les mots du motif par une table (`SORTES`, retirée de `src/vm.c`). La table lisait aussi les données du programme : `« désignation » en nombre` échouait en `lien`, `« est unique : » en date` en `unicité`, `« absent » après « désign »` en `lien`. Cinq fautes du programme rangées en `lien` par le mot « désign » deviennent `autre`. Le refus d'une sorte inconnue énumère `natif` et `conflit`, qu'il oubliait, d'après la liste de l'analyse. Nouvel essai `tests/sortes` |
+| 3.25 | 2026-11-12 | § 22.28 : l'écran d'un objet. `L'écran du salarié, pour un salarié, montre :` ; les zones qui portent le nom d'un champ s'y lient (`, non liée` pour s'en abstenir) ; `le salarié de l'écran` ; `Ouvrir l'écran du salarié pour s.` charge les zones avant `Quand on ouvre` ; `Enregistrer le salarié de l'écran.` crée et conserve un nouveau, ou écrit un ancien, dans la transaction de l'événement ; le bouton `, qui enregistre et ferme l'écran`. Sans instruction nouvelle ni format changé. Forme compacte : `_pour _un salarié`, `_non_lié`, `_enregistre_ferme`, `_ouvrir x _pour s`, `_enregistrer _écran.salarié`. Essais : `tests/ecran-objet` (neuf parcours en scénarios, forme canonique, aller-retour compact), quatorze refus dans `test_machine`, un écran servi au navigateur dans `test_serveur` |

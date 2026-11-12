@@ -2722,6 +2722,24 @@ int main(void) {
     }
 #endif
 
+    {   /* L'écran d'un objet (3.25) : servi au navigateur, ses zones liées remplies, « Enregistrer » écrit l'objet */
+        const char *src =
+            "Un salarié, conservé, a :\n    un nom (texte),\n    un taux (nombre).\n"
+            "L'écran du salarié, « Salarié », pour un salarié, montre :\n    un nom (texte),\n    un taux (nombre),\n"
+            "    un bouton « Enregistrer », qui enregistre et ferme l'écran.\n"
+            "Le a vaut un nouveau salarié :\n    Le nom vaut « Bea ».\n    Le taux vaut 50.\nConserver le a.\n"
+            "Ouvrir l'écran du salarié pour le a.\n"
+            "Afficher le nom du a puis « / » puis le taux du a puis « / » puis le nombre de salariés conservés.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"),
+                 evenement("q=1&z0=B%C3%A9a&z1=60&clic=2"),
+                 get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "value=\"Bea\"");
+        CONTIENT(sc.reponses[0], "value=\"50\"");
+        CONTIENT(sc.reponses[2], "Béa / 60 / 1");
+        liberer(&sc);
+    }
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

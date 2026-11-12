@@ -1506,7 +1506,8 @@ static int est_etat(const Jeton *t) {
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
         || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales") || est_cle(t, "confirmer")
-        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié") || est_cle(t, "clavier") || est_cle(t, "destructif") || est_cle(t, "ferme");
+        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié") || est_cle(t, "clavier") || est_cle(t, "destructif") || est_cle(t, "ferme")
+        || est_cle(t, "enregistre_ferme") || est_cle(t, "non_lié");   /* 3.25 */
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -1550,6 +1551,11 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             mot(r, "de", x);
             copier(r, &r->e[k + 1]);
             k += 2;
+        } else if (zone && est_cle(x, "non_lié")) {   /* _non_lié → , non lié (une zone, 3.25) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "non", x);
+            mot(r, feminin ? "liée" : "lié", x);
+            k++;
         } else if (zone && est_cle(x, "plusieurs_lignes")) {
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "sur", x); mot(r, "plusieurs", x); mot(r, "lignes", x);
@@ -1642,6 +1648,15 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             mot(r, "par", x);
             copier(r, &r->e[k + 1]);
             k += 2;
+        } else if (!zone && est_cle(x, "enregistre_ferme")) {   /* _enregistre_ferme → , qui enregistre et ferme l'écran (3.25) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "qui", x);
+            mot(r, "enregistre", x);
+            mot(r, "et", x);
+            mot(r, "ferme", x);
+            emettre(r, J_ELISION, "l", x, 1);
+            mot(r, "écran", x);
+            k++;
         } else if (!zone && est_cle(x, "ferme")) {   /* _ferme → , qui ferme l'écran (un bouton, 3.22) */
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "qui", x);
@@ -2223,6 +2238,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     if (document || (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran") && !(d + 1 < f && r->e[d + 1].type == J_POINT))) {
         /* _écran des_compositeurs [« Titre »] → L'écran des compositeurs[, « Titre »,] montre : ;
          * _document de_quittance → Le document de quittance montre : (2.25) */
+        /* _pour _un salarié (3.25) : à la fin de l'en-tête → « , pour un salarié, » */
+        const size_t pour_trouve = chercher(r, d + 1, f, "pour");
+        size_t pour = pour_trouve;
+        if (pour < f && (document || pour + 2 >= f || !(est_cle(&r->e[pour + 1], "un") || est_cle(&r->e[pour + 1], "une")))) {
+            echouer(r, &r->e[pour], grym_dupliquer("Forme attendue : « _écran du_salarié _pour _un salarié »."));
+            return;
+        }
+        const size_t f_entete = f;
+        if (pour < f) f = pour;
         size_t fin_nom = f;
         const Jeton *titre = NULL, *taille = NULL;
         if (f > d + 2 && (est_cle(&r->e[f - 1], "en_grand") || est_cle(&r->e[f - 1], "en_petit"))) { taille = &r->e[f - 1]; fin_nom = f - 1; }
@@ -2242,6 +2266,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (taille) { mot(r, "en", taille); mot(r, est_cle(taille, "en_grand") ? "grand" : "petit", taille); }
             emettre(r, J_VIRGULE, NULL, titre ? titre : taille ? taille : &r->e[marque_titre], 1);
         }
+        if (pour < f_entete) {   /* « , pour un salarié, » (3.25) */
+            if (!(titre || taille || marque_titre < fin_calcul)) emettre(r, J_VIRGULE, NULL, &r->e[pour], 1);
+            mot(r, "pour", &r->e[pour]);
+            mot(r, r->e[pour + 1].valeur, &r->e[pour + 1]);
+            for (size_t k = pour + 2; k < f_entete; k++) copier(r, &r->e[k]);
+            emettre(r, J_VIRGULE, NULL, &r->e[f_entete - 1], 1);
+        }
+        f = f_entete;
         mot(r, "montre", t);
         emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
         fixer_retrait(r, premier, prof);
@@ -2407,7 +2439,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         mot(r, t->valeur, t);
         emettre(r, J_ELISION, "l", t, 1);
         mot(r, "écran", t);
-        for (size_t k = d + 1; k < f; k++) copier(r, &r->e[k]);
+        const size_t pour = ouvre ? chercher(r, d + 1, f, "pour") : f;   /* _ouvrir du_salarié _pour s (3.25) */
+        if (ouvre && (pour == d + 1 || pour + 1 == f)) {
+            echouer(r, t, grym_dupliquer("Forme attendue : « _ouvrir du_salarié _pour s »."));
+            return;
+        }
+        for (size_t k = d + 1; k < pour; k++) copier(r, &r->e[k]);
+        if (pour < f) {
+            mot(r, "pour", &r->e[pour]);
+            expression(r, pour + 1, f);
+        }
         point(r, f);
         fixer_retrait(r, premier, prof);
         return;
@@ -3736,6 +3777,13 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             point(r, f);
         } else if (!strcmp(c, "enregistrer")) {
             size_t dans = chercher(r, d + 1, f, "dans");
+            if (dans == f && f > d + 1 && est_cle(&r->e[d + 1], "écran")) {   /* _enregistrer _écran.salarié → Enregistrer le salarié de l'écran. (3.25) */
+                mot(r, "enregistrer", t);
+                expression(r, d + 1, f);
+                point(r, f);
+                fixer_retrait(r, premier, prof);
+                return;
+            }
             if (dans == f || dans == d + 1) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _enregistrer photo _dans « copie.jpg » »."));
                 return;

@@ -1,0 +1,166 @@
+#!/bin/sh
+# L'écran d'un objet (grammaire 3.25, 12 novembre 2026) : « L'écran du salarié, pour un salarié, montre : ». Ses zones liées
+# reçoivent l'objet à l'ouverture, « Enregistrer le salarié de l'écran. » les écrit (un nouveau naît, se conserve et
+# devient l'objet de l'écran) ; un refus n'écrit rien, pas même l'objet posé dans l'écran. Les parcours se jouent en
+# scénarios ; puis la forme canonique et l'aller-retour par la forme compacte.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+cat > l.grym <<'FIN'
+Un salarié, conservé, a :
+    un nom (texte), unique,
+    un pays (texte), « Suisse » au départ,
+    un courriel (texte), facultatif,
+    un taux (nombre), 100 au départ.
+L'écran du salarié, « Salarié », pour un salarié, montre :
+    un nom (texte),
+    un pays (texte), « Suisse » au départ,
+    un courriel (texte), facultatif,
+    un taux (nombre), 100 au départ,
+    une remarque (texte), facultative,
+    un bouton « Enregistrer », qui enregistre et ferme l'écran,
+    un bouton « Garder », principal,
+    un bouton « Fermer », qui ferme l'écran, à confirmer par « Perdre les changements ? » si l'écran est modifié,
+    un bouton « Supprimer », visible si le salarié de l'écran est présent.
+Quand on ouvre l'écran du salarié :
+    Si le salarié de l'écran est présent, afficher « ouvert : » puis le nom du salarié de l'écran.
+    Sinon, afficher « nouveau ».
+Quand on clique sur « Garder » dans l'écran du salarié :
+    Si le taux de l'écran > 100, refuser « Taux au-dessus de 100 ».
+    Enregistrer le salarié de l'écran.
+    Afficher « gardé : » puis le nom du salarié de l'écran.
+Quand on clique sur « Supprimer » dans l'écran du salarié :
+    Supprimer le salarié de l'écran.
+    Fermer l'écran.
+L'écran des salariés montre :
+    la liste des salariés conservés,
+    un bouton « Nouveau ».
+Quand on clique sur « Nouveau » dans l'écran des salariés :
+    Ouvrir l'écran du salarié.
+Quand on choisit un salarié dans l'écran des salariés :
+    Ouvrir l'écran du salarié pour le salarié choisi de l'écran.
+FIN
+cat > s.grym <<'FIN'
+Ces scénarios éprouvent « l ».
+Scénario « un nouveau naît de ses zones » :
+    On clique sur « Nouveau » dans l'écran des salariés.
+    On écrit « Ana » dans le nom de l'écran du salarié.
+    On écrit « 80 » dans le taux de l'écran du salarié.
+    On clique sur « Enregistrer » dans l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Le s vaut le salarié conservé dont le nom est « Ana ».
+    Vérifier que le taux du s = 80.
+    Vérifier que le pays du s = « Suisse ».
+    Vérifier que le courriel du s est absent.
+Scénario « un ancien se charge et se modifie » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Bea ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 50.
+        Le courriel vaut « b@x.ch ».
+    Conserver le a.
+    On choisit le a dans l'écran des salariés.
+    On écrit « 60 » dans le taux de l'écran du salarié.
+    On clique sur « Garder » dans l'écran du salarié.
+    On écrit « Béa » dans le nom de l'écran du salarié.
+    On clique sur « Enregistrer » dans l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Vérifier que le nombre de salariés conservés = 1.
+    Le s vaut le salarié conservé dont le nom est « Béa ».
+    Vérifier que le taux du s = 60.
+    Vérifier que le courriel du s = « b@x.ch ».
+Scénario « un refus n'écrit rien » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Cy ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 100.
+    Conserver le a.
+    On choisit le a dans l'écran des salariés.
+    On écrit « 150 » dans le taux de l'écran du salarié.
+    On clique sur « Garder » dans l'écran du salarié.
+    On voit l'erreur « Taux au-dessus de 100 » dans l'écran du salarié.
+    On ferme l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Vérifier que le taux du a = 100.
+Scénario « l'unicité refuse et n'écrit rien » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Eva ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 100.
+    Conserver le a.
+    On clique sur « Nouveau » dans l'écran des salariés.
+    On écrit « Eva » dans le nom de l'écran du salarié.
+    On clique sur « Garder » dans l'écran du salarié.
+    On voit l'erreur "« nom » est unique : un autre salarié conservé a déjà « Eva »." dans l'écran du salarié.
+    On ferme l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Vérifier que le nombre de salariés conservés = 1.
+Scénario « supprimer l'objet de l'écran » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Fil ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 100.
+    Conserver le a.
+    On choisit le a dans l'écran des salariés.
+    On clique sur « Supprimer » dans l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Vérifier que le nombre de salariés conservés = 0.
+Scénario « après un refus, le nouveau reste nouveau » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Gil ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 100.
+    Conserver le a.
+    On clique sur « Nouveau » dans l'écran des salariés.
+    On écrit « Gil » dans le nom de l'écran du salarié.
+    On clique sur « Garder » dans l'écran du salarié.
+    On voit l'erreur "« nom » est unique : un autre salarié conservé a déjà « Gil »." dans l'écran du salarié.
+    On écrit « Gaël » dans le nom de l'écran du salarié.
+    On clique sur « Enregistrer » dans l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Vérifier que le nombre de salariés conservés = 2.
+    Vérifier que le salarié conservé dont le nom est « Gaël » est présent.
+Scénario « garder deux fois ne crée qu'un salarié » :
+    On clique sur « Nouveau » dans l'écran des salariés.
+    On écrit « Hal » dans le nom de l'écran du salarié.
+    On clique sur « Garder » dans l'écran du salarié.
+    On écrit « 70 » dans le taux de l'écran du salarié.
+    On clique sur « Garder » dans l'écran du salarié.
+    On ferme l'écran du salarié.
+    Ouvrir l'écran des salariés.
+    Vérifier que le nombre de salariés conservés = 1.
+    Vérifier que le taux du salarié conservé dont le nom est « Hal » = 70.
+Scénario « un écran chargé n'est pas modifié » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Ivo ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 100.
+    Conserver le a.
+    On choisit le a dans l'écran des salariés.
+    On clique sur « Fermer » dans l'écran du salarié.
+    Ouvrir l'écran des salariés.
+Scénario « un écran changé demande confirmation » :
+    Le a vaut un nouveau salarié :
+        Le nom vaut « Jo ».
+        Le pays vaut « Suisse ».
+        Le taux vaut 100.
+    Conserver le a.
+    On choisit le a dans l'écran des salariés.
+    On écrit « 90 » dans le taux de l'écran du salarié.
+    On clique sur « Fermer » dans l'écran du salarié.
+    On confirme.
+    Ouvrir l'écran des salariés.
+    Vérifier que le taux du a = 100.
+FIN
+sortie=$("$grym" scenarios s.grym 2>&1)
+verifier "$(printf '%s\n' "$sortie" | tail -1)" "9 scénarios, 9 réussis : tout est juste." "les neuf parcours"
+[ "$echecs" -eq 0 ] || printf '%s\n' "$sortie" | grep '✗'
+verifier "$("$grym" formater l.grym)" "$(cat l.grym)" "forme canonique"
+mkdir c && cp l.grym c/ && cd c && "$grym" traduire l.grym > /dev/null 2>&1 && rm l.grym && "$grym" traduire l.grymc > /dev/null 2>&1
+verifier "$(cat l.grym 2>/dev/null)" "$(cat ../l.grym)" "aller-retour par la forme compacte"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

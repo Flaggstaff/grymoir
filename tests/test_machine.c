@@ -2541,6 +2541,25 @@ int main(void) {
          "ERREUR 2:5 Le bouton « Fermer » de l'écran « x » ferme déjà l'écran (« qui ferme l'écran ») : retire son « Quand on clique sur « Fermer » dans l'écran x : », ou retire « qui ferme l'écran ».");
     PROG("L'écran x montre :\n    un bouton « OK », qui ferme l'écran, qui ferme l'écran.", "ERREUR 2:42 « qui ferme l'écran » est déjà dit.");
 
+    /* L'écran d'un objet (3.25) : « , pour un salarié, », les zones liées par leur nom, « Ouvrir l'écran … pour s. »,
+     * « Enregistrer le salarié de l'écran. », « qui enregistre et ferme l'écran ». Les refus de l'analyse ici ; les
+     * parcours dans tests/ecran-objet (les scénarios d'un programme entier). */
+#define ECRAN_OBJET_E "Un salarié, conservé, a :\n    un nom (texte),\n    un courriel (texte), facultatif,\n    un taux (nombre).\n"
+    PROG(ECRAN_OBJET_E "L'écran x, pour une salarié, montre :\n    un nom (texte).", "ERREUR 5:17 Accord : « pour un salarié ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un client, montre :\n    un nom (texte).", "ERREUR 5:20 « client » n'est pas une entité conservée : un écran montre un objet conservé, « pour un salarié ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un taux (texte).", "ERREUR 6:5 La zone « taux » est (texte), le champ « taux » du salarié est (nombre) : écris la zone comme le champ, ou ajoute « , non lié ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un courriel (texte).", "ERREUR 6:5 Le champ « courriel » du salarié est facultatif : sa zone aussi, « , facultatif ».");
+    PROG(ECRAN_OBJET_E "L'écran x montre :\n    un nom (texte), non lié.", "ERREUR 6:21 « non lié » ne sert que dans un écran « pour un … » (3.25).");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    une remarque (texte), non liée.", "ERREUR 6:5 « non liée » : le salarié n'a pas de champ « remarque » ; retire « non liée ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un nom (texte), non liée.", "ERREUR 6:25 Accord : « non lié ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un salarié (texte).", "ERREUR 6:5 La zone « salarié » porte le nom de l'objet de l'écran (« pour un salarié ») : « le salarié de l'écran » le désigne déjà. Nomme la zone autrement.");
+    PROG(ECRAN_OBJET_E "L'écran x montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran x :\n    Ouvrir l'écran x pour 3.", "ERREUR 8:22 L'écran « x » ne montre pas d'objet : déclare-le « L'écran x, pour un …, montre : » (3.25).");
+    PROG(ECRAN_OBJET_E "L'écran y, pour un salarié, montre :\n    un nom (texte).\nL'écran x montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran x :\n    Ouvrir l'écran y pour « a ».", "ERREUR 10:27 L'écran « y » montre un objet « salarié » : « pour » ne reçoit pas une valeur (texte).");
+    PROG(ECRAN_OBJET_E "L'écran x montre :\n    un bouton « OK », qui enregistre et ferme l'écran.", "ERREUR 6:23 « qui enregistre » demande un écran qui montre un objet : « L'écran du salarié, pour un salarié, montre : » (3.25).");
+    PROG(ECRAN_OBJET_E "Le document d, pour un salarié, montre :\n    le texte « a ».", "ERREUR 5:24 Seul un écran montre un objet : un document ou une partie ne se déclare pas « pour un … ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un bouton « OK », qui enregistre et ferme l'écran, qui ferme l'écran.", "ERREUR 6:56 Ce bouton ferme déjà l'écran : un seul « qui … ».");
+    PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un nom (texte),\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran x :\n    Enregistrer le nom de l'écran.", "ERREUR 9:5 « Enregistrer » attend l'objet de l'écran, « Enregistrer le salarié de l'écran. », ou un fichier : « Enregistrer la photo dans « copie.jpg ». ».");
+
     /* « On est le … » (3.21) : la date du jour d'un scénario, aussi pour un écran ouvert ensuite */
     SCENARIO("Scénario « s » :\n    On est le 15.03.2027.\n    Afficher aujourd'hui.\n    On est le (aujourd'hui + 17 jours).\n"
              "    Afficher aujourd'hui − 01.01.2027.", 1, "15.03.2027\n90");

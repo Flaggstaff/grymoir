@@ -204,11 +204,15 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
         if (n->texte2) { chaine_ajouter(c, " « "); chaine_ajouter(c, n->texte2); chaine_ajouter(c, " »"); }
+        if (n->texte3) { chaine_ajouter(c, " pour ["); chaine_ajouter(c, n->texte3); chaine_ajouter(c, "]"); }   /* 3.25 */
         for (size_t k = 0; k < n->nb_enfants; k++) {
             const Noeud *el = n->enfants[k];
             chaine_ajouter(c, " ");
             decrire(el, c);
+            if (el->type == N_BOUTON && (el->entier & 32768)) chaine_ajouter(c, " (enregistre-ferme)");   /* 3.25 */
             if (el->type != N_NOM) continue;   /* zone : ses options et ses états (§ 22.6) */
+            if (el->entier & 65536) chaine_ajouter(c, " (liée)");          /* 3.25 */
+            if (el->entier & 16384) chaine_ajouter(c, " (non-liée)");
             if (el->entier & 2) chaine_ajouter(c, " (plusieurs-lignes)");
             if (el->entier & 4) chaine_ajouter(c, " (lecture-seule)");
             for (size_t q = 0; q < el->nb_enfants; q++)
@@ -384,7 +388,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, "(ouvrir [");
         chaine_ajouter(c, n->texte);
-        chaine_ajouter(c, "])");
+        chaine_ajouter(c, "]");
+        if (n->forme == 4) { chaine_ajouter(c, " pour "); decrire(n->enfants[0], c); }   /* 3.25 */
+        chaine_ajouter(c, ")");
         return;
     case P_FERMER:
         chaine_ajouter(c, "(fermer-écran)");
@@ -875,6 +881,12 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case P_ENREGISTRER:
+        if (n->forme == 1) {   /* « Enregistrer le salarié de l'écran. » (3.25) */
+            chaine_ajouter(c, "(enregistrer-objet ");
+            decrire(n->enfants[0], c);
+            chaine_ajouter(c, ")");
+            return;
+        }
         chaine_ajouter(c, "(enregistrer ");
         decrire(n->enfants[0], c);
         chaine_ajouter(c, " ");

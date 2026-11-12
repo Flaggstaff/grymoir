@@ -1093,6 +1093,82 @@ static void document(Compilation *c, const Noeud *n, int montrer) {
     emettre(c, I_DOCUMENT, montrer, n->ligne, n->colonne);
 }
 
+/* L'écran d'un objet (3.25) : ses zones liées sont celles que l'analyse a marquées (entier 65536), chacune au nom de son
+ * champ. L'objet est le champ caché de l'écran qui porte le nom de l'entité (« le salarié de l'écran »). */
+static int nom_ou_echec(Compilation *c, const char *nom, int ligne, int colonne, long *k) {
+    *k = bloc_nom(c->b, nom);
+    if (*k >= 0) return 1;
+    Noeud faux = {0};
+    faux.ligne = ligne;
+    faux.colonne = colonne;
+    trop_grand(c, &faux);
+    return 0;
+}
+
+/* Les zones liées reçoivent les champs de l'objet, s'il est là (« Ouvrir l'écran du salarié pour s. »). L'écran est
+ * l'écran en cours (ÉCRAN_OBJET). */
+static void charger_objet(Compilation *c, const Noeud *e, int l, int col) {
+    long ko;
+    if (!nom_ou_echec(c, e->texte3, l, col, &ko)) return;
+    emettre(c, I_ECRAN_OBJET, 0, l, col);
+    emettre(c, I_LIRE_CHAMP, ko, l, col);
+    emettre(c, I_EST_ABSENT, 0, l, col);
+    emettre(c, I_NON, 0, l, col);
+    const size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+    for (size_t k = 0; k < e->nb_enfants; k++) {
+        const Noeud *z = e->enfants[k];
+        if (z->type != N_NOM || !(z->entier & 65536)) continue;
+        long kz;
+        if (!nom_ou_echec(c, z->texte, l, col, &kz)) return;
+        emettre(c, I_ECRAN_OBJET, 0, l, col);
+        emettre(c, I_ECRAN_OBJET, 0, l, col);
+        emettre(c, I_LIRE_CHAMP, ko, l, col);
+        emettre(c, I_LIRE_CHAMP, kz, l, col);
+        emettre(c, I_ECRIRE_CHAMP, kz, l, col);
+    }
+    bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
+}
+
+/* « Enregistrer le salarié de l'écran. » : un salarié absent naît des zones liées, se conserve et devient l'objet de
+ * l'écran ; présent, il reçoit les zones liées. Les règles se vérifient à la fin de l'événement, comme toujours. */
+static void enregistrer_objet(Compilation *c, const Noeud *e, int l, int col) {
+    long ko;
+    if (!nom_ou_echec(c, e->texte3, l, col, &ko)) return;
+    emettre(c, I_ECRAN_OBJET, 0, l, col);
+    emettre(c, I_LIRE_CHAMP, ko, l, col);
+    emettre(c, I_EST_ABSENT, 0, l, col);
+    const size_t vers_present = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+    emettre(c, I_ECRAN_OBJET, 0, l, col);   /* la cible : l'objet ira dans le champ caché de l'écran */
+    emettre(c, I_NOUVEAU, ko, l, col);      /* le nom de l'entité est celui du champ caché */
+    for (size_t k = 0; k < e->nb_enfants; k++) {
+        const Noeud *z = e->enfants[k];
+        if (z->type != N_NOM || !(z->entier & 65536)) continue;
+        long kz;
+        if (!nom_ou_echec(c, z->texte, l, col, &kz)) return;
+        emettre(c, I_ECRAN_OBJET, 0, l, col);
+        emettre(c, I_LIRE_CHAMP, kz, l, col);
+        emettre(c, I_INITIALISER_CHAMP, kz, l, col);
+    }
+    emettre(c, I_ECRIRE_CHAMP, ko, l, col);
+    emettre(c, I_ECRAN_OBJET, 0, l, col);
+    emettre(c, I_LIRE_CHAMP, ko, l, col);
+    emettre(c, I_CONSERVER, 0, l, col);
+    const size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+    bloc_corriger_saut(c->b, vers_present, c->b->taille_code);
+    for (size_t k = 0; k < e->nb_enfants; k++) {
+        const Noeud *z = e->enfants[k];
+        if (z->type != N_NOM || !(z->entier & 65536)) continue;
+        long kz;
+        if (!nom_ou_echec(c, z->texte, l, col, &kz)) return;
+        emettre(c, I_ECRAN_OBJET, 0, l, col);
+        emettre(c, I_LIRE_CHAMP, ko, l, col);
+        emettre(c, I_ECRAN_OBJET, 0, l, col);
+        emettre(c, I_LIRE_CHAMP, kz, l, col);
+        emettre(c, I_ECRIRE_CHAMP, kz, l, col);
+    }
+    bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
+}
+
 static void phrase(Compilation *c, const Noeud *ph) {
     switch (ph->type) {
     case P_CONTRAT:   /* une version abstraite : sans code ; l'analyse a vérifié les versions concrètes (§ 13.7 bis) */
@@ -1646,6 +1722,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_CHANGER_MDP_BASE, 0, ph->ligne, ph->colonne);
         return;
     case P_ENREGISTRER:
+        if (ph->forme == 1) {   /* « Enregistrer le salarié de l'écran. » (3.25) */
+            const Noeud *e = trouver_ecran(c->programme->phrases, c->programme->nb, ph->texte);
+            if (!e || !e->texte3) { trop_grand(c, ph); return; }
+            enregistrer_objet(c, e, ph->ligne, ph->colonne);
+            return;
+        }
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);
         emettre(c, I_ENREGISTRER, 0, ph->ligne, ph->colonne);
@@ -1746,6 +1828,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 f->fichier = c->fichier ? grym_dupliquer(c->fichier) : NULL;
                 f->sorte = B_ACTION;
                 module_ajouter(c->module, f);
+                if (el->entier & 32768) {   /* « , qui enregistre et ferme l'écran » (3.25) : enregistrer, puis fermer */
+                    Bloc *prec = c->b;
+                    c->b = f;
+                    enregistrer_objet(c, ph, el->ligne, el->colonne);
+                    c->b = prec;
+                }
                 bloc_emettre(f, I_FERMER_ECRAN, 0, el->ligne, el->colonne);
                 bloc_emettre(f, I_RETOUR, 0, el->ligne, 0);
             } else if (el->type == N_CHERCHER && !el->graphique) {   /* un graphique ne se choisit pas (§ 22.11) */
@@ -1767,6 +1855,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
                     classe_facultatif_dernier_champ(cm);
                 }
             }
+        }
+        if (ph->texte3) {   /* « , pour un salarié, » (3.25) : « le salarié de l'écran », absent pour un nouveau salarié */
+            classe_ajouter_champ(cm, ph->texte3);
+            classe_typer_dernier_champ(cm, ph->texte3, 0);
+            classe_facultatif_dernier_champ(cm);
         }
         return;
     }
@@ -1798,6 +1891,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
         const long kd = description_ecran(c, e, ph);
         if (kd < 0) return;
         const int ev = ph->local, objet = ph->local + 1;
+        /* « pour s » (3.25) : lu avant l'ouverture, où « l'écran » désigne encore celui d'où l'on vient */
+        if (ph->forme == 4) {
+            expression(c, ph->enfants[0]);
+            emettre(c, I_ECRIRE_LOCAL, objet, ph->ligne, ph->colonne);
+        }
         verifier_regles(c, ph->ligne, ph->colonne);   /* « Ouvrir » valide ce qui précède */
         filtres_de_zones(c, e, ph);
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
@@ -1813,6 +1911,14 @@ static void phrase(Compilation *c, const Noeud *ph) {
             long nz = bloc_nom(c->b, el->texte);
             if (nz < 0) { trop_grand(c, ph); return; }
             emettre(c, I_ECRIRE_CHAMP, nz, ph->ligne, ph->colonne);
+        }
+        if (ph->forme == 4) {   /* l'objet de l'écran, puis ses champs dans les zones liées, avant « Quand on ouvre » (3.25) */
+            long ko;
+            if (!nom_ou_echec(c, e->texte3, ph->ligne, ph->colonne, &ko)) return;
+            emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
+            emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+            emettre(c, I_ECRIRE_CHAMP, ko, ph->ligne, ph->colonne);
+            charger_objet(c, e, ph->ligne, ph->colonne);
         }
         /* « Quand on ouvre » : une fois, avant la première attente, avec sa propre reprise */
         const Noeud *qo = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 4, "ouverture");
