@@ -5068,10 +5068,55 @@ static Noeud *branche(Analyse *a, int colonne, const char *mot, int *forme_bloc)
 }
 
 /* si = "Si" valeur branche [ "Sinon" ( "si" … | branche ) ] (§ 5.4) */
+/* « s'il » à la position k : l'élision « s' » suivie de « il » (3.27). */
+static int s_il(Analyse *a, size_t k) {
+    return k + 1 < a->n && a->j[k].type == J_ELISION && strcmp(a->j[k].valeur, "s") == 0 && est_mot(&a->j[k + 1], "il");
+}
+
+/* « il existe un barème conservé [dont …] », « il n'existe aucune facture conservée [dont …] » (3.27), lu à partir de
+ * « il » : un N_CHERCHER de forme 9, entier & 2 pour « aucun » ; la base s'arrête au premier objet trouvé. */
+static Noeud *existence(Analyse *a) {
+    const Jeton *il = cour(a);
+    size_t k = a->i + 1;
+    const int aucun = a->j[k].type == J_ELISION && strcmp(a->j[k].valeur, "n") == 0;
+    if (aucun) k++;
+    if (!est_mot(&a->j[k], "existe"))
+        return erreur(a, &a->j[k], grym_dupliquer("« il existe » attendu : « S'il existe un barème conservé dont l'année est 2027, … »."));
+    const Jeton *art = &a->j[k + 1];
+    const int masc = aucun ? est_mot(art, "aucun") : est_mot(art, "un"), fem = aucun ? est_mot(art, "aucune") : est_mot(art, "une");
+    if (!masc && !fem)
+        return erreur(a, art, grym_dupliquer(aucun ? "« aucun » ou « aucune » attendu : « S'il n'existe aucune facture conservée dont … »."
+                                                   : "« un » ou « une » attendu : « S'il existe un barème conservé dont … »."));
+    size_t apres;
+    Classe *e = entite_conservee(a, k + 2, 0, &apres);
+    if (!e) {
+        if (a->echec) return NULL;
+        return erreur(a, &a->j[k + 2], grym_dupliquer("Une entité conservée attendue : « S'il existe un barème conservé dont … »."));
+    }
+    if (a->corbeille)
+        return erreur(a, &a->j[apres - 1], grym_dupliquer("« il existe » cherche parmi les objets conservés, pas dans la corbeille."));
+    if (!art->synthetique && (e->genre == GENRE_FEMININ) != (fem != 0))
+        return erreur(a, art, grym_formater("Accord : « %s %s ».", aucun ? (e->genre == GENRE_FEMININ ? "aucune" : "aucun")
+                                                                        : (e->genre == GENRE_FEMININ ? "une" : "un"), e->nom));
+    a->i = apres;
+    Noeud *cond = NULL;
+    if (!clause_dont(a, e, &cond)) return NULL;
+    Noeud *n = noeud_creer(N_CHERCHER, il->ligne, il->colonne, il->debut);
+    n->texte = grym_dupliquer(e->nom);
+    n->forme = 9;
+    if (aucun) n->entier |= 2;
+    if (cond) noeud_ajouter(n, cond);
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 static Noeud *si(Analyse *a, int colonne, int sinon_si) {
     Jeton *t = cour(a);
     avancer(a);
-    Noeud *cond = valeur(a);
+    /* « S'il existe … », « Sinon, s'il n'existe aucun … » (3.27) : l'élision a pris la place de « si » */
+    if (t->type != J_ELISION && est_mot(cour(a), "il") && (est_mot(voir(a, 1), "existe") || voir(a, 1)->type == J_ELISION))
+        return erreur(a, t, grym_dupliquer("« si il » s'élide : « S'il existe un barème conservé dont … », « S'il n'existe aucun … »."));
+    Noeud *cond = t->type == J_ELISION ? existence(a) : valeur(a);
     if (!cond) return NULL;
     if (!peut_etre_condition(cond)) {
         noeud_liberer(cond);
@@ -5102,7 +5147,7 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
     }
     avancer(a);
     Noeud *autre;
-    if (est_mot(cour(a), "si")) {
+    if (est_mot(cour(a), "si") || s_il(a, a->i)) {
         Noeud *imbrique = si(a, colonne, 1);
         if (!imbrique) { noeud_liberer(n); return NULL; }
         autre = noeud_creer(N_BLOC, imbrique->ligne, imbrique->colonne, imbrique->debut);
@@ -12031,7 +12076,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = chemin->fin;
         return n;
     }
-    if (est_mot(t, "si")) return si(a, colonne, 0);
+    if (est_mot(t, "si") || s_il(a, a->i)) return si(a, colonne, 0);
     if (est_mot(t, "essayer")) return essayer(a, colonne);
     if (est_mot(t, "chaque")) return regle(a, colonne);   /* § 16.14 */
     if (est_mot(t, "faire") && est_mot(voir(a, 1), "comme") && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "clic")

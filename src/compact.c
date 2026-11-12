@@ -369,6 +369,23 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k += 2;
             continue;
         }
+        if ((est_cle(t, "existe") && k + 3 < f + 1 && (est_cle(&r->e[k + 1], "un") || est_cle(&r->e[k + 1], "une"))
+             && k + 2 < f && r->e[k + 2].type == J_CROCHETS)
+            || ((est_cle(t, "aucun") || est_cle(t, "aucune")) && k + 1 < f && r->e[k + 1].type == J_CROCHETS)) {
+            /* _existe _un barème _conservé → il existe un barème conservé ; _aucune facture … → il n'existe aucune
+             * facture … (3.27). « S' » devant : posé par « _si », « _sinon_si » */
+            const int aucun = !est_cle(t, "existe");
+            mot(r, "il", t);
+            if (aucun) emettre(r, J_ELISION, "n", t, 1);
+            mot(r, "existe", t);
+            mot(r, aucun ? t->valeur : r->e[k + 1].valeur, aucun ? t : &r->e[k + 1]);
+            if (!aucun) k++;
+            copier(r, &r->e[k + 1]);   /* l'entité */
+            k++;
+            if (k + 1 < f && est_cle(&r->e[k + 1], "conservé")) { mot(r, "conservé", &r->e[k + 1]); k++; }   /* synthétique */
+            else { echouer(r, t, grym_dupliquer("Forme attendue : « _existe _un barème _conservé », « _aucune facture _conservé ».")); return; }
+            continue;
+        }
         if (est_cle(t, "au_plus_grand") || est_cle(t, "au_plus_petit")) {   /* _au_plus_grand solde → au plus grand solde */
             mot(r, "au", t);
             mot(r, "plus", t);
@@ -2773,7 +2790,9 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (!strcmp(c, "sinon_si")) {
                 size_t alors = chercher(r, d + 1, f, "alors");
                 if (alors != f - 1) { echouer(r, t, grym_dupliquer("« _alors » attendu en fin de ligne.")); return; }
-                mot(r, "si", t);
+                if (est_cle(&r->e[d + 1], "existe") || est_cle(&r->e[d + 1], "aucun") || est_cle(&r->e[d + 1], "aucune"))
+                    emettre(r, J_ELISION, "s", t, 1);   /* _sinon_si _existe … → Sinon s'il existe … (3.27) */
+                else mot(r, "si", t);
                 expression(r, d + 1, alors);
             } else if (f != d + 1) {
                 echouer(r, &r->e[d + 1], grym_dupliquer("« _sinon » s'écrit seul sur sa ligne."));
@@ -3221,7 +3240,9 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 echouer(r, t, grym_dupliquer("« _alors » attendu en fin de ligne : « _si x > 0 _alors »."));
                 return;
             }
-            if (!strcmp(c, "si")) mot(r, "si", t);
+            const int existe = d + 1 < f && (est_cle(&r->e[d + 1], "existe") || est_cle(&r->e[d + 1], "aucun") || est_cle(&r->e[d + 1], "aucune"));
+            if (!strcmp(c, "si") && existe) emettre(r, J_ELISION, "s", t, 1);   /* _si _existe … → S'il existe … (3.27) */
+            else if (!strcmp(c, "si")) mot(r, "si", t);
             else { mot(r, "tant", t); mot(r, "que", t); }
             expression(r, d + 1, alors);
             emettre(r, J_DEUX_POINTS, marque, &r->e[f - 1], 1);

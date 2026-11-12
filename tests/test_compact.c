@@ -340,6 +340,9 @@ int main(void) {
                  "_quand _clique « Garder » _dans de_la_note\n    _enregistrer _écran.note\n_fin\n"
                  "_écran x\n    _liste note _conservé\n_fin\n_quand _choisit _une note _dans x\n    _ouvrir de_la_note _pour _écran.note_choisie\n_fin\n", NULL);
     ERR("_écran x _pour\n_fin\n", 1, 10, "Forme attendue : « _écran du_salarié _pour _un salarié ».");
+    /* l'existence (3.27) */
+    ALLER_RETOUR("_classe _une note _conservé\n    _un rang (nombre)\n_fin\n_si _existe _une note _conservé _dont rang > 2 _alors\n"
+                 "    _afficher 1\n_sinon_si _aucune note _conservé _alors\n    _afficher 2\n_fin\n", NULL);
     /* § 22.5 (2.13) : la couleur libre, le fond, la police, le logo SVG */
     ALLER_RETOUR("_écrans _couleur « #46433B » _fond « #E8E2D6 » _police "
                  "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » _logo « vendor/lucide/check.svg »\n", NULL);

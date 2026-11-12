@@ -1364,6 +1364,17 @@ static void expression(Impression *im, const Noeud *n) {
                 preposition(im, "de", objet);
             }
             free(p);
+        } else if (n->forme == 9) {   /* « il existe un barème conservé », « il n'existe aucune facture conservée » (3.27) */
+            const int aucun = (n->entier & 2) != 0;
+            if (im->compact) {
+                aj(im, aucun ? (fem ? "_aucune " : "_aucun ") : (fem ? "_existe _une " : "_existe _un "));
+                ecrire_nom(im, n->texte, 0);
+                aj(im, " _conservé");
+            } else {
+                aj(im, aucun ? (fem ? "il n'existe aucune " : "il n'existe aucun ") : (fem ? "il existe une " : "il existe un "));
+                aj(im, n->texte);
+                aj(im, fem ? " conservée" : " conservé");
+            }
         } else if (n->forme == 2) {   /* « le nombre de clients conservés », « le nombre d'œuvres de bach » */
             if (im->compact) {
                 aj(im, "_nombre_de ");
@@ -1757,7 +1768,8 @@ static void si(Impression *im, const Noeud *n, int niveau, int sinon_si) {
         marque_branche(im, n->enfants[1], n->forme & 1);
         branche(im, n->enfants[1], 0, niveau);
     } else {
-        aj(im, sinon_si ? "Sinon si " : "Si ");
+        const int existe = cond->type == N_CHERCHER && cond->forme == 9;   /* « S'il existe … » (3.27) */
+        aj(im, existe ? (sinon_si ? "Sinon s'" : "S'") : sinon_si ? "Sinon si " : "Si ");
         expression(im, cond);
         branche(im, n->enfants[1], !(n->forme & 1), niveau);
     }

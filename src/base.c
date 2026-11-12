@@ -3534,6 +3534,9 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         return 1;
     }
     char *entite = grym_formater("%.*s", (int)(s1 - d), d);
+    /* « g » : l'existence (3.27), « s'il existe un barème conservé dont … » : un nombre qui s'arrête au premier objet */
+    const int existence = cm == 'g';
+    if (existence) cm = '2';
     int mode = cm >= 'a' ? 10 + cm - 'a' : cm - '0';
     int corbeille = (mode >= 3 && mode <= 5) || (mode >= 7 && mode % 2 == 1);   /* « supprimés » (§ 16.12) */
     if (mode >= 3 && mode <= 5) mode -= 3;
@@ -3575,7 +3578,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         chaine_ajouter(&r.sql, "SELECT ");
         colonne(&r, (size_t)k_somme);
     } else {
-        chaine_ajouter(&r.sql, mode == 0 ? "SELECT g.id, g.classe" : "SELECT count(*)");
+        chaine_ajouter(&r.sql, mode == 0 ? "SELECT g.id, g.classe" : existence ? "SELECT 1" : "SELECT count(*)");
     }
     chaine_ajouter(&r.sql, " FROM ");
     for (size_t i = r.n; i > 0; i--) {
@@ -3623,6 +3626,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         chaine_ajouter(&r.sql, "g.id");
     }
     free(tri);
+    if (existence) chaine_ajouter(&r.sql, " LIMIT 1");
     char *texte = chaine_rendre(&r.sql);
     sqlite3_stmt *st = NULL;
     if (ok && preparer(b, texte, &st) != SQLITE_OK) {
@@ -3729,6 +3733,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     }
     long compte = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
     rendre(b, st);
+    if (existence) { *resultat = vi_booleen(compte != 0); return 1; }
     if (mode == 2) {
         char tampon[32];
         snprintf(tampon, sizeof tampon, "%ld", compte);

@@ -2900,6 +2900,35 @@ int main(void) {
          "Pour chaque facture conservée dont l'échéance > l'envoi, par numéro :\n" \
          "    Afficher le numéro de la facture.\n",
          "payé < montant : 1\npayé ≥ montant : 2\nrang = montant : 2\nrang > montant : 0\nenvoi > échéance : 1\nmontant > plafond : 3\nà travers et et : 1\nF2");
+#define EXISTE_E "Un barème, conservé, a :\n    une année (nombre entier), unique,\n    un taux (nombre).\nUne facture, conservée, a :\n    un montant (nombre),\n    un payé (nombre).\n"
+    /* 3.27 : « S'il existe un … conservé dont … », « S'il n'existe aucun … », « Sinon s'il … » */
+    PROG("Un barème, conservé, a :\n" \
+         "    une année (nombre entier), unique,\n" \
+         "    un taux (nombre).\n" \
+         "Une facture, conservée, a :\n" \
+         "    un montant (nombre),\n" \
+         "    un payé (nombre).\n" \
+         "Le b vaut un nouveau barème :\n" \
+         "    L'année vaut 2026.\n" \
+         "    Le taux vaut 5,3.\n" \
+         "Conserver le b.\n" \
+         "S'il existe un barème conservé dont l'année est 2026, afficher « 2026 existe ».\n" \
+         "S'il existe un barème conservé dont l'année est 2027, afficher « 2027 existe ».\n" \
+         "Sinon, afficher « pas de 2027 ».\n" \
+         "S'il n'existe aucun barème conservé dont l'année est 2027 :\n" \
+         "    Afficher « aucun 2027 ».\n" \
+         "S'il n'existe aucune facture conservée, afficher « aucune facture ».\n" \
+         "Si 1 > 2, afficher « non ».\n" \
+         "Sinon s'il existe un barème conservé, afficher « sinon s'il ».\n" \
+         "S'il existe une facture conservée dont le payé < le montant, afficher « impayée ».\n",
+         "2026 existe\npas de 2027\naucun 2027\naucune facture\nsinon s'il");
+    PROG(EXISTE_E "S'il existe une barème conservé, afficher 1.", "ERREUR 7:13 Accord : « un barème ».");
+    PROG(EXISTE_E "S'il n'existe aucun facture conservée, afficher 1.", "ERREUR 7:15 Accord : « aucune facture ».");
+    PROG(EXISTE_E "S'il existe un barème supprimé, afficher 1.", "ERREUR 7:23 « il existe » cherche parmi les objets conservés, pas dans la corbeille.");
+    PROG(EXISTE_E "Si il existe un barème conservé, afficher 1.", "ERREUR 7:1 « si il » s'élide : « S'il existe un barème conservé dont … », « S'il n'existe aucun … ».");
+    PROG(EXISTE_E "S'il existe le barème conservé, afficher 1.", "ERREUR 7:13 « un » ou « une » attendu : « S'il existe un barème conservé dont … ».");
+    PROG(EXISTE_E "S'il existe un client conservé, afficher 1.", "ERREUR 7:16 Une entité conservée attendue : « S'il existe un barème conservé dont … ».");
+    PROG(EXISTE_E "S'il y a un barème conservé, afficher 1.", "ERREUR 7:6 « il existe » attendu : « S'il existe un barème conservé dont l'année est 2027, … ».");
     /* Tables (§ 13.11) */
     PROG("Les tarifs valent la table où « 7601 » vaut 24 et « 7602 » vaut 12.\nLes compteurs valent une table vide.\n"
          "Dans les compteurs, « CQ » vaut 0.\nDans les compteurs, « CQ » devient la valeur de « CQ » dans les compteurs + 1.\n"
