@@ -206,8 +206,27 @@ static void appel(Compilation *c, const Noeud *n, int rend) {
 static void expression(Compilation *c, const Noeud *n);
 
 /* Condition « dont » en descripteur ; chaque valeur comparée est calculée ici et devient « ?n ». */
+/* La définition d'un adjectif (3.28), dans le programme ou un fichier utilisé ; d'abord pour l'entité, puis ses ancêtres
+ * n'étant pas connus ici, pour le nom seul de l'entité écrite dans le nœud. */
+static const Noeud *trouver_adjectif(Noeud *const *ph, size_t nb, const char *entite, const char *forme) {
+    for (size_t k = 0; k < nb; k++) {
+        if (ph[k]->type == P_UTILISER) {
+            const Noeud *r = trouver_adjectif(ph[k]->enfants, ph[k]->nb_enfants, entite, forme);
+            if (r) return r;
+        }
+        if (ph[k]->type == P_ADJECTIF && strcmp(ph[k]->texte, entite) == 0 && strcmp(ph[k]->texte2, forme) == 0) return ph[k];
+    }
+    return NULL;
+}
+
 static void condition_dont(Compilation *c, const Noeud *n, Chaine *d, int *parametres) {
     if (n->type == N_GROUPE) { condition_dont(c, n->enfants[0], d, parametres); return; }
+    if (n->type == N_ADJECTIF) {   /* « impayées » (3.28) : la condition de sa définition, à sa place */
+        const Noeud *def = trouver_adjectif(c->programme->phrases, c->programme->nb, n->texte2, n->texte);
+        if (!def) { trop_grand(c, n); return; }
+        condition_dont(c, def->enfants[0], d, parametres);
+        return;
+    }
     if (n->type == N_LOGIQUE) {
         chaine_ajouter(d, n->op == 'e' ? "(e" : "(o");
         condition_dont(c, n->enfants[0], d, parametres);
@@ -282,6 +301,24 @@ static void chercher(Compilation *c, const Noeud *n) {
 static void expression(Compilation *c, const Noeud *n) {
     if (c->echec) return;
     switch (n->type) {
+    case N_ADJECTIF: {   /* « f est impayée » (3.28) : la base cherche cet objet-là avec la définition, mode « g » */
+        const Noeud *def = trouver_adjectif(c->programme->phrases, c->programme->nb, n->texte2, n->texte);
+        if (!def || n->forme != 1) { trop_grand(c, n); return; }
+        Chaine d = {0};
+        chaine_ajouter(&d, def->texte);
+        chaine_ajouter(&d, "\x1fg\x1f\x1f" "0\x1f(e(S?1)");
+        int parametres = 1;
+        expression(c, n->enfants[0]);
+        condition_dont(c, def->enfants[0], &d, &parametres);
+        chaine_ajouter(&d, ")");
+        char *texte = chaine_rendre(&d);
+        long k = bloc_constante(c->b, C_RECHERCHE, texte);
+        free(texte);
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_CHERCHER, k, n->ligne, n->colonne);
+        if (n->negation) emettre(c, I_NON, 0, n->ligne, n->colonne);
+        return;
+    }
     case N_NOMBRE:
     case N_TEXTE: {
         long k = bloc_constante(c->b, n->type == N_NOMBRE ? C_NOMBRE : C_TEXTE, n->texte);
@@ -1719,6 +1756,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_CONNEXION:   /* 3.17 : la connexion se fait à la place de la phrase ; le module le note */
         c->module->connexion = 1;
         emettre(c, I_CONNEXION, 0, ph->ligne, ph->colonne);
+        return;
+    case P_ADJECTIF:   /* « Une facture est impayée si … » (3.28) : une définition, lue là où l'adjectif s'emploie */
         return;
     case P_BASE_CHIFFREE:   /* « La base est chiffrée. » (2.37) : une marque du module, lue avant d'ouvrir la base */
         c->module->base_chiffree = 1;

@@ -114,7 +114,17 @@ struct Portee {
     /* Écrans déclarés (§ 22) : leurs boutons et les entités de leurs listes, pour vérifier les événements. */
     struct EcranConnu *ecrans;
     size_t nb_ecrans;
+    /* Adjectifs définis (3.28) : « Une facture est impayée si … » ; la condition reste dans l'arbre (P_ADJECTIF). */
+    struct AdjectifConnu *adjectifs;
+    size_t nb_adjectifs;
 };
+
+typedef struct AdjectifConnu {
+    char *entite;
+    char *forme;     /* telle qu'écrite : « impayée », « en retard » */
+    char *pluriel;   /* « impayées » ; plusieurs mots : la même */
+    int ligne;
+} AdjectifConnu;
 
 typedef struct EcranConnu {
     char *nom;
@@ -175,6 +185,8 @@ Portee *portee_creer(void) {
     p->nb_xml = 0;
     p->ecrans = NULL;
     p->nb_ecrans = 0;
+    p->adjectifs = NULL;
+    p->nb_adjectifs = 0;
     return p;
 }
 
@@ -272,6 +284,14 @@ static void portee_vider(Portee *p) {
     free(p->ecrans);
     p->ecrans = NULL;
     p->nb_ecrans = 0;
+    for (size_t i = 0; i < p->nb_adjectifs; i++) {
+        free(p->adjectifs[i].entite);
+        free(p->adjectifs[i].forme);
+        free(p->adjectifs[i].pluriel);
+    }
+    free(p->adjectifs);
+    p->adjectifs = NULL;
+    p->nb_adjectifs = 0;
 }
 
 void portee_detruire(Portee *p) {
@@ -322,6 +342,11 @@ static void portee_copier(Portee *dst, const Portee *src) {
     dst->nb_xml = src->nb_xml;
     dst->xml_noms = src->nb_xml ? copier_noms(src->xml_noms, src->nb_xml) : NULL;
     dst->xml_racines = src->nb_xml ? copier_noms(src->xml_racines, src->nb_xml) : NULL;
+    dst->nb_adjectifs = src->nb_adjectifs;   /* 3.28 */
+    dst->adjectifs = src->nb_adjectifs ? grym_allouer(src->nb_adjectifs * sizeof *dst->adjectifs) : NULL;
+    for (size_t i = 0; i < src->nb_adjectifs; i++)
+        dst->adjectifs[i] = (AdjectifConnu){ grym_dupliquer(src->adjectifs[i].entite), grym_dupliquer(src->adjectifs[i].forme),
+                                             grym_dupliquer(src->adjectifs[i].pluriel), src->adjectifs[i].ligne };
     dst->nb_ecrans = src->nb_ecrans;
     dst->ecrans = src->nb_ecrans ? grym_allouer(src->nb_ecrans * sizeof *dst->ecrans) : NULL;
     for (size_t i = 0; i < src->nb_ecrans; i++) {
@@ -917,7 +942,7 @@ static const char *type_statique(const Noeud *n) {
         return "nombre entier";
     }
     case N_TEXTE: return "texte";
-    case N_BOOLEEN: case N_COMPARAISON: case N_LOGIQUE: return "vrai ou faux";
+    case N_BOOLEEN: case N_COMPARAISON: case N_LOGIQUE: case N_ADJECTIF: return "vrai ou faux";
     case N_DATE: case N_AUJOURDHUI: return "date";
     case N_HEURE: case N_MAINTENANT: return "heure";
     case N_FICHIER: case N_DOCUMENT: return "fichier";
@@ -1769,6 +1794,8 @@ static int verifier_permise(Analyse *a, const char *permises, const Noeud *v);
 static char *annotation(Analyse *a, size_t o, size_t f, const char *nom);
 static char *types_des_parametres(const Noeud *params);
 
+static int clause_dont_seule(Analyse *a, const Classe *e, Noeud **cond);
+
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
     for (size_t k = 0; k < n->nb_enfants; k++) if (contient_champ_dont(n->enfants[k])) return 1;
@@ -1950,8 +1977,94 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
     return 0;
 }
 
-/* « dont … » facultatif ; *cond reçoit la condition, ou NULL. Renvoie 0 en cas d'erreur. */
+/* Un adjectif défini (3.28) de l'entité e (ou de ses ancêtres ; NULL : de n'importe quelle entité) à la position k :
+ * ses mots, ou un nom entre crochets venu de la forme compacte. Rend l'adjectif, *apres l'index qui le suit, *pluriel 1
+ * si la forme lue est le pluriel ; NULL s'il n'y en a pas. Le plus long l'emporte. */
+static const AdjectifConnu *adjectif_en(Analyse *a, size_t k, const Classe *e, size_t *apres, int *pluriel) {
+    const AdjectifConnu *trouve = NULL;
+    size_t meilleur = 0;
+    for (size_t i = 0; i < a->portee->nb_adjectifs; i++) {
+        const AdjectifConnu *ad = &a->portee->adjectifs[i];
+        if (e) {
+            int lignee = 0;
+            for (const Classe *c = e; c && !lignee; c = c->parent ? classe_de(a->portee, c->parent) : NULL)
+                lignee = strcmp(c->nom, ad->entite) == 0;
+            if (!lignee) continue;
+        }
+        for (int pl = 0; pl < 2; pl++) {
+            const char *forme = pl ? ad->pluriel : ad->forme;
+            size_t q = k, lu = 0;
+            if (k < a->n && a->j[k].type == J_CROCHETS) {
+                if (strcmp(a->j[k].valeur, forme) == 0) { q = k + 1; lu = strlen(forme); }
+            } else {
+                const char *f = forme;
+                while (*f && q < a->n && a->j[q].type == J_MOT) {
+                    const size_t n = strlen(a->j[q].valeur);
+                    if (strncmp(f, a->j[q].valeur, n) != 0 || (f[n] != '\0' && f[n] != ' ')) break;
+                    f += n;
+                    if (*f == ' ') f++;
+                    q++;
+                }
+                if (!*f && q > k) lu = strlen(forme);
+            }
+            if (lu > meilleur || (lu && lu == meilleur && !pl)) {
+                meilleur = lu;
+                trouve = ad;
+                *apres = q;
+                *pluriel = pl && strcmp(ad->pluriel, ad->forme) != 0;
+            }
+        }
+    }
+    return trouve;
+}
+
+/* « dont … » facultatif ; *cond reçoit la condition, ou NULL. Renvoie 0 en cas d'erreur. Un adjectif défini peut le
+ * précéder (3.28) : « les factures conservées impayées dont … » ; il se combine alors à la condition. */
 static int clause_dont(Analyse *a, const Classe *e, Noeud **cond) {
+    *cond = NULL;
+    size_t apres_adj;
+    int pluriel_adj = 0;
+    const AdjectifConnu *ad = adjectif_en(a, a->i, e, &apres_adj, &pluriel_adj);
+    Noeud *adj = NULL;
+    if (ad) {
+        /* l'accord suit « conservé » quand il précède : « conservées impayées » */
+        const Jeton *avant = a->i > 0 ? &a->j[a->i - 1] : NULL;
+        if (avant && avant->type == J_MOT && est_conserve_mot(avant) && !a->j[a->i].synthetique && !avant->synthetique
+            && strcmp(ad->pluriel, ad->forme) != 0) {
+            const size_t l = strlen(avant->valeur);
+            const int pluriel_attendu = l && avant->valeur[l - 1] == 's';
+            if (pluriel_attendu != pluriel_adj) {
+                erreur(a, cour(a), grym_formater("Accord : « %s %s ».", avant->valeur, pluriel_attendu ? ad->pluriel : ad->forme));
+                return 0;
+            }
+        }
+        adj = noeud_creer(N_ADJECTIF, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+        adj->texte = grym_dupliquer(ad->forme);
+        adj->texte2 = grym_dupliquer(ad->entite);
+        adj->entier = pluriel_adj;
+        adj->fin = fin_jeton(&a->j[apres_adj - 1]);
+        a->i = apres_adj;
+    }
+    if (!est_mot(cour(a), "dont")) { *cond = adj; return 1; }
+    Noeud *suite = NULL;
+    {
+        Noeud *x;
+        const int ok = clause_dont_seule(a, e, &x);
+        if (!ok) { noeud_liberer(adj); return 0; }
+        suite = x;
+    }
+    if (!adj) { *cond = suite; return 1; }
+    Noeud *et = noeud_creer(N_LOGIQUE, adj->ligne, adj->colonne, adj->debut);
+    et->op = 'e';
+    et->forme = 9;   /* « impayées dont … » : l'adjectif, puis la condition ; réimprimé ainsi */
+    noeud_ajouter(et, adj);
+    noeud_ajouter(et, suite);
+    et->fin = suite->fin;
+    *cond = et;
+    return 1;
+}
+
+static int clause_dont_seule(Analyse *a, const Classe *e, Noeud **cond) {
     *cond = NULL;
     if (!est_mot(cour(a), "dont")) return 1;
     avancer(a);
@@ -4244,6 +4357,45 @@ static int complement(Analyse *a, char quoi) {
 
 /* Ce qui suit « est » ou « n'est pas » (§ 5.1). */
 static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test) {
+    if (!a->dont && a->portee->nb_adjectifs) {   /* « Si f est impayée » (3.28) : la base répond, avec la définition */
+        const char *ty = type_statique(sujet);
+        const Classe *ce = ty && !type_de_base(ty) ? classe_de(a->portee, ty) : NULL;
+        size_t apres;
+        int pl = 0;
+        const AdjectifConnu *ad = adjectif_en(a, a->i, ce, &apres, &pl);
+        if (!ad && ty && type_de_base(ty) && adjectif_en(a, a->i, NULL, &apres, &pl)) {   /* « x est impayée », x un nombre */
+            const AdjectifConnu *x = adjectif_en(a, a->i, NULL, &apres, &pl);
+            const Classe *cx = classe_de(a->portee, x->entite);
+            noeud_liberer(sujet);
+            return erreur(a, cour(a), grym_formater("« %s » se dit d'un%s %s, pas d'une valeur (%s).", x->forme,
+                                                    cx && cx->genre == GENRE_FEMININ ? "e" : "", x->entite, ty));
+        }
+        if (ad && !ce) {   /* un sujet sans type connu : l'adjectif d'une seule entité suffit */
+            size_t a2;
+            int p2;
+            for (size_t i = 0; i < a->portee->nb_adjectifs; i++) {
+                const AdjectifConnu *x = &a->portee->adjectifs[i];
+                if (x != ad && strcmp(x->forme, ad->forme) == 0 && adjectif_en(a, a->i, classe_de(a->portee, x->entite), &a2, &p2)) {
+                    noeud_liberer(sujet);
+                    return erreur(a, cour(a), grym_formater("« %s » se dit de plusieurs entités : de quelle sorte d'objet s'agit-il ?", ad->forme));
+                }
+            }
+        }
+        if (ad) {
+            if (pl) { noeud_liberer(sujet); return erreur(a, cour(a), grym_formater("Accord : « est %s ».", ad->forme)); }
+            Noeud *n = noeud_creer(N_ADJECTIF, sujet->ligne, sujet->colonne, sujet->debut);
+            n->texte = grym_dupliquer(ad->forme);
+            n->texte2 = grym_dupliquer(ad->entite);
+            n->forme = 1;
+            n->negation = negation;
+            n->op_ligne = test->ligne;
+            n->op_colonne = test->colonne;
+            noeud_ajouter(n, sujet);
+            n->fin = fin_jeton(&a->j[apres - 1]);
+            a->i = apres;
+            return n;
+        }
+    }
     Symbole *s = sujet->type == N_NOM ? visible(a, sujet->texte) : NULL;
     attendre_relations(a, s ? s->genre : GENRE_LIBRE);
     Jeton *t = cour(a);
@@ -5107,6 +5259,67 @@ static Noeud *existence(Analyse *a) {
     if (aucun) n->entier |= 2;
     if (cond) noeud_ajouter(n, cond);
     n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
+/* « Une facture est impayée si le payé < le montant. » (3.28) : k, l'index de « est » ; q, celui de « si ». La condition
+ * s'écrit comme après « dont » : des champs de l'objet, face à des valeurs ou à d'autres champs. */
+static Noeud *definition_adjectif(Analyse *a, size_t k, size_t q) {
+    const Jeton *t = cour(a);
+    char *nom = a->j[a->i + 1].type == J_CROCHETS ? grym_dupliquer(a->j[a->i + 1].valeur) : cle(a, a->i + 1, k);
+    const Classe *e = nom ? classe_de(a->portee, nom) : NULL;
+    if (!e || e->aptitude || !e->conserve) {
+        Noeud *r = erreur(a, &a->j[a->i + 1], grym_formater("« %s » n'est pas une entité conservée : un adjectif se définit pour une "
+                                                            "entité, « Une facture est impayée si … » (3.28).", nom ? nom : ""));
+        free(nom);
+        return r;
+    }
+    free(nom);
+    if ((e->genre == GENRE_FEMININ) != est_mot(t, "une") && !t->synthetique)
+        return erreur(a, t, grym_formater("Accord : « %s %s ».", e->genre == GENRE_FEMININ ? "Une" : "Un", e->nom));
+    char *forme = a->j[k + 1].type == J_CROCHETS && q == k + 2 ? grym_dupliquer(a->j[k + 1].valeur) : NULL;
+    if (!forme) {
+        for (size_t x = k + 1; x < q; x++)
+            if (a->j[x].type != J_MOT) return erreur(a, &a->j[x], grym_dupliquer("Un adjectif s'écrit en mots : « Une facture est en retard si … »."));
+        Chaine c = {0};
+        for (size_t x = k + 1; x < q; x++) { if (x > k + 1) chaine_ajouter(&c, " "); chaine_ajouter(&c, a->j[x].valeur); }
+        forme = chaine_rendre(&c);
+    }
+    for (size_t r = 0; r < NB_RELATIONS; r++)
+        if (strcmp(forme, RELATIONS[r].m) == 0 || strcmp(forme, RELATIONS[r].f) == 0 || strcmp(forme, "parmi") == 0) {
+            Noeud *x = erreur(a, &a->j[k + 1], grym_formater("« %s » est un mot du langage (« est %s ») : choisis un autre adjectif.", forme, forme));
+            free(forme);
+            return x;
+        }
+    for (size_t i = 0; i < a->portee->nb_adjectifs; i++)
+        if (strcmp(a->portee->adjectifs[i].entite, e->nom) == 0 && strcmp(a->portee->adjectifs[i].forme, forme) == 0) {
+            Noeud *x = erreur(a, &a->j[k + 1], grym_formater("« %s » est déjà défini pour %s %s (ligne %d).", forme,
+                                                            e->genre == GENRE_FEMININ ? "une" : "un", e->nom, a->portee->adjectifs[i].ligne));
+            free(forme);
+            return x;
+        }
+    a->i = q + 1;
+    const char *avant = a->dont;
+    a->dont = e->nom;
+    Noeud *c = valeur(a);
+    a->dont = avant;
+    if (!c || !verifier_dont(a, e, c)) { noeud_liberer(c); free(forme); return NULL; }
+    if (!fin_phrase(a, 0)) { noeud_liberer(c); free(forme); return NULL; }
+    /* l'accord se déduit : un mot prend un s au pluriel (sauf s, x, z) ; plusieurs mots restent invariables */
+    const size_t l = strlen(forme);
+    const int invariable = strchr(forme, ' ') || forme[l - 1] == 's' || forme[l - 1] == 'x' || forme[l - 1] == 'z';
+    AdjectifConnu ad = { grym_dupliquer(e->nom), grym_dupliquer(forme), invariable ? grym_dupliquer(forme) : grym_formater("%ss", forme), t->ligne };
+    AdjectifConnu *t2 = grym_allouer((a->portee->nb_adjectifs + 1) * sizeof *t2);
+    if (a->portee->nb_adjectifs) memcpy(t2, a->portee->adjectifs, a->portee->nb_adjectifs * sizeof *t2);
+    t2[a->portee->nb_adjectifs++] = ad;
+    free(a->portee->adjectifs);
+    a->portee->adjectifs = t2;
+    Noeud *n = noeud_creer(P_ADJECTIF, t->ligne, t->colonne, t->debut);
+    n->texte = grym_dupliquer(e->nom);
+    n->texte2 = forme;
+    n->forme = e->genre == GENRE_FEMININ ? 2 : 1;
+    noeud_ajouter(n, c);
+    n->fin = c->fin;
     return n;
 }
 
@@ -9049,6 +9262,8 @@ static void lier_zones(Analyse *a, Noeud *ecran) {
     }
 }
 
+static Noeud *definition_adjectif(Analyse *a, size_t k, size_t q);
+
 static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     if (!premier_niveau(a, t)) return NULL;
     size_t d = a->i + 2, f;
@@ -12191,6 +12406,13 @@ static Noeud *phrase(Analyse *a, int colonne) {
         size_t k = a->i + 1;
         while (k < a->n && (mot_de_nom(a, k) || a->j[k].type == J_CROCHETS) && !est_mot(&a->j[k], "est")) k++;
         if (k > a->i + 1 && k + 1 < a->n && est_mot(&a->j[k], "est") && a->j[k + 1].type == J_TEXTE) return definition_type(a, k);
+        /* « Une facture est impayée si … » : un adjectif défini (3.28) ; « est un » reste l'héritage */
+        if (k > a->i + 1 && k + 2 < a->n && est_mot(&a->j[k], "est") && !est_mot(&a->j[k + 1], "un") && !est_mot(&a->j[k + 1], "une")
+            && (a->j[k + 1].type == J_MOT || a->j[k + 1].type == J_CROCHETS)) {
+            size_t q = k + 1;
+            while (q < a->n && a->j[q].ligne == a->j[k].ligne && !est_mot(&a->j[q], "si") && a->j[q].type != J_POINT) q++;
+            if (q < a->n && est_mot(&a->j[q], "si")) return definition_adjectif(a, k, q);
+        }
         /* « Une chose payable doit savoir : … » : un contrat d'aptitude (§ 13.7 bis) */
         size_t kd = a->i + 2;
         if (kd < a->n && a->j[kd].type == J_CROCHETS) kd++;   /* « [payable] », de la forme compacte */

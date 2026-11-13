@@ -240,11 +240,16 @@ typedef enum {
     N_TABLE_ECRIRE,  /* « Dans les t, k vaut v. » (forme 0), « devient » (1), « Les t perdent k. » (2) : enfants : la table
                         (N_NOM), la clé, [la valeur] */
     N_TABLE_LISTE,   /* « les clés des t » (forme 0), « les valeurs des t » (1) : enfant : la table (N_NOM) ; une liste */
-    N_EXTRAIRE       /* découper un texte (§ 4.6) ; forme, et enfants : 0 « le 3e caractère de t » (t, k), 1 « le caractère de rang
+    N_EXTRAIRE,      /* découper un texte (§ 4.6) ; forme, et enfants : 0 « le 3e caractère de t » (t, k), 1 « le caractère de rang
                         k de t » (t, k), 2 « le premier caractère de t » (t), 3 « le dernier » (t), 4 « les n premiers caractères
                         de t » (t, n), 5 « les n derniers » (t, n), 6 « les caractères a à b de t » (t, a, b), 7 « t après x »
                         (t, x), 8 « t avant x » (t, x), 9 « la position de x dans t » (x, t), 10 « les morceaux de t séparés
                         par s » (t, s), une liste */
+    N_ADJECTIF,      /* un adjectif défini (3.28) : texte : sa forme déclarée ; texte2 : l'entité ; forme 0 : dans une
+                        recherche (« les factures conservées impayées »), sans enfant, entier 1 si écrit au pluriel ;
+                        forme 1 : « f est impayée », enfants[0] : l'objet, negation : « n'est pas » */
+    P_ADJECTIF       /* « Une facture est impayée si le payé < le montant. » (3.28) : texte : l'entité ; texte2 : l'adjectif ;
+                        forme 1 masculin, 2 féminin (l'article écrit) ; enfants[0] : la condition, comme dans « dont » */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

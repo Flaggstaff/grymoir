@@ -296,6 +296,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "est", t);
             continue;
         }
+        if (est_cle(t, "n_est_pas")) {   /* « g _n_est_pas impayée » → « g n'est pas impayée » (3.28) */
+            emettre(r, J_ELISION, "n", t, 1);
+            mot(r, "est", t);
+            mot(r, "pas", t);
+            continue;
+        }
         if (est_cle(t, "écran") && !(k + 1 < f && r->e[k + 1].type == J_POINT)) {   /* _écran seul → l'écran (2.51) */
             emettre(r, J_ELISION, "l", t, 1);
             mot(r, "écran", t);
@@ -3228,6 +3234,21 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 mot(r, "ligne", &r->e[sans]);
             }
             point(r, f);
+        } else if (!strcmp(c, "adjectif")) {
+            /* _adjectif _une facture impayée _si payé < montant → Une facture est impayée si le payé < le montant. (3.28) */
+            const size_t si = chercher(r, d + 1, f, "si");
+            if (!(d + 4 <= si && si + 1 < f && (est_cle(&r->e[d + 1], "un") || est_cle(&r->e[d + 1], "une"))
+                  && r->e[d + 2].type == J_CROCHETS && r->e[d + 3].type == J_CROCHETS && si == d + 4)) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _adjectif _une facture impayée _si payé < montant »."));
+                return;
+            }
+            mot(r, r->e[d + 1].valeur, &r->e[d + 1]);
+            copier(r, &r->e[d + 2]);
+            mot(r, "est", &r->e[d + 3]);
+            copier(r, &r->e[d + 3]);
+            mot(r, "si", &r->e[si]);
+            expression(r, si + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "si") || !strcmp(c, "tant_que")) {
             size_t alors = !strcmp(c, "si") ? chercher(r, d + 1, f, "alors") : f;
             /* « _alors _court », « _alors _bloc » (2.35) : la forme littéraire de la branche */
@@ -3309,13 +3330,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             copier(r, &r->e[d + 1]);
             mot(r, est_cle(&r->e[d + 2], "supprimé") ? "supprimé" : "conservé", &r->e[d + 2]);
             size_t par = chercher(r, d + 3, f, "par");
-            if (d + 3 < par) {
-                if (!est_cle(&r->e[d + 3], "dont")) {
-                    echouer(r, &r->e[d + 3], grym_dupliquer("« _dont » ou « _par » attendu après « _conservé »."));
+            size_t apres = d + 3;
+            if (apres < par && r->e[apres].type == J_CROCHETS) copier(r, &r->e[apres++]);   /* un adjectif défini (3.28) */
+            if (apres < par) {
+                if (!est_cle(&r->e[apres], "dont")) {
+                    echouer(r, &r->e[apres], grym_dupliquer("« _dont » ou « _par » attendu après « _conservé »."));
                     return;
                 }
-                mot(r, "dont", &r->e[d + 3]);
-                expression(r, d + 4, par);
+                mot(r, "dont", &r->e[apres]);
+                expression(r, apres + 1, par);
             }
             if (par < f) {
                 size_t fin_tri = f;

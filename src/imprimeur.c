@@ -183,6 +183,14 @@ static void aj_sigles(Impression *im, const char *t) {
     free(x);
 }
 
+/* Le pluriel d'un adjectif défini (3.28), comme l'analyse le déduit : un s, sauf après s, x, z ; plusieurs mots : la
+ * même forme. Rendu à libérer. */
+static char *pluriel_adjectif(const char *f) {
+    const size_t l = strlen(f);
+    if (!l || strchr(f, ' ') || f[l - 1] == 's' || f[l - 1] == 'x' || f[l - 1] == 'z') return grym_dupliquer(f);
+    return grym_formater("%ss", f);
+}
+
 static void ecrire_nom(Impression *im, const char *nom, int crochets) {
     char *s = texte_avec_sigles(nom);
     ecrire_nom_tel(im, s, crochets);
@@ -287,7 +295,7 @@ static int calcul_nu(const Noeud *n) {
 static int argument_simple(const Noeud *n) {
     switch (n->type) {
     case N_OPERATION: return n->op == '^';
-    case N_COMPARAISON: case N_LOGIQUE: return 0;
+    case N_COMPARAISON: case N_LOGIQUE: case N_ADJECTIF: return 0;
     case N_COLLAGE: return 0;   /* « de ("Rappel " suivi du numéro) » : sans parenthèses, « suivi de » s'appliquerait à l'appel (2.35) */
     default: return 1;
     }
@@ -773,6 +781,18 @@ static void expression(Impression *im, const Noeud *n) {
         expression(im, n->enfants[0]);
         aj(im, im->compact ? (n->op == 'e' ? " _et " : " _ou ") : (n->op == 'e' ? " et " : " ou "));
         expression(im, n->enfants[1]);
+        return;
+    case N_ADJECTIF:   /* « g est impayée », « g n'est pas en retard » (3.28) ; dans une recherche : sa forme seule */
+        if (n->forme == 1) {
+            expression(im, n->enfants[0]);
+            aj(im, im->compact ? (n->negation ? " _n_est_pas " : " _est ") : (n->negation ? " n'est pas " : " est "));
+        }
+        {
+            char *x = n->entier ? pluriel_adjectif(n->texte) : grym_dupliquer(n->texte);
+            if (im->compact) ecrire_nom(im, x, 0);
+            else aj(im, x);
+            free(x);
+        }
         return;
     case N_COMPARAISON:
         comparaison(im, n, n->enfants[0]->type == N_SUJET);
@@ -1416,8 +1436,15 @@ static void expression(Impression *im, const Noeud *n) {
             }
         }
         if (n->nb_enfants > (size_t)inverse && n->enfants[0]->type != N_SI_ECRAN) {   /* la grille (2.74) n'en est pas une */
-            aj(im, im->compact ? " _dont " : " dont ");
-            expression(im, n->enfants[0]);
+            const Noeud *cd = n->enfants[0];
+            /* un adjectif défini (3.28) se place avant « dont » : « conservées impayées dont … » */
+            const Noeud *adj = cd->type == N_ADJECTIF ? cd : cd->type == N_LOGIQUE && cd->forme == 9 ? cd->enfants[0] : NULL;
+            if (adj) { aj(im, " "); expression(im, adj); }
+            const Noeud *reste = cd->type == N_ADJECTIF ? NULL : adj ? cd->enfants[1] : cd;
+            if (reste) {
+                aj(im, im->compact ? " _dont " : " dont ");
+                expression(im, reste);
+            }
         }
         if (n->texte2 && n->forme < 3) {   /* formes 3 à 7 : texte2 est le champ de l'agrégat, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
@@ -3380,6 +3407,25 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             expression(im, n->enfants[1]);
         }
         aj(im, c ? "\n" : ".\n");
+        return;
+    case P_ADJECTIF:   /* « Une facture est impayée si … » ; « _adjectif _une facture impayée _si … » (3.28) */
+        if (c) {
+            aj(im, n->forme == 2 ? "_adjectif _une " : "_adjectif _un ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, " ");
+            ecrire_nom(im, n->texte2, 0);
+            aj(im, " _si ");
+            expression(im, n->enfants[0]);
+            aj(im, "\n");
+        } else {
+            aj(im, n->forme == 2 ? "Une " : "Un ");
+            aj(im, n->texte);
+            aj(im, " est ");
+            aj(im, n->texte2);
+            aj(im, " si ");
+            expression(im, n->enfants[0]);
+            aj(im, ".\n");
+        }
         return;
     case P_BASE_CHIFFREE:   /* 2.37 */
         aj(im, c ? "_base_chiffrée\n" : "La base est chiffrée.\n");

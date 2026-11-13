@@ -870,6 +870,22 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case P_BASE_CHIFFREE:
         chaine_ajouter(c, "(base chiffrée)");
         return;
+    case P_ADJECTIF:   /* 3.28 */
+        chaine_ajouter(c, "(adjectif [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] « ");
+        chaine_ajouter(c, n->texte2);
+        chaine_ajouter(c, " » ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_ADJECTIF:
+        chaine_ajouter(c, n->negation ? "(n'est-pas « " : "(est « ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, " »");
+        if (n->forme == 1) { chaine_ajouter(c, " "); decrire(n->enfants[0], c); }
+        chaine_ajouter(c, ")");
+        return;
     case P_CONNEXION:
         chaine_ajouter(c, "(connexion)");
         return;

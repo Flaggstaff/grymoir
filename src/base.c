@@ -3160,6 +3160,41 @@ static int lire_condition(Recherche *r) {
     } else if (op == 'n') {
         chaine_ajouter(&r->sql, "NOT ");
         if (!lire_condition(r)) return 0;
+    } else if (op == 'S') {   /* « f est impayée » (3.28) : l'objet ?k lui-même, conservé */
+        char *fin;
+        size_t i = (size_t)strtoul(r->p + 1, &fin, 10);
+        r->p = fin;
+        if (i < 1 || i > r->nb_params || r->nb_liens == 64) { r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+        const Valeur *v = &r->params[i - 1];
+        if (v->type == V_ABSENT) {
+            r->erreur = v->texte ? grym_echec("absence", "Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
+                                 : grym_echec("absence", "La valeur est absente.");
+            return 0;
+        }
+        if (v->type != V_OBJET) {
+            r->erreur = grym_formater("L'adjectif se dit d'un%s %s, pas d'une valeur qui n'est pas un objet.", r->e->feminin ? "e" : "", r->e->nom);
+            return 0;
+        }
+        int lignee = 0;
+        for (const ClasseVM *c = v->objet->classe; c && !lignee; c = c->parent) lignee = c == r->e || strcmp(c->nom, r->e->nom) == 0;
+        if (!lignee) {
+            r->erreur = grym_formater("L'adjectif se dit d'un%s %s : cet objet est un%s %s.", r->e->feminin ? "e" : "", r->e->nom,
+                                      v->objet->classe->feminin ? "e" : "", v->objet->classe->nom);
+            return 0;
+        }
+        if (v->objet->id == 0) {
+            r->erreur = grym_formater("Ce%s %s n'est pas conservé%s : un adjectif défini se vérifie dans la base. Conserve-l%s d'abord.",
+                                      v->objet->classe->feminin ? "tte" : "", v->objet->classe->nom, v->objet->classe->feminin ? "e" : "",
+                                      v->objet->classe->feminin ? "a" : "e");
+            return 0;
+        }
+        char t[40];
+        snprintf(t, sizeof t, "(g.id = ?%lu)", (unsigned long)(r->nb_liens + 1));
+        chaine_ajouter(&r->sql, t);
+        r->liens[r->nb_liens] = i - 1;
+        r->types[r->nb_liens] = v->objet->classe->nom;
+        r->champs[r->nb_liens] = "objet";
+        r->nb_liens++;
     } else if (op == 'I' || op == 'M') {
         /* relation inverse (grammaire, § 16.10) : le lien de l'entité qui peut désigner l'objet ?k, ou le champ
          * multiple qui le relie à l'entité, dans un sens ou dans l'autre (§ 16.13) ;

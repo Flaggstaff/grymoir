@@ -340,6 +340,11 @@ int main(void) {
                  "_quand _clique « Garder » _dans de_la_note\n    _enregistrer _écran.note\n_fin\n"
                  "_écran x\n    _liste note _conservé\n_fin\n_quand _choisit _une note _dans x\n    _ouvrir de_la_note _pour _écran.note_choisie\n_fin\n", NULL);
     ERR("_écran x _pour\n_fin\n", 1, 10, "Forme attendue : « _écran du_salarié _pour _un salarié ».");
+    /* les adjectifs définis (3.28) */
+    ALLER_RETOUR("_classe _une note _conservé\n    _un rang (nombre)\n    _une remarque (texte) _facultatif\n_fin\n"
+                 "_adjectif _une note haute _si rang > 2\n_adjectif _une note sans_remarque _si remarque _absent\n"
+                 "_afficher _nombre_de note _conservé hautes\n_pour_chaque note _conservé sans_remarque _dont rang < 9 _par rang\n"
+                 "    _si note _est haute _alors\n        _afficher 1\n    _sinon_si note _n_est_pas sans_remarque _alors\n        _afficher 2\n    _fin\n_fin\n", NULL);
     /* l'existence (3.27) */
     ALLER_RETOUR("_classe _une note _conservé\n    _un rang (nombre)\n_fin\n_si _existe _une note _conservé _dont rang > 2 _alors\n"
                  "    _afficher 1\n_sinon_si _aucune note _conservé _alors\n    _afficher 2\n_fin\n", NULL);

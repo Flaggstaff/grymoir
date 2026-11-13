@@ -2929,6 +2929,114 @@ int main(void) {
     PROG(EXISTE_E "S'il existe le barème conservé, afficher 1.", "ERREUR 7:13 « un » ou « une » attendu : « S'il existe un barème conservé dont … ».");
     PROG(EXISTE_E "S'il existe un client conservé, afficher 1.", "ERREUR 7:16 Une entité conservée attendue : « S'il existe un barème conservé dont … ».");
     PROG(EXISTE_E "S'il y a un barème conservé, afficher 1.", "ERREUR 7:6 « il existe » attendu : « S'il existe un barème conservé dont l'année est 2027, … ».");
+    /* 3.28 : les adjectifs définis. L'objet (« Si la facture est impayée ») et la recherche (« les factures conservées
+     * impayées ») passent par la même définition, dans la base : leurs comptes doivent être égaux, absents compris. */
+    PROG("Une personne, conservée, a :\n" \
+         "    un nom (texte), unique.\n" \
+         "Une facture, conservée, a :\n" \
+         "    un numéro (texte), unique,\n" \
+         "    un montant (nombre),\n" \
+         "    un payé (nombre), facultatif,\n" \
+         "    une échéance (date),\n" \
+         "    une catégorie (texte), facultative,\n" \
+         "    un client (personne), facultatif.\n" \
+         "Une facture est impayée si le payé < le montant ou le payé est absent.\n" \
+         "Une facture est échue si l'échéance < 15.03.2027.\n" \
+         "Une facture est en litige si la catégorie est « litige » et le nom du client commence par « A ».\n" \
+         "Une facture est soldée si le payé ≥ le montant.\n" \
+         "Le a vaut une nouvelle personne :\n" \
+         "    Le nom vaut « Ana ».\n" \
+         "Conserver le a.\n" \
+         "Le b vaut une nouvelle personne :\n" \
+         "    Le nom vaut « Bob ».\n" \
+         "Conserver le b.\n" \
+         "Le k vaut 0.\n" \
+         "Répéter 12 fois :\n" \
+         "    Le k devient k + 1.\n" \
+         "    La f vaut une nouvelle facture :\n" \
+         "        Le numéro vaut « F » suivi de k.\n" \
+         "        Le montant vaut k × 10.\n" \
+         "        L'échéance vaut 01.03.2027.\n" \
+         "    Si le reste de k par 3 = 0, le payé de la f devient k × 10.\n" \
+         "    Si le reste de k par 3 = 1, le payé de la f devient k × 5.\n" \
+         "    Si le reste de k par 2 = 0, l'échéance de la f devient 01.04.2027.\n" \
+         "    Si le reste de k par 4 = 0, la catégorie de la f devient « litige ».\n" \
+         "    Si le reste de k par 5 < 3, le client de la f devient a.\n" \
+         "    Sinon, le client de la f devient b.\n" \
+         "    Conserver la f.\n" \
+         "Pour vérifier un adjectif et un compte et un autre compte :\n" \
+         "    Si compte = autre compte, afficher adjectif puis « : » puis compte.\n" \
+         "    Sinon, afficher adjectif puis « : DIFFÉRENT » puis compte puis « / » puis autre compte.\n" \
+         "Le n1 vaut 0.\n" \
+         "Le n2 vaut 0.\n" \
+         "Le n3 vaut 0.\n" \
+         "Le n4 vaut 0.\n" \
+         "Pour chaque facture conservée :\n" \
+         "    Si la facture est impayée, le n1 devient n1 + 1.\n" \
+         "    Si la facture est échue, le n2 devient n2 + 1.\n" \
+         "    Si la facture est en litige, le n3 devient n3 + 1.\n" \
+         "    Si la facture n'est pas soldée, le n4 devient n4 + 1.\n" \
+         "Vérifier « impayée » et le nombre de factures conservées impayées et n1.\n" \
+         "Vérifier « échue » et le nombre de factures conservées échues et n2.\n" \
+         "Vérifier « en litige » et le nombre de factures conservées en litige et n3.\n" \
+         "Vérifier « non soldée » et 12 − le nombre de factures conservées soldées et n4.\n",
+         "impayée : 8\néchue : 6\nen litige : 1\nnon soldée : 8");
+    PROG("Une facture, conservée, a :\n" \
+         "    un numéro (texte), unique,\n" \
+         "    un montant (nombre),\n" \
+         "    un payé (nombre),\n" \
+         "    une échéance (date).\n" \
+         "Une facture est impayée si le payé < le montant.\n" \
+         "Une facture est en retard si l'échéance < aujourd'hui et le payé < le montant.\n" \
+         "Pour créer un numéro et un montant et un payé et une échéance :\n" \
+         "    La f vaut une nouvelle facture :\n" \
+         "        Le numéro vaut numéro.\n" \
+         "        Le montant vaut montant.\n" \
+         "        Le payé vaut payé.\n" \
+         "        L'échéance vaut échéance.\n" \
+         "    Conserver la f.\n" \
+         "Créer « F1 » et 100 et 40 et 01.10.2026.\n" \
+         "Créer « F2 » et 100 et 100 et 01.10.2026.\n" \
+         "Créer « F3 » et 50 et 0 et 01.01.2030.\n" \
+         "Afficher le nombre de factures conservées impayées.\n" \
+         "Afficher le nombre de factures conservées en retard.\n" \
+         "Pour chaque facture conservée impayée dont le montant > 60, par numéro :\n" \
+         "    Afficher le numéro de la facture.\n" \
+         "S'il existe une facture conservée en retard, afficher « du retard ».\n" \
+         "La g vaut la facture conservée dont le numéro est « F2 ».\n" \
+         "Si la g est impayée, afficher « F2 impayée ».\n" \
+         "Si la g n'est pas impayée, afficher « F2 payée ».\n" \
+         "Le payé de la g devient 10.\n" \
+         "Si la g est impayée, afficher « F2 impayée maintenant ».\n",
+         "2\n1\nF1\ndu retard\nF2 payée\nF2 impayée maintenant");
+    PROG("Un client, conservé, a :\n" \
+         "    un nom (texte),\n" \
+         "    un solde (nombre).\n" \
+         "Un membre, conservé, est un client.\n" \
+         "Un client est débiteur si le solde < 0.\n" \
+         "Le m vaut un nouveau membre :\n" \
+         "    Le nom vaut « M ».\n" \
+         "    Le solde vaut −5.\n" \
+         "Conserver le m.\n" \
+         "Le c vaut un nouveau client :\n" \
+         "    Le nom vaut « C ».\n" \
+         "    Le solde vaut 5.\n" \
+         "Conserver le c.\n" \
+         "Afficher le nombre de clients conservés débiteurs.\n" \
+         "Afficher le nombre de membres conservés débiteurs.\n" \
+         "Si le m est débiteur, afficher « m débiteur ».\n" \
+         "Si le c n'est pas débiteur, afficher « c pas débiteur ».\n",
+         "1\n1\nm débiteur\nc pas débiteur");
+#define ADJ_E "Une personne, conservée, a :\n    un nom (texte), unique.\nUne facture, conservée, a :\n    un numéro (texte), unique,\n    un montant (nombre),\n    un payé (nombre), facultatif,\n    une échéance (date),\n    une catégorie (texte), facultative,\n    un client (personne), facultatif.\n"
+    PROG(ADJ_E "Un client est impayé si le payé < le montant.", "ERREUR 10:4 « client » n'est pas une entité conservée : un adjectif se définit pour une entité, « Une facture est impayée si … » (3.28).");
+    PROG(ADJ_E "Un facture est impayée si le payé < le montant.", "ERREUR 10:1 Accord : « Une facture ».");
+    PROG(ADJ_E "Une facture est positive si le payé > 0.", "ERREUR 10:17 « positive » est un mot du langage (« est positive ») : choisis un autre adjectif.");
+    PROG(ADJ_E "Une facture est chère si le prix > 100.", "ERREUR 10:29 « prix » inconnu.");
+    PROG(ADJ_E "Une facture est impayée si le payé < le montant.\nUne facture est impayée si le payé < 3.", "ERREUR 11:17 « impayée » est déjà défini pour une facture (ligne 10).");
+    PROG(ADJ_E "Une facture est impayée si le payé < le montant.\nAfficher le nombre de factures conservées impayée.", "ERREUR 11:43 Accord : « conservées impayées ».");
+    PROG(ADJ_E "Une facture est impayée si le payé < le montant.\nPour chaque facture conservée :\n    Si la facture est impayées, afficher 1.", "ERREUR 12:23 Accord : « est impayée ».");
+    PROG(ADJ_E "Une facture est impayée si le payé < le montant.\nLa f vaut une nouvelle facture :\n    Le numéro vaut « X ».\n    Le montant vaut 3.\n    L'échéance vaut 01.01.2027.\nSi la f est impayée, afficher 1.", "ERREUR 15:4 Cette facture n'est pas conservée : un adjectif défini se vérifie dans la base. Conserve-la d'abord.");
+    PROG(ADJ_E "Une facture est impayée si le payé < le montant.\nLe a vaut une nouvelle personne :\n    Le nom vaut « Z ».\nConserver le a.\nSi le a est impayée, afficher 1.", "ERREUR 14:4 L'adjectif se dit d'une facture : cet objet est une personne.");
     /* Tables (§ 13.11) */
     PROG("Les tarifs valent la table où « 7601 » vaut 24 et « 7602 » vaut 12.\nLes compteurs valent une table vide.\n"
          "Dans les compteurs, « CQ » vaut 0.\nDans les compteurs, « CQ » devient la valeur de « CQ » dans les compteurs + 1.\n"

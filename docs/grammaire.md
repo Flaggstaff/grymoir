@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.27 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.28 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2071,6 +2071,29 @@ Si le rôle de l'utilisateur connecté ≠ « direction », refuser « Réservé
 - **Forme compacte** : `_connexion`, `_utilisateur_connecté`.
 - **Bytecode** : `CONNEXION` à la place de la phrase, `CONNECTÉ` pour l'expression, et la marque du module (`docs/vm.md`).
 
+### 16.21 Les adjectifs définis *(3.28, implémenté le 12 novembre 2026)*
+Une condition qui revient se nomme une fois, comme un adjectif de l'entité, puis s'emploie dans les recherches et dans `Si`.
+```
+Une facture est impayée si le payé < le montant ou le payé est absent.
+Une facture est en retard si l'échéance < aujourd'hui et le payé < le montant.
+
+Pour chaque facture conservée impayée dont le montant > 60, par échéance :
+    …
+Afficher le nombre de factures conservées en retard.
+S'il existe une facture conservée en retard, afficher « Des retards ».
+Si la facture est impayée, …
+Si la facture n'est pas en retard, …
+```
+- **La définition** : `Un client est …` / `Une facture est … si` suivi d'une condition écrite **comme après `dont`** (§ 16.4) : des champs de l'objet (`le payé`, `le nom du client`), face à des valeurs (`aujourd'hui`, `« litige »`, un calcul) ou à d'autres champs (3.26), reliés par `et` et `ou`. L'entité est conservée et déclarée avant ; l'article s'accorde. Un adjectif par nom et par entité ; les mots du langage (`positif`, `absent`, `parmi`…) sont refusés. Une valeur de la condition se calcule à chaque emploi (`aujourd'hui` est le jour de l'emploi).
+- **L'accord se déduit** de la forme écrite, accordée à l'entité : un mot prend un s au pluriel (`impayée`, `impayées`), sauf s'il finit par s, x ou z ; plusieurs mots restent invariables (`en retard`). L'analyse vérifie l'accord : « Accord : « conservées impayées ». », « Accord : « est impayée ». »
+- **Dans une recherche**, l'adjectif suit `conservé` et précède `dont`, qui le complète : `les factures conservées impayées dont …`, `le nombre de …`, `la … conservée … dont …`, `Pour chaque …`, `S'il existe …` (3.27). Il vaut sa condition, mise à sa place : la base fait le travail.
+- **Sur un objet**, `x est impayée`, `x n'est pas impayée` : la base cherche cet objet-là avec la même définition. **Les deux emplois répondent donc toujours de la même façon**, absents compris : un champ absent rend une comparaison fausse, dans les deux. L'objet doit être conservé (« Cette facture n'est pas conservée : un adjectif défini se vérifie dans la base. Conserve-la d'abord. ») et de l'entité (« L'adjectif se dit d'une facture : cet objet est une personne. »). Ce qu'il a reçu dans l'événement en cours compte déjà.
+- **L'héritage** : un adjectif d'une entité vaut pour celles qui en héritent (`Un client est débiteur si …` sert à `les membres conservés débiteurs`).
+- **Pour commencer**, l'adjectif s'emploie dans les recherches et dans `Si`, pas encore dans les règles (§ 16.14), `actif si`, `visible si`, ni dans une autre définition.
+- Les refus : « « client » n'est pas une entité conservée : … » ; « Accord : « Une facture ». » ; « « impayée » est déjà défini pour une facture (ligne 10). » ; « « positive » est un mot du langage (« est positive ») : choisis un autre adjectif. »
+- En forme compacte : `_adjectif _une facture impayée _si payé < montant`, `_adjectif _une facture en_retard _si …` ; `_nombre_de facture _conservé impayées`, `_pour_chaque facture _conservé impayée _dont …` ; `_si f _est impayée _alors`, `_si f _n_est_pas impayée _alors`.
+- **Ailleurs** : Inform 7 (Graham Nelson) définit ses adjectifs ainsi, « Definition: a … is … if … », pour les employer dans ses descriptions ; GrymoiR en reprend l'idée et la traduit en SQL.
+
 ## 17. Questions à l'utilisateur *(v1.0)*
 
 ```
@@ -3284,3 +3307,4 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
 | 3.25 | 2026-11-12 | § 22.28 : l'écran d'un objet. `L'écran du salarié, pour un salarié, montre :` ; les zones qui portent le nom d'un champ s'y lient (`, non liée` pour s'en abstenir) ; `le salarié de l'écran` ; `Ouvrir l'écran du salarié pour s.` charge les zones avant `Quand on ouvre` ; `Enregistrer le salarié de l'écran.` crée et conserve un nouveau, ou écrit un ancien, dans la transaction de l'événement ; le bouton `, qui enregistre et ferme l'écran`. Sans instruction nouvelle ni format changé. Forme compacte : `_pour _un salarié`, `_non_lié`, `_enregistre_ferme`, `_ouvrir x _pour s`, `_enregistrer _écran.salarié`. Essais : `tests/ecran-objet` (neuf parcours en scénarios, forme canonique, aller-retour compact), quatorze refus dans `test_machine`, un écran servi au navigateur dans `test_serveur` |
 | 3.26 | 2026-11-12 | § 16.4 : deux champs du même objet se comparent dans une condition `dont` (`dont le payé < le montant`, `dont le montant > le plafond de la catégorie`), de même type, un nombre entier face à un nombre, colonne contre colonne dans la base ; « dont le solde = le nom » est refusé pour ses types (avant : pour ses deux champs). Recherche `(op [champ] [champ2])` (vm 2.12) |
 | 3.27 | 2026-11-12 | § 16.4 : `S'il existe un barème conservé dont …`, `S'il n'existe aucune facture conservée dont …`, `Sinon s'il …` : la base s'arrête au premier objet (recherche de mode `g`, vm 2.13). Forme compacte `_existe _un …`, `_aucun …` |
+| 3.28 | 2026-11-12 | § 16.21 : les adjectifs définis, `Une facture est impayée si …` ; employés dans les recherches (`les factures conservées impayées dont …`) et sur un objet (`Si f est impayée`), les deux par la base et la même définition. Recherche `(S?k)` : l'objet lui-même (vm 2.14). Forme compacte `_adjectif`, `_est`, `_n_est_pas` |
