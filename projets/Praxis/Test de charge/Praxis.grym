@@ -11,8 +11,7 @@ Remarque : une sauvegarde automatique ratée, que l'accueil montre ; ce que l'é
 L'échec de sauvegarde vaut absent.
 L'avis des sauvegardes vaut absent.
 L'avis des accès vaut absent.
-Remarque : le personnel (3 novembre 2026) : le salarié, le barème et la feuille dont la page est ouverte ; ce que les feuilles disent.
-Le salarié ouvert vaut absent.
+Remarque : le personnel (3 novembre 2026) : le barème et la feuille dont la page est ouverte (le salarié : l'objet de son écran, 3.25) ; ce que les feuilles disent.
 Le barème ouvert vaut absent.
 La feuille ouverte vaut absent.
 L'avis du personnel vaut absent.
@@ -265,7 +264,7 @@ L'écran du personnel, « Personnel », montre :
 
 Remarque : la fiche d'un salarié : l'adresse comme sur une enveloppe (la feuille part par la poste), le contrat, les retenues
 Remarque : que la caisse et le canton fixent. Le salaire mensuel est celui d'un plein temps.
-L'écran du salarié, « Salarié », montre :
+L'écran du salarié, « Salarié », pour un salarié, montre :
     en position libre :
         un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
         un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
@@ -290,9 +289,9 @@ L'écran du salarié, « Salarié », montre :
         un taux LAA (nombre), avec l'unité « % », avec l'indication « Accidents non professionnels, part du salarié ; 0 sous 8 h par semaine », à 828 de la gauche et 360 du haut, large de 240,
         une retenue d'impôt (nombre), avec l'unité « CHF », avec l'indication « Impôt à la source par mois, d'après le barème cantonal ; 0 sans permis B ou G », à 552 de la gauche et 456 du haut, large de 260,
     côte à côte :
-        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce salarié ? Il part dans la corbeille, ses feuilles restent. », visible si le salarié ouvert est présent.
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce salarié ? Il part dans la corbeille, ses feuilles restent. », visible si le salarié de l'écran est présent.
 
 Remarque : les salariés sortis : leur fiche s'ouvre encore, pour une attestation ou une feuille d'avant ; vider la sortie les ramène.
 L'écran des sortis, « Salariés sortis », montre :
@@ -399,87 +398,19 @@ Quand on clique sur « Personnel » dans l'écran d'accueil :
     Ouvrir l'écran du personnel.
 
 Quand on clique sur « Nouveau salarié » dans l'écran du personnel :
-    Le salarié ouvert devient absent.
     Ouvrir l'écran du salarié.
 
 Quand on choisit un salarié dans l'écran du personnel :
-    Le salarié ouvert devient le salarié choisi de l'écran.
-    Ouvrir l'écran du salarié.
+    Ouvrir l'écran du salarié pour le salarié choisi de l'écran.
 
 Quand on clique sur « Salariés sortis » dans l'écran du personnel :
     Ouvrir l'écran des sortis.
 
 Quand on choisit un salarié dans l'écran des sortis :
-    Le salarié ouvert devient le salarié choisi de l'écran.
-    Ouvrir l'écran du salarié.
-
-Quand on ouvre l'écran du salarié :
-    Si le salarié ouvert est présent :
-        Le s vaut le salarié ouvert.
-        Le nom de l'écran devient le nom du s.
-        Le prénom de l'écran devient le prénom du s.
-        La rue de l'écran devient la rue du s.
-        Le numéro de maison de l'écran devient le numéro de maison du s.
-        Le complément d'adresse de l'écran devient le complément d'adresse du s.
-        Le numéro postal de l'écran devient le numéro postal du s.
-        La localité de l'écran devient la localité du s.
-        Le pays de l'écran devient le pays du s.
-        Le courriel de l'écran devient le courriel du s.
-        Le numéro AVS de l'écran devient le numéro AVS du s.
-        La date de naissance de l'écran devient la date de naissance du s.
-        Le permis de l'écran devient le permis du s.
-        La fonction de l'écran devient la fonction du s.
-        Le taux d'occupation de l'écran devient le taux d'occupation du s.
-        Le salaire mensuel de l'écran devient le salaire mensuel du s.
-        Le treizième de l'écran devient le treizième du s.
-        L'entrée de l'écran devient l'entrée du s.
-        La sortie de l'écran devient la sortie du s.
-        L'IBAN de l'écran devient l'IBAN du s.
-        La retenue LPP de l'écran devient la retenue LPP du s.
-        Le taux LAA de l'écran devient le taux LAA du s.
-        La retenue d'impôt de l'écran devient la retenue d'impôt du s.
-
-Remarque : un salarié nouveau se conserve d'abord, puis se remplit comme un ancien.
-Quand on clique sur « Enregistrer » dans l'écran du salarié :
-    Si le salarié ouvert est absent :
-        Le n vaut un nouveau salarié :
-            Le nom vaut le nom de l'écran.
-            Le pays vaut le pays de l'écran.
-            Le taux d'occupation vaut le taux d'occupation de l'écran.
-            Le salaire mensuel vaut le salaire mensuel de l'écran.
-            Le treizième vaut le treizième de l'écran.
-            La retenue LPP vaut la retenue LPP de l'écran.
-            Le taux LAA vaut le taux LAA de l'écran.
-            La retenue d'impôt vaut la retenue d'impôt de l'écran.
-        Conserver le n.
-        Le salarié ouvert devient le n.
-    Le s vaut le salarié ouvert.
-    Le nom du s devient le nom de l'écran.
-    Le prénom du s devient le prénom de l'écran.
-    La rue du s devient la rue de l'écran.
-    Le numéro de maison du s devient le numéro de maison de l'écran.
-    Le complément d'adresse du s devient le complément d'adresse de l'écran.
-    Le numéro postal du s devient le numéro postal de l'écran.
-    La localité du s devient la localité de l'écran.
-    Le pays du s devient le pays de l'écran.
-    Le courriel du s devient le courriel de l'écran.
-    Le numéro AVS du s devient le numéro AVS de l'écran.
-    La date de naissance du s devient la date de naissance de l'écran.
-    Le permis du s devient le permis de l'écran.
-    La fonction du s devient la fonction de l'écran.
-    Le taux d'occupation du s devient le taux d'occupation de l'écran.
-    Le salaire mensuel du s devient le salaire mensuel de l'écran.
-    Le treizième du s devient le treizième de l'écran.
-    L'entrée du s devient l'entrée de l'écran.
-    La sortie du s devient la sortie de l'écran.
-    L'IBAN du s devient l'IBAN de l'écran.
-    La retenue LPP du s devient la retenue LPP de l'écran.
-    Le taux LAA du s devient le taux LAA de l'écran.
-    La retenue d'impôt du s devient la retenue d'impôt de l'écran.
-    Fermer l'écran.
+    Ouvrir l'écran du salarié pour le salarié choisi de l'écran.
 
 Quand on clique sur « Supprimer » dans l'écran du salarié :
-    Supprimer le salarié ouvert.
+    Supprimer le salarié de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Barèmes » dans l'écran du personnel :

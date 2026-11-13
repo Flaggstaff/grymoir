@@ -359,3 +359,53 @@ Scénario « pas de feuille sans le barème de l'année » :
         Vérifier que faux.
     En cas d'échec de refus :
         Vérifier que le motif de l'échec = « Pas de barème pour 2025 : ajoute-le dans Personnel, Barèmes. ».
+
+Remarque : l'écran du salarié (12 novembre 2026) : l'écran d'un objet (grammaire 3.25). Ses zones reçoivent le salarié choisi,
+Remarque : « Enregistrer » les écrit ; un nouveau naît de ses zones. Avant, 75 lignes de recopie le faisaient à la main.
+Scénario « un salarié naît de son écran » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On clique sur « Nouveau salarié » dans l'écran du personnel.
+    On écrit « Favre » dans le nom de l'écran du salarié.
+    On écrit « Jean » dans le prénom de l'écran du salarié.
+    On écrit « 60 » dans le taux d'occupation de l'écran du salarié.
+    On écrit « 6000 » dans le salaire mensuel de l'écran du salarié.
+    On écrit « 0 » dans la retenue LPP de l'écran du salarié.
+    On écrit « 1,2 » dans le taux LAA de l'écran du salarié.
+    On écrit « 0 » dans la retenue d'impôt de l'écran du salarié.
+    On clique sur « Enregistrer » dans l'écran du salarié.
+    Ouvrir l'écran du personnel.
+    Vérifier que le nombre de salariés conservés = 1.
+    Le e vaut le salarié conservé dont le nom est « Favre ».
+    Vérifier que le prénom du e = « Jean ».
+    Vérifier que le taux d'occupation du e = 60.
+    Vérifier que le salaire mensuel du e = 6000.
+    Vérifier que le pays du e = « Suisse ».
+    Vérifier que le treizième du e est faux.
+    Vérifier que l'IBAN du e est absent.
+
+Scénario « l'écran du salarié montre le salarié choisi et l'écrit » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    L'IBAN de l'employée devient « CH93 0076 2011 6238 5295 7 ».
+    On choisit l'employée dans l'écran du personnel.
+    On écrit « 90 » dans le taux d'occupation de l'écran du salarié.
+    On clique sur « Enregistrer » dans l'écran du salarié.
+    Ouvrir l'écran du personnel.
+    Vérifier que le nombre de salariés conservés = 1.
+    Vérifier que le taux d'occupation de l'employée = 90.
+    Vérifier que le nom de l'employée = « Muller ».
+    Vérifier que l'IBAN de l'employée = « CH93 0076 2011 6238 5295 7 ».
+    Vérifier que la retenue LPP de l'employée = 150.
+
+Scénario « fermer l'écran du salarié sans enregistrer ne change rien » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    On choisit l'employée dans l'écran du personnel.
+    On écrit « 20 » dans le taux d'occupation de l'écran du salarié.
+    On clique sur « Fermer » dans l'écran du salarié.
+    On confirme.
+    Ouvrir l'écran du personnel.
+    Vérifier que le taux d'occupation de l'employée = 80.
