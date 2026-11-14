@@ -542,6 +542,16 @@ static int champ_connu(Portee *p, const char *nom, Genre *g) {
     return 0;
 }
 
+/* Le champ « nom » existe-t-il hors des écrans (3.31) ? Une zone d'écran n'est un champ que de son écran. */
+static int champ_hors_ecrans(Portee *p, const char *nom) {
+    for (size_t i = 0; i < p->nb_classes; i++) {
+        if (strncmp(p->classes[i].nom, "écran ", 7) == 0) continue;
+        for (size_t k = 0; k < p->classes[i].nb; k++)
+            if (strcmp(p->classes[i].champs[k], nom) == 0) return 1;
+    }
+    return 0;
+}
+
 static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     if (p->n == p->cap) {
         size_t cap = p->cap ? p->cap * 2 : 16;
@@ -1646,6 +1656,11 @@ static Noeud *nom_expression(Analyse *a) {
             if (!complement_de(a, k) || (s && fin > k)) continue;
             char *c = cle(a, d, k);
             Genre g;
+            /* 3.31 : une zone d'écran ne masque pas un calcul du même nom, sauf devant « l'écran » : « la période de
+             * l'année des comptes » appelle le calcul, même si un écran a une zone « période ». Avant, l'accès au champ
+             * l'emportait et échouait à l'exécution (« la valeur n'est pas un objet »). */
+            const int devant_ecran = k + 2 < a->n && a->j[k + 1].type == J_ELISION && est_mot(&a->j[k + 2], "écran");
+            if (s && s->sorte == S_CALCUL && fin == k && !devant_ecran && !champ_hors_ecrans(a->portee, c)) { free(c); continue; }
             if (champ_connu(a->portee, c, &g) || (!s && champ_integre(c, &g)))
                 return acces_champ(a, c, g, tart, art, premier_jeton, k);
             free(c);

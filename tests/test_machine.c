@@ -2553,6 +2553,9 @@ int main(void) {
          "L'écran de l'acte, pour un acte, montre :\n    un code (texte).\n"
          "Ouvrir l'écran de l'acte pour un nouveau soin :\n    Le nom vaut « x ».",
          "ERREUR 7:31 L'écran « de l'acte » montre un objet « acte » : « pour » ne reçoit pas un soin.");
+    /* 3.31 : une zone d'écran ne masque pas un calcul du même nom ; « la période de l'écran » reste la zone */
+    PROG("La période d'une année vaut année + 1.\nL'écran x montre :\n    une période (nombre), facultative.\n"
+         "Quand on ouvre l'écran x :\n    La période de l'écran devient la période de 2026.\nAfficher la période de 2026.", "2027");
 #define ECRAN_OBJET_E "Un salarié, conservé, a :\n    un nom (texte),\n    un courriel (texte), facultatif,\n    un taux (nombre).\n"
     PROG(ECRAN_OBJET_E "L'écran x, pour une salarié, montre :\n    un nom (texte).", "ERREUR 5:17 Accord : « pour un salarié ».");
     PROG(ECRAN_OBJET_E "L'écran x, pour un client, montre :\n    un nom (texte).", "ERREUR 5:20 « client » n'est pas une entité conservée : un écran montre un objet conservé, « pour un salarié ».");

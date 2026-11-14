@@ -1653,21 +1653,30 @@ int main(void) {
         remove("_essai_cabinet8.grymd");
         /* les listes suivent l'année choisie (21 octobre 2026) : celle de la séance payée il y a quatre jours, choisie
            dans le menu de la Comptabilité, pour valoir aussi les premiers jours de janvier */
-        char ev_annee[40], titre[40];
+        char ev_annee[40], titre[40], ev[5][48];
         {
-            const time_t il_y_a = time(NULL) - 4 * 86400;
-            char an[5];
+            const time_t maintenant = time(NULL), il_y_a = maintenant - 4 * 86400;
+            char an[5], cette_annee[5];
             strftime(an, sizeof an, "%Y", localtime(&il_y_a));
+            strftime(cette_annee, sizeof cette_annee, "%Y", localtime(&maintenant));
             snprintf(ev_annee, sizeof ev_annee, "q=4&z0=%s&valider=1", an);   /* l'année, dans l'écran des quittances */
             snprintf(titre, sizeof titre, "<h1>Quittances %s</h1>", an);
+            /* 3.31 : l'écran s'ouvre sur l'année des comptes (« la période de … » appelle enfin le calcul) ; choisir cette
+               même année ne change rien, et ne fait pas de tour : les tours suivants commencent un cran plus tôt */
+            const int q = strcmp(an, cette_annee) == 0 ? 4 : 5;
+            snprintf(ev[0], sizeof ev[0], "q=%d&choix=3.0", q);
+            snprintf(ev[1], sizeof ev[1], "q=%d&clic=Quittance", q + 1);
+            snprintf(ev[2], sizeof ev[2], "q=%d&z1=Sophie+Cl%%C3%%A9ment", q + 2);
+            snprintf(ev[3], sizeof ev[3], "q=%d&z1=Personne", q + 3);
+            snprintf(ev[4], sizeof ev[4], "q=%d&z1=", q + 4);
         }
         memset(&sc, 0, sizeof sc);
         /* les quittances, depuis la tuile Facturation (31 octobre 2026 : la Comptabilité ne garde que les comptes) */
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=Quittances"),
                  evenement(ev_annee), get("/"),                                                                /* 4, 5 */
-                 evenement("q=5&choix=3.0"), evenement("q=6&clic=Quittance"), get("/"),                       /* 6, 7, 8 */
-                 evenement("q=7&z1=Sophie+Cl%C3%A9ment"), get("/"), evenement("q=8&z1=Personne"), get("/"),   /* 9 à 12 */
-                 evenement("q=9&z1="), get("/"));                                                              /* 13, 14 */
+                 evenement(ev[0]), evenement(ev[1]), get("/"),                                                 /* 6, 7, 8 */
+                 evenement(ev[2]), get("/"), evenement(ev[3]), get("/"),                                       /* 9 à 12 */
+                 evenement(ev[4]), get("/"));                                                                  /* 13, 14 */
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet9.grymd", &sc);
         CONTIENT(sc.reponses[5], titre);
         CONTIENT(sc.reponses[5], "<td>Sophie Clément</td>");   /* payée par virement il y a quatre jours, sans quittance */

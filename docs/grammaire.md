@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.30 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.31 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1038,7 +1038,7 @@ Afficher le nom du client de la facture.            →  nom de (client de (fact
 
 - Un champ se lit par le complément du nom : `le solde du client`, `la date de la facture`, `le nom de l'employé`. Les compléments s'enchaînent de droite à gauche.
 - Un champ se modifie avec `devient`, jamais avec `vaut`.
-- Quand un nom de champ suivi de `de` peut aussi se lire comme un nom déclaré, la plus longue correspondance l'emporte ; à longueur égale, le champ l'emporte. `Le prix de vente vaut 3.` crée un nom, même si `prix` est un champ, tant que `vente` n'est pas un nom existant.
+- Quand un nom de champ suivi de `de` peut aussi se lire comme un nom déclaré, la plus longue correspondance l'emporte ; à longueur égale, le champ l'emporte. `Le prix de vente vaut 3.` crée un nom, même si `prix` est un champ, tant que `vente` n'est pas un nom existant. *(3.31)* Sauf face à un calcul du même nom quand le champ n'existe que comme zone d'écran : `la période de l'année des comptes` appelle le calcul `La période d'une année`, même si un écran a une zone `période` ; devant `l'écran`, la zone reste lue (`la période de l'écran`).
 - Un calcul lit les champs de ses paramètres, mais ne les modifie pas (§ 9.4).
 - Qu'un objet ait bien le champ demandé se vérifie à l'exécution.
 
@@ -3319,3 +3319,4 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
 | 3.28 | 2026-11-12 | § 16.21 : les adjectifs définis, `Une facture est impayée si …` ; employés dans les recherches (`les factures conservées impayées dont …`) et sur un objet (`Si f est impayée`), les deux par la base et la même définition. Recherche `(S?k)` : l'objet lui-même (vm 2.14). Forme compacte `_adjectif`, `_est`, `_n_est_pas` |
 | 3.29 | 2026-11-12 | § 22.28 : le titre calculé d'un écran se lit après la naissance de sa classe, et peut lire l'objet de l'écran (`("Barème " suivi de l'année du barème de l'écran)`) ; trouvé en convertissant Praxis |
 | 3.30 | 2026-11-12 | § 22.28 : `Ouvrir l'écran de l'acte pour un nouvel acte :` et son bloc : un nouvel objet reçoit, à l'ouverture, ce que l'écran ne montre pas (le soin d'où l'on vient) ; modèle caché de l'écran, conservé par `Enregistrer`. Forme compacte `_pour _nouveau acte _avec` |
+| 3.31 | 2026-11-12 | § 13.3 : une zone d'écran ne masque plus un calcul du même nom. « Un champ suivi de « de » l'emporte » valait aussi pour les zones : dans Praxis, la zone « période » de l'écran des prévues faisait lire `la période de l'année des comptes` comme un champ d'un nombre, au lieu du calcul `La période d'une année` ; dix ouvertures d'écran (Frais, Factures, Quittances…) échouaient à l'exécution (« « période » : la valeur n'est pas un objet »). Le calcul l'emporte désormais sur un champ qui n'existe que dans des écrans ; devant « l'écran » (`la période de l'écran`), la zone reste lue. Trouvé par les scénarios de la conversion de Praxis |
