@@ -135,7 +135,10 @@ static int ecrire_certificat(const char *chemin, const char *sujet, const char *
     mbedtls_x509write_crt_set_issuer_key(&c, ke);
     unsigned char serie[16];
     int r = mbedtls_ctr_drbg_random(h, serie, sizeof serie);
-    serie[0] &= 0x7F;   /* un numéro positif */
+    /* un numéro positif, au premier octet non nul : en DER, un entier ne commence pas par un octet nul suivi d'un octet
+     * < 0x80 (encodage non minimal). Avec « &= 0x7F » seul, un certificat sur 128 avait un 0x00 en tête ; OpenSSL le
+     * refusait (« nested asn1 error », Field=serialNumber) : l'échec isolé de tests/certificats (12 novembre 2026). */
+    serie[0] = (unsigned char)((serie[0] & 0x7F) | 0x40);
     char debut[16], fin[16];
     horodatage(debut, sizeof debut, -1);   /* un jour de marge pour une horloge en retard */
     horodatage(fin, sizeof fin, jours);
