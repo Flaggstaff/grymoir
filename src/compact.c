@@ -2264,7 +2264,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         /* _pour _un salarié (3.25) : à la fin de l'en-tête → « , pour un salarié, » */
         const size_t pour_trouve = chercher(r, d + 1, f, "pour");
         size_t pour = pour_trouve;
-        if (pour < f && (document || pour + 2 >= f || !(est_cle(&r->e[pour + 1], "un") || est_cle(&r->e[pour + 1], "une")))) {
+        if (pour < f && (pour + 2 >= f || !(est_cle(&r->e[pour + 1], "un") || est_cle(&r->e[pour + 1], "une")))) {
             echouer(r, &r->e[pour], grym_dupliquer("Forme attendue : « _écran du_salarié _pour _un salarié »."));
             return;
         }
@@ -2440,7 +2440,9 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "ouvrir", t);
             mot(r, "le", &r->e[d + 1]);
             mot(r, "document", &r->e[d + 1]);
-            for (size_t k = d + 2; k < f; k++) copier(r, &r->e[k]);
+            const size_t pour = chercher(r, d + 2, f, "pour");   /* _ouvrir _document de_feuille _pour x (3.32) */
+            for (size_t k = d + 2; k < pour; k++) copier(r, &r->e[k]);
+            if (pour < f) { mot(r, "pour", &r->e[pour]); expression(r, pour + 1, f); }
             point(r, f);
             fixer_retrait(r, premier, prof);
             return;

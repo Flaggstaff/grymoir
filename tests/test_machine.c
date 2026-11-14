@@ -2568,7 +2568,9 @@ int main(void) {
     PROG(ECRAN_OBJET_E "L'écran x montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran x :\n    Ouvrir l'écran x pour 3.", "ERREUR 8:22 L'écran « x » ne montre pas d'objet : déclare-le « L'écran x, pour un …, montre : » (3.25).");
     PROG(ECRAN_OBJET_E "L'écran y, pour un salarié, montre :\n    un nom (texte).\nL'écran x montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran x :\n    Ouvrir l'écran y pour « a ».", "ERREUR 10:27 L'écran « y » montre un objet « salarié » : « pour » ne reçoit pas une valeur (texte).");
     PROG(ECRAN_OBJET_E "L'écran x montre :\n    un bouton « OK », qui enregistre et ferme l'écran.", "ERREUR 6:23 « qui enregistre » demande un écran qui montre un objet : « L'écran du salarié, pour un salarié, montre : » (3.25).");
-    PROG(ECRAN_OBJET_E "Le document d, pour un salarié, montre :\n    le texte « a ».", "ERREUR 5:24 Seul un écran montre un objet : un document ou une partie ne se déclare pas « pour un … ».");
+    /* 3.32 : un document reçoit un objet comme un écran */
+    PROG(ECRAN_OBJET_E "Le document d, pour un salarié, montre :\n    le texte le nom du salarié de l'écran.\nAfficher « ok ».", "ok");
+    PROG(ECRAN_OBJET_E "Le document d montre :\n    le texte « a ».\nOuvrir le document d pour 3.", "ERREUR 7:22 Le document « d » ne montre pas d'objet : déclare-le « Le document d, pour une …, montre : » (3.32).");
     PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un bouton « OK », qui enregistre et ferme l'écran, qui ferme l'écran.", "ERREUR 6:56 Ce bouton ferme déjà l'écran : un seul « qui … ».");
     PROG(ECRAN_OBJET_E "L'écran x, pour un salarié, montre :\n    un nom (texte),\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran x :\n    Enregistrer le nom de l'écran.", "ERREUR 9:5 « Enregistrer » attend l'objet de l'écran, « Enregistrer le salarié de l'écran. », ou un fichier : « Enregistrer la photo dans « copie.jpg ». ».");
 

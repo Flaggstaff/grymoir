@@ -2512,8 +2512,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         }
         if (n->forme == 2) {   /* « Ouvrir le document de quittance. » ; « _ouvrir _document de_quittance » (2.25) */
             const char *nd = strncmp(n->texte, "document ", 9) == 0 ? n->texte + 9 : n->texte;
-            if (c) { aj(im, "_ouvrir _document "); ecrire_nom(im, nd, 0); aj(im, "\n"); }
-            else { aj(im, "Ouvrir le document "); aj(im, nd); aj(im, ".\n"); }
+            if (c) {
+                aj(im, "_ouvrir _document ");
+                ecrire_nom(im, nd, 0);
+                if (n->nb_enfants) { aj(im, " _pour "); expression(im, n->enfants[0]); }   /* 3.32 */
+                aj(im, "\n");
+            } else {
+                aj(im, "Ouvrir le document ");
+                aj(im, nd);
+                if (n->nb_enfants) { aj(im, " pour "); expression(im, n->enfants[0]); }
+                aj(im, ".\n");
+            }
             return;
         }
         {

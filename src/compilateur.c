@@ -1131,8 +1131,21 @@ static void document(Compilation *c, const Noeud *n, int montrer) {
     if (!e) { trop_grand(c, n); return; }
     const long kd = description_ecran(c, e, n);
     if (kd < 0) return;
+    /* « pour la feuille de l'écran » (3.32) : lu avant l'ouverture, là où « l'écran » est encore celui d'où l'on vient */
+    const int pour = n->type == P_OUVRIR && n->nb_enfants == 1 && e->texte3;
+    if (pour) {
+        expression(c, n->enfants[0]);
+        emettre(c, I_ECRIRE_LOCAL, n->local, n->ligne, n->colonne);
+    }
     filtres_de_zones(c, e, n);
     emettre(c, I_ECRAN_OUVRIR, kd, n->ligne, n->colonne);
+    if (pour) {
+        long ko = bloc_nom(c->b, e->texte3);
+        if (ko < 0) { trop_grand(c, n); return; }
+        emettre(c, I_ECRAN_OBJET, 0, n->ligne, n->colonne);
+        emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
+        emettre(c, I_ECRIRE_CHAMP, ko, n->ligne, n->colonne);
+    }
     relire_ecran(c, e, n);
     emettre(c, I_DOCUMENT, montrer, n->ligne, n->colonne);
 }

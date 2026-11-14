@@ -9345,7 +9345,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         a->i--;   /* la virgule : les positions suivantes se comptent depuis elle */
         const Jeton *tp = voir(a, 1), *art = voir(a, 2);
         const char *refus = NULL;
-        if (document || partie) refus = "Seul un écran montre un objet : un document ou une partie ne se déclare pas « pour un … ».";
+        if (partie) refus = "Un écran ou un document montre un objet : une partie ne se déclare pas « pour un … ».";
         else if (!est_mot(art, "un") && !est_mot(art, "une")) refus = "« pour un … » attendu : « L'écran du salarié, pour un salarié, montre : ».";
         size_t d2 = a->i + 3, q = d2;
         const int crochets = !refus && a->j[d2].type == J_CROCHETS;   /* venu de la forme compacte : un nom entier */
@@ -10643,13 +10643,35 @@ static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
         /* « Ouvrir le document de quittance. » (2.25) : l'aperçu du PDF, d'où l'on imprime */
         size_t f2;
         char *nd = NULL;
-        if (!document_nomme(a, a->i + 3, &f2, &nd))
+        EcranConnu *ed = document_nomme(a, a->i + 3, &f2, &nd);
+        if (!ed)
             return erreur(a, voir(a, 3), grym_dupliquer("Document inconnu : déclare-le avec « Le document de quittance montre : »."));
         a->i = f2;
-        if (!fin_phrase(a, 0)) { free(nd); return NULL; }
+        Noeud *pour_objet = NULL;
+        if (est_mot(cour(a), "pour")) {   /* « Ouvrir le document de feuille pour la feuille de l'écran. » (3.32) */
+            const Jeton *tp = cour(a);
+            if (!ed->objet) {
+                Noeud *r = erreur(a, tp, grym_formater("Le document « %s » ne montre pas d'objet : déclare-le « Le %s, pour une …, "
+                                                       "montre : » (3.32).", nd + 9, nd));
+                free(nd);
+                return r;
+            }
+            avancer(a);
+            pour_objet = expression(a);
+            if (!pour_objet) { free(nd); return NULL; }
+            const char *ty = type_statique(pour_objet);
+            if (ty && (type_de_base(ty) || (classe_de(a->portee, ty) && !est_sous_classe(a->portee, ty, ed->objet)))) {
+                Noeud *r = erreur(a, tp, grym_formater("Le document « %s » montre un objet « %s » : « pour » ne reçoit pas une valeur (%s).",
+                                                       nd + 9, ed->objet, ty));
+                noeud_liberer(pour_objet); free(nd);
+                return r;
+            }
+        }
+        if (!fin_phrase(a, 0)) { free(nd); noeud_liberer(pour_objet); return NULL; }
         Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
         n->forme = 2;
         n->texte = nd;
+        if (pour_objet) { noeud_ajouter(n, pour_objet); n->local = a->nb_locaux++; }
         n->fin = fin_jeton(&a->j[a->i - 1]);
         return n;
     }

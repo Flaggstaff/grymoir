@@ -248,5 +248,38 @@ verifier "$(printf '%s\n' "$sortie" | tail -1)" "3 scénarios, 3 réussis : tout
 verifier "$("$grym" formater nv.grym)" "$(cat nv.grym)" "forme canonique du modèle"
 mkdir m && cp nv.grym m/ && cd m && "$grym" traduire nv.grym > /dev/null 2>&1 && rm nv.grym && "$grym" traduire nv.grymc > /dev/null 2>&1
 verifier "$(cat nv.grym 2>/dev/null)" "$(cat ../nv.grym)" "aller-retour du modèle par la forme compacte"
+# Un document qui reçoit son objet (grammaire 3.32) : « Ouvrir le document de feuille pour la feuille de l'écran. »
+cd "$d" || exit 1
+cat > doc.grym <<'FIN'
+Une feuille, conservée, a :
+    un intitulé (texte).
+Le document de feuille, ("Feuille " suivi de l'intitulé de la feuille de l'écran), pour une feuille, montre :
+    le texte "Intitulé : " suivi de l'intitulé de la feuille de l'écran.
+L'écran de la feuille, pour une feuille, montre :
+    un intitulé (texte),
+    un bouton « Imprimer ».
+Quand on clique sur « Imprimer » dans l'écran de la feuille :
+    Ouvrir le document de feuille pour la feuille de l'écran.
+L'écran des feuilles montre :
+    la liste des feuilles conservées.
+Quand on choisit une feuille dans l'écran des feuilles :
+    Ouvrir l'écran de la feuille pour la feuille choisie de l'écran.
+FIN
+cat > docs.grym <<'FIN'
+Ces scénarios éprouvent « doc ».
+Scénario « le document reçoit sa feuille » :
+    La f vaut une nouvelle feuille :
+        L'intitulé vaut « novembre 2026 ».
+    Conserver la f.
+    On choisit la f dans l'écran des feuilles.
+    On clique sur « Imprimer » dans l'écran de la feuille.
+    On ferme l'écran de la feuille.
+    Ouvrir l'écran des feuilles.
+    Vérifier que « Feuille novembre 2026 » est parmi les documents sortis.
+FIN
+sortie=$("$grym" scenarios docs.grym 2>&1)
+verifier "$(printf '%s\n' "$sortie" | tail -1)" "1 scénario, 1 réussi : tout est juste." "le document reçoit sa feuille"
+mkdir dd && cp doc.grym dd/ && cd dd && "$grym" traduire doc.grym > /dev/null 2>&1 && rm doc.grym && "$grym" traduire doc.grymc > /dev/null 2>&1
+verifier "$(cat doc.grym 2>/dev/null)" "$(cat ../doc.grym)" "aller-retour du document par la forme compacte"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]
