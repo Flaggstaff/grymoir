@@ -106,7 +106,6 @@ La date justifiée vaut aujourd'hui.
 Le montant justifié vaut 0.
 Le début justifié vaut aujourd'hui.
 La fin justifiée vaut aujourd'hui.
-L'acte ouvert vaut absent.
 Remarque : la facture électronique en cours (generalInvoice 5.0, 27 octobre 2026) : son identifiant tiré au hasard, l'heure de la
 Remarque : demande (en secondes depuis le 1er janvier 1970), le traitement de sa première à sa dernière séance, son total, son assureur.
 Le guid électronique vaut « ».
@@ -128,7 +127,6 @@ La date du rappel électronique vaut aujourd'hui.
 L'horodatage du rappel électronique vaut 0.
 Le niveau du rappel électronique vaut 1.
 L'avis des factures vaut « ».
-La méthode ouverte vaut absent.
 Le décompte ouvert vaut absent.
 Le crédit ouvert vaut absent.
 L'annonce des crédits vaut "Choisis le fichier de la banque, puis « Lire l'avis ».".
@@ -688,7 +686,7 @@ L'écran du soin, « Soin », pour un soin, montre :
     une facturation (« patient » ou « assurance »), avec l'indication « Sans ordonnance : au patient (QR-facture, quittance) ou à son assurance », visible si la facturation aux assurances du cabinet conservé,
     le texte « Justificatif de remboursement », en petites capitales,
     le texte la composition du soin de l'écran,
-    la liste des actes conservés dont le soin = la méthode ouverte, par code, avec le code, le libellé, la quantité, le prix et la première séance seulement,
+    la liste des actes conservés dont le soin = le soin de l'écran, par code, avec le code, le libellé, la quantité, le prix et la première séance seulement,
     une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
@@ -698,7 +696,7 @@ L'écran du soin, « Soin », pour un soin, montre :
 
 Remarque : un acte du justificatif de remboursement d'un soin (Tarif 590, 27 octobre 2026) : son code, son libellé, sa quantité
 Remarque : en périodes de 5 minutes et le prix d'une période ; l'anamnèse ne se compte qu'à la première séance.
-L'écran de l'acte, « Acte du Tarif 590 », montre :
+L'écran de l'acte, « Acte du Tarif 590 », pour un acte, montre :
     un code (texte), avec l'indication « Le code du Tarif 590 : 1200 »,
     un libellé (texte), avec l'indication « Anamnèse / bilan / diagnostic, par période de 5 min. »,
     une quantité (nombre), avec l'indication « En périodes de 5 minutes : 10 pour 50 minutes »,
@@ -707,7 +705,7 @@ L'écran de l'acte, « Acte du Tarif 590 », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer cet acte ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cet acte ? », visible si l'acte de l'écran est présent.
 
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
@@ -2782,7 +2780,6 @@ Quand on clique sur « Facture » dans l'écran des encaissements :
     Facturer au comptoir la séance choisie de l'écran.
 
 Quand on choisit un soin dans l'écran des soins :
-    La méthode ouverte devient le soin choisi de l'écran.
     Ouvrir l'écran du soin pour le soin choisi de l'écran.
 
 Remarque : une ordonnance exigée (l'ergothérapie) fait facturer le soin à l'assurance, quand le cabinet y facture.
@@ -2798,44 +2795,19 @@ Quand on clique sur « Supprimer » dans l'écran du soin :
     Fermer l'écran.
 
 Quand on clique sur « Nouvel acte » dans l'écran du soin :
-    L'acte ouvert devient absent.
-    Ouvrir l'écran de l'acte.
+    Ouvrir l'écran de l'acte pour un nouvel acte :
+        Le soin vaut le soin de l'écran.
 
 Quand on choisit un acte dans l'écran du soin :
-    L'acte ouvert devient l'acte choisi de l'écran.
-    Ouvrir l'écran de l'acte.
-
-Quand on ouvre l'écran de l'acte :
-    Si l'acte ouvert est présent :
-        Le a vaut l'acte ouvert.
-        Le code de l'écran devient le code du a.
-        Le libellé de l'écran devient le libellé du a.
-        La quantité de l'écran devient la quantité du a.
-        Le prix de l'écran devient le prix du a.
-        La première séance seulement de l'écran devient la première séance seulement du a.
+    Ouvrir l'écran de l'acte pour l'acte choisi de l'écran.
 
 Quand on clique sur « Enregistrer » dans l'écran de l'acte :
     Si la quantité de l'écran ≤ 0, refuser « La quantité compte des périodes de 5 minutes : au moins une. ».
-    Si l'acte ouvert est absent :
-        Le nouveau vaut un nouvel acte :
-            Le soin vaut la méthode ouverte.
-            Le code vaut le code de l'écran.
-            Le libellé vaut le libellé de l'écran.
-            La quantité vaut la quantité de l'écran.
-            Le prix vaut le prix de l'écran.
-            La première séance seulement vaut la première séance seulement de l'écran.
-        Conserver le nouveau.
-        L'acte ouvert devient le nouveau.
-    Le a vaut l'acte ouvert.
-    Le code du a devient le code de l'écran.
-    Le libellé du a devient le libellé de l'écran.
-    La quantité du a devient la quantité de l'écran.
-    Le prix du a devient le prix de l'écran.
-    La première séance seulement du a devient la première séance seulement de l'écran.
+    Enregistrer l'acte de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Supprimer » dans l'écran de l'acte :
-    Si l'acte ouvert est présent, supprimer l'acte ouvert.
+    Supprimer l'acte de l'écran.
     Fermer l'écran.
 
 Remarque : la page d'une séance ; son patient s'ouvre sur sa page, jamais sur la fiche déduite.

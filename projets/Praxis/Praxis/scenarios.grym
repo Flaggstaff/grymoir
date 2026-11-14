@@ -461,3 +461,59 @@ Scénario « une ordonnance exigée fait facturer le soin à l'assurance » :
     Ouvrir l'écran des soins.
     Vérifier que l'ordonnance exigée du s est vraie.
     Vérifier que la facturation du s = « assurance ».
+
+Remarque : l'acte d'un soin (12 novembre 2026) : un acte nouveau reçoit le soin d'où l'on vient (grammaire 3.30).
+Scénario « un acte nouveau reçoit le soin d'où l'on vient » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On choisit le s dans l'écran des soins.
+    On clique sur « Nouvel acte » dans l'écran du soin.
+    On écrit « 1200 » dans le code de l'écran de l'acte.
+    On écrit « Anamnèse » dans le libellé de l'écran de l'acte.
+    On écrit « 2 » dans la quantité de l'écran de l'acte.
+    On écrit « 8,50 » dans le prix de l'écran de l'acte.
+    On clique sur « Enregistrer » dans l'écran de l'acte.
+    On ferme l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que le nombre d'actes conservés = 1.
+    Le a vaut l'acte conservé dont le code est « 1200 ».
+    Vérifier que le soin du a = s.
+    Vérifier que la quantité du a = 2.
+    Vérifier que la première séance seulement du a est fausse.
+
+Scénario « un acte sans période est refusé » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On choisit le s dans l'écran des soins.
+    On clique sur « Nouvel acte » dans l'écran du soin.
+    On écrit « 1200 » dans le code de l'écran de l'acte.
+    On écrit « Anamnèse » dans le libellé de l'écran de l'acte.
+    On écrit « 0 » dans la quantité de l'écran de l'acte.
+    On écrit « 8,50 » dans le prix de l'écran de l'acte.
+    On clique sur « Enregistrer » dans l'écran de l'acte.
+    On voit l'erreur « La quantité compte des périodes de 5 minutes : au moins une. » dans l'écran de l'acte.
+    On ferme l'écran de l'acte.
+    On ferme l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que le nombre d'actes conservés = 0.
+
+Scénario « un acte choisi se modifie » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Le a vaut un nouvel acte :
+        Le soin vaut s.
+        Le code vaut « 1200 ».
+        Le libellé vaut « Anamnèse ».
+        La quantité vaut 2.
+        Le prix vaut 8,50.
+        La première séance seulement vaut vrai.
+    Conserver le a.
+    On choisit le s dans l'écran des soins.
+    On choisit le a dans l'écran du soin.
+    On écrit « 3 » dans la quantité de l'écran de l'acte.
+    On clique sur « Enregistrer » dans l'écran de l'acte.
+    On ferme l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que la quantité du a = 3.
+    Vérifier que la première séance seulement du a est vraie.
+    Vérifier que le soin du a = s.
