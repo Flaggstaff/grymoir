@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.28 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.29 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -3065,6 +3065,7 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
     Fermer l'écran.
 ```
 - **`, pour un salarié,`** se place après le titre (ou à sa place) et avant `montre :`. L'entité est conservée ; l'article s'accorde (`pour une ordonnance`). Un document ou une partie ne se déclare pas ainsi. Sans cette tournure, un écran garde son sens d'avant (charte, art. 13).
+- **Le titre calculé** *(3.29)* se lit une fois la classe de l'écran née : il lit l'objet, `L'écran du barème, ("Barème " suivi de l'année du barème de l'écran), pour un barème, montre :`. Relu à chaque tour, il voit l'objet chargé ; pour un écran qui s'ouvre aussi sur un nouveau, il ne lit pas un champ d'un objet absent : l'écran montrerait « Le champ « barème » est absent : … ».
 - **`le salarié de l'écran`** désigne l'objet montré : celui reçu par `Ouvrir l'écran … pour …`, ou `absent` pour un nouveau, jusqu'à ce qu'il soit enregistré. Il se lit comme une zone (`visible si le salarié de l'écran est présent`), dans les événements et les actions de l'écran. Une zone ne porte pas ce nom.
 - **Une zone liée** est une zone qui porte le nom d'un champ du salarié (hérités et aptitudes compris). Elle a le type du champ, sinon l'analyse refuse (« La zone « taux » est (texte), le champ « taux » du salarié est (nombre) : … ») ; un champ facultatif demande une zone facultative. Une zone qui porte ce nom sans devoir s'y lier s'écrit **`, non liée`** (`non lié` au masculin). Les autres zones restent des zones ordinaires. Les choix multiples (`des genres (genre)`) et les zones d'une partie ne se lient pas.
 - **`Ouvrir l'écran du salarié pour s.`** : après les valeurs de départ des zones et avant `Quand on ouvre`, chaque zone liée reçoit le champ de `s`. `s` se lit avant l'ouverture, là où `l'écran` désigne encore celui d'où l'on vient (`le salarié choisi de l'écran`). Un `s` absent vaut un nouveau. Le chargement ne compte pas comme une modification : `si l'écran est modifié` (§ 22.6) ne s'allume qu'après une saisie. Un écran qui ne montre pas d'objet refuse `pour` ; un écran dont le nom contient déjà « pour » garde son nom entier s'il est déclaré.
@@ -3308,3 +3309,4 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
 | 3.26 | 2026-11-12 | § 16.4 : deux champs du même objet se comparent dans une condition `dont` (`dont le payé < le montant`, `dont le montant > le plafond de la catégorie`), de même type, un nombre entier face à un nombre, colonne contre colonne dans la base ; « dont le solde = le nom » est refusé pour ses types (avant : pour ses deux champs). Recherche `(op [champ] [champ2])` (vm 2.12) |
 | 3.27 | 2026-11-12 | § 16.4 : `S'il existe un barème conservé dont …`, `S'il n'existe aucune facture conservée dont …`, `Sinon s'il …` : la base s'arrête au premier objet (recherche de mode `g`, vm 2.13). Forme compacte `_existe _un …`, `_aucun …` |
 | 3.28 | 2026-11-12 | § 16.21 : les adjectifs définis, `Une facture est impayée si …` ; employés dans les recherches (`les factures conservées impayées dont …`) et sur un objet (`Si f est impayée`), les deux par la base et la même définition. Recherche `(S?k)` : l'objet lui-même (vm 2.14). Forme compacte `_adjectif`, `_est`, `_n_est_pas` |
+| 3.29 | 2026-11-12 | § 22.28 : le titre calculé d'un écran se lit après la naissance de sa classe, et peut lire l'objet de l'écran (`("Barème " suivi de l'année du barème de l'écran)`) ; trouvé en convertissant Praxis |

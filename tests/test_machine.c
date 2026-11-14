@@ -2544,6 +2544,10 @@ int main(void) {
     /* L'écran d'un objet (3.25) : « , pour un salarié, », les zones liées par leur nom, « Ouvrir l'écran … pour s. »,
      * « Enregistrer le salarié de l'écran. », « qui enregistre et ferme l'écran ». Les refus de l'analyse ici ; les
      * parcours dans tests/ecran-objet (les scénarios d'un programme entier). */
+    /* 3.29 : le titre calculé se lit après la naissance de la classe de l'écran : il lit l'objet de l'écran */
+    PROG("Un barème, conservé, a :\n    une année (nombre entier).\n"
+         "L'écran du barème, (\"Barème \" suivi de l'année du barème de l'écran), pour un barème, montre :\n    une année (nombre entier).\n"
+         "Afficher « ok ».", "ok");
 #define ECRAN_OBJET_E "Un salarié, conservé, a :\n    un nom (texte),\n    un courriel (texte), facultatif,\n    un taux (nombre).\n"
     PROG(ECRAN_OBJET_E "L'écran x, pour une salarié, montre :\n    un nom (texte).", "ERREUR 5:17 Accord : « pour un salarié ».");
     PROG(ECRAN_OBJET_E "L'écran x, pour un client, montre :\n    un nom (texte).", "ERREUR 5:20 « client » n'est pas une entité conservée : un écran montre un objet conservé, « pour un salarié ».");

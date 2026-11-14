@@ -9286,6 +9286,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     }
     char *titre = NULL;
     Noeud *titre_calcule = NULL;
+    size_t titre_debut = 0;   /* l'index de la parenthèse d'un titre calculé, lu après la naissance de la classe */
     int taille_titre = 0;
     a->i = f;
     /* « , « Recherche », », « , « Recherche » en grand, », « , en petit, » : le titre donné, sa taille (§ 22.1, § 22.5) ;
@@ -9295,24 +9296,26 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         const char *t2 = NULL;
         if (a->j[q].type == J_TEXTE) t2 = a->j[q++].valeur;
         else if (a->j[q].type == J_PAR_OUV) {
-            const size_t garde = a->i;
-            a->i = q;
-            titre_calcule = base(a);
-            if (!titre_calcule) { free(nom); return NULL; }
-            q = a->i;
-            a->i = garde;
+            /* lu plus loin, une fois la classe de l'écran née (3.25) : « ("Barème " suivi de l'année du barème de l'écran) » */
+            titre_debut = q;
+            int prof = 0;
+            do {
+                if (a->j[q].type == J_PAR_OUV) prof++;
+                else if (a->j[q].type == J_PAR_FERM) prof--;
+                q++;
+            } while (prof > 0 && q < a->n && a->j[q].type != J_FIN);
+            if (prof > 0) { free(nom); return erreur(a, &a->j[titre_debut], grym_dupliquer("Parenthèse non fermée.")); }
         }
         int taille = 0;
         if (est_mot(&a->j[q], "en") && (est_mot(&a->j[q + 1], "petit") || est_mot(&a->j[q + 1], "grand"))) {
             taille = est_mot(&a->j[q + 1], "grand") ? 1 : -1;
             q += 2;
         }
-        if ((t2 || taille || titre_calcule) && a->j[q].type == J_VIRGULE) {
+        if ((t2 || taille || titre_debut) && a->j[q].type == J_VIRGULE) {
             if (t2) titre = grym_dupliquer(t2);
             taille_titre = taille;
             a->i = q + 1;
-        } else if (titre_calcule) {
-            noeud_liberer(titre_calcule);
+        } else if (titre_debut) {
             free(nom);
             return erreur(a, &a->j[q], grym_dupliquer("« , » attendu après le titre : « L'écran d'accueil, (\"Bonjour \" suivi du prénom) en grand, montre : »."));
         }
@@ -9387,6 +9390,12 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         n->texte3 = objet;
         n->forme = genre_objet == GENRE_FEMININ ? 2 : 1;
         a->ecran_objet = n->texte3;
+    }
+    if (titre_debut) {   /* le titre calculé : « l'écran » et l'objet de l'écran y sont connus */
+        const size_t garde = a->i;
+        a->i = titre_debut;
+        n->titre_calcule = base(a);   /* en cas d'erreur, a->echec est posé : la déclaration continue, puis échoue */
+        a->i = garde;
     }
     int blocs[16], nb_blocs = 0;   /* colonnes des blocs « côte à côte » et « l'un sous l'autre » ouverts (§ 22.1) */
     int formes[16];                /* la forme de chaque bloc ouvert : 4 en position libre (§ 22.9), 5 les onglets (§ 22.10) */
