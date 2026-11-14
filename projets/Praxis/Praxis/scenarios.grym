@@ -517,3 +517,125 @@ Scénario « un acte choisi se modifie » :
     Vérifier que la quantité du a = 3.
     Vérifier que la première séance seulement du a est vraie.
     Vérifier que le soin du a = s.
+
+Remarque : l'assureur et l'ordonnance (12 novembre 2026) : une ordonnance nouvelle reçoit son patient, sa date du jour, neuf séances
+Remarque : et le cas « maladie » (grammaire 3.30) ; un scan absent de l'écran ne retire pas celui de l'ordonnance.
+Scénario « un assureur naît de son écran » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On clique sur « Nouvel assureur » dans l'écran des assureurs.
+    On écrit « Groupe Mutuel » dans le nom de l'écran de l'assureur.
+    On écrit « 7601003000016 » dans le numéro GLN de l'écran de l'assureur.
+    On clique sur « Enregistrer » dans l'écran de l'assureur.
+    Ouvrir l'écran des assureurs.
+    Vérifier que le nombre d'assureurs conservés = 1.
+    Le a vaut l'assureur conservé dont le nom est « Groupe Mutuel ».
+    Vérifier que le numéro GLN du a = « 7601003000016 ».
+
+Scénario « un assureur choisi se modifie » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Le a vaut un nouvel assureur :
+        Le nom vaut « Groupe Mutuel ».
+        Le numéro GLN vaut « 7601003000016 ».
+    Conserver le a.
+    On choisit le a dans l'écran des assureurs.
+    On écrit « Martigny » dans la localité de l'écran de l'assureur.
+    On clique sur « Enregistrer » dans l'écran de l'assureur.
+    Ouvrir l'écran des assureurs.
+    Vérifier que le nombre d'assureurs conservés = 1.
+    Vérifier que la localité du a = « Martigny ».
+    Vérifier que le numéro GLN du a = « 7601003000016 ».
+
+Scénario « un GLN de douze chiffres est refusé » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On clique sur « Nouvel assureur » dans l'écran des assureurs.
+    On écrit « Visana » dans le nom de l'écran de l'assureur.
+    On écrit « 760100300001 » dans le numéro GLN de l'écran de l'assureur.
+    On clique sur « Enregistrer » dans l'écran de l'assureur.
+    On voit l'erreur « Un GLN a treize chiffres. » dans l'écran de l'assureur.
+    On ferme l'écran de l'assureur.
+    Ouvrir l'écran des assureurs.
+    Vérifier que le nombre d'assureurs conservés = 0.
+
+Scénario « un assureur qu'un patient désigne ne se supprime pas » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Le a vaut un nouvel assureur :
+        Le nom vaut « CSS ».
+    Conserver le a.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    L'assureur du patient de la séance devient le a.
+    On choisit le a dans l'écran des assureurs.
+    On clique sur « Supprimer » dans l'écran de l'assureur.
+    On confirme.
+    On voit l'erreur « Des patients ont encore cet assureur : change d'abord leur assurance. » dans l'écran de l'assureur.
+    On ferme l'écran de l'assureur.
+    Ouvrir l'écran des assureurs.
+    Vérifier que le nombre d'assureurs conservés = 1.
+
+Scénario « une ordonnance nouvelle reçoit son patient et ses valeurs de départ » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    La facturation aux assurances du cabinet conservé devient vrai.
+    Le p vaut le patient de la séance.
+    On choisit le p dans l'écran des patients.
+    On clique sur « Ordonnances » dans l'écran du patient.
+    On clique sur « Nouvelle ordonnance » dans l'écran des prescriptions.
+    On écrit « Dr Muller » dans le médecin de l'écran de l'ordonnance.
+    On clique sur « Enregistrer » dans l'écran de l'ordonnance.
+    On ferme l'écran des prescriptions.
+    On ferme l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que le nombre d'ordonnances conservées = 1.
+    L'o vaut l'ordonnance conservée dont le médecin est « Dr Muller ».
+    Vérifier que le patient de l'o = le patient de la séance.
+    Vérifier que la date de l'o = 10.11.2026.
+    Vérifier que le maximum de séances de l'o = 9.
+    Vérifier que le cas de l'o = « maladie ».
+
+Scénario « une ordonnance de dix séances est refusée » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    La facturation aux assurances du cabinet conservé devient vrai.
+    Le p vaut le patient de la séance.
+    On choisit le p dans l'écran des patients.
+    On clique sur « Ordonnances » dans l'écran du patient.
+    On clique sur « Nouvelle ordonnance » dans l'écran des prescriptions.
+    On écrit « Dr Muller » dans le médecin de l'écran de l'ordonnance.
+    On écrit « 10 » dans le maximum de séances de l'écran de l'ordonnance.
+    On clique sur « Enregistrer » dans l'écran de l'ordonnance.
+    On voit l'erreur « Une ordonnance couvre de une à neuf séances (OPAS art. 6, al. 2). » dans l'écran de l'ordonnance.
+    On ferme l'écran de l'ordonnance.
+    On ferme l'écran des prescriptions.
+    On ferme l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que le nombre d'ordonnances conservées = 0.
+
+Scénario « une ordonnance choisie se modifie, son scan gardé » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    L'o vaut une nouvelle ordonnance :
+        Le patient vaut le patient de la séance.
+        La date vaut 01.11.2026.
+        Le médecin vaut « Dr Muller ».
+        Le maximum de séances vaut 9.
+        Le cas vaut « maladie ».
+        Le scan vaut « %PDF-1.4 » en fichier.
+    Conserver l'o.
+    La facturation aux assurances du cabinet conservé devient vrai.
+    On choisit le patient de la séance dans l'écran des patients.
+    On clique sur « Ordonnances » dans l'écran du patient.
+    On choisit l'o dans l'écran des prescriptions.
+    On écrit « 6 » dans le maximum de séances de l'écran de l'ordonnance.
+    On clique sur « Enregistrer » dans l'écran de l'ordonnance.
+    On ferme l'écran des prescriptions.
+    On ferme l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que le maximum de séances de l'o = 6.
+    Vérifier que la date de l'o = 01.11.2026.
+    Vérifier que le scan de l'o est présent.

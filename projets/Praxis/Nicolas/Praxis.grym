@@ -30,9 +30,7 @@ La personne proposée vaut absent.
 
 Remarque : la séance et le soin dont la page est ouverte.
 La séance ouverte vaut absent.
-L'assureur ouvert vaut absent.
-L'ordonnance ouverte vaut absent.
-Remarque : où en est l'ordonnance ouverte, calculé avant d'ouvrir son écran (un calcul appelé depuis l'écran le dérangeait).
+Remarque : où en est l'ordonnance de l'écran, calculé avant d'ouvrir son écran (un calcul appelé depuis l'écran le dérangeait).
 L'usage ouvert vaut « ».
 Remarque : ce que le service SMS a répondu au dernier essai, tel quel.
 L'état SMS vaut « Aucun essai encore. ».
@@ -3028,7 +3026,7 @@ L'écran des assureurs, « Assureurs », montre :
         un bouton « Nouvel assureur »,
         un bouton « Fermer », qui ferme l'écran.
 
-L'écran de l'assureur, « Assureur », montre :
+L'écran de l'assureur, « Assureur », pour un assureur, montre :
     un nom (texte),
     un numéro GLN (texte), facultatif, avec l'indication « 13 chiffres, le destinataire des factures électroniques »,
     une rue (texte), facultative,
@@ -3040,7 +3038,7 @@ L'écran de l'assureur, « Assureur », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer cet assureur ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cet assureur ? », visible si l'assureur de l'écran est présent.
 
 Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
 Remarque : la plus récente en tête ; une nouvelle s'ouvre vide, une choisie s'ouvre remplie.
@@ -3051,14 +3049,14 @@ L'écran des prescriptions, « Ordonnances », montre :
         un bouton « Nouvelle ordonnance », principal,
         un bouton « Fermer », qui ferme l'écran.
 
-L'écran de l'ordonnance, « Ordonnance », montre :
+L'écran de l'ordonnance, « Ordonnance », pour une ordonnance, montre :
     une date (date), avec l'indication « Le jour de la prescription »,
     un médecin (texte), avec l'indication « Le médecin prescripteur »,
     un numéro RCC du médecin (texte), facultatif,
     un numéro GLN du médecin (texte), facultatif, avec l'indication « 13 chiffres »,
     un maximum de séances (nombre entier), avec l'indication « Neuf au plus par ordonnance (OPAS art. 6, al. 2) »,
     un cas (« maladie », « accident » ou « invalidité »),
-    un scan (fichier), facultatif, avec l'indication « L'ordonnance scannée »,
+    un scan (fichier), facultatif, non lié, avec l'indication « L'ordonnance scannée »,
     une remarque (texte), facultative, sur plusieurs lignes,
     un accord du médecin conseil (date), facultatif, avec l'indication « Au-delà de 36 séances sur ordonnance : le jour de son accord (convention ASE, art. 6.3) »,
     le texte l'usage ouvert,
@@ -3066,7 +3064,7 @@ L'écran de l'ordonnance, « Ordonnance », montre :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Voir le scan »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette ordonnance ? »,
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette ordonnance ? », visible si l'ordonnance de l'écran est présente,
         un bouton « Facturer à l'assurance »,
         un bouton « Annoncer à l'assureur ».
 
@@ -3074,121 +3072,57 @@ Quand on clique sur « Assureurs » dans l'écran de configuration :
     Ouvrir l'écran des assureurs.
 
 Quand on clique sur « Nouvel assureur » dans l'écran des assureurs :
-    L'assureur ouvert devient absent.
     Ouvrir l'écran de l'assureur.
 
 Quand on choisit un assureur dans l'écran des assureurs :
-    L'assureur ouvert devient l'assureur choisi de l'écran.
-    Ouvrir l'écran de l'assureur.
-
-Quand on ouvre l'écran de l'assureur :
-    Si l'assureur ouvert est présent :
-        Le a vaut l'assureur ouvert.
-        Le nom de l'écran devient le nom du a.
-        Le numéro GLN de l'écran devient le numéro GLN du a.
-        La rue de l'écran devient la rue du a.
-        Le numéro de maison de l'écran devient le numéro de maison du a.
-        La case postale de l'écran devient la case postale du a.
-        Le numéro postal de l'écran devient le numéro postal du a.
-        La localité de l'écran devient la localité du a.
-        La valeur du point de l'écran devient la valeur du point du a.
+    Ouvrir l'écran de l'assureur pour l'assureur choisi de l'écran.
 
 Quand on clique sur « Enregistrer » dans l'écran de l'assureur :
     Si le numéro GLN de l'écran est présent :
         Si la longueur du numéro GLN de l'écran ≠ 13, refuser « Un GLN a treize chiffres. ».
-    Si l'assureur ouvert est absent :
-        Le nouveau vaut un nouvel assureur :
-            Le nom vaut le nom de l'écran.
-        Conserver le nouveau.
-        L'assureur ouvert devient le nouveau.
-    Le a vaut l'assureur ouvert.
-    Le nom du a devient le nom de l'écran.
-    Le numéro GLN du a devient le numéro GLN de l'écran.
-    La rue du a devient la rue de l'écran.
-    Le numéro de maison du a devient le numéro de maison de l'écran.
-    La case postale du a devient la case postale de l'écran.
-    Le numéro postal du a devient le numéro postal de l'écran.
-    La localité du a devient la localité de l'écran.
-    La valeur du point du a devient la valeur du point de l'écran.
+    Enregistrer l'assureur de l'écran.
     Fermer l'écran.
 
 Remarque : un assureur qu'un patient désigne encore ne se supprime pas : on change d'abord l'assurance du patient.
 Quand on clique sur « Supprimer » dans l'écran de l'assureur :
-    Si l'assureur ouvert est absent, fermer l'écran.
-    Sinon :
-        Le a vaut l'assureur ouvert.
-        Si le nombre de patients conservés dont l'assureur = le a > 0, refuser « Des patients ont encore cet assureur : change d'abord leur assurance. ».
-        Supprimer le a.
-        Fermer l'écran.
+    S'il existe un patient conservé dont l'assureur est l'assureur de l'écran, refuser « Des patients ont encore cet assureur : change d'abord leur assurance. ».
+    Supprimer l'assureur de l'écran.
+    Fermer l'écran.
 
 Quand on clique sur « Ordonnances » dans l'écran du patient :
     Ouvrir l'écran des prescriptions.
 
 Quand on clique sur « Nouvelle ordonnance » dans l'écran des prescriptions :
-    L'ordonnance ouverte devient absent.
     L'usage ouvert devient « Une nouvelle ordonnance : ses séances se comptent dès la première. ».
-    Ouvrir l'écran de l'ordonnance.
+    Ouvrir l'écran de l'ordonnance pour une nouvelle ordonnance :
+        Le patient vaut la personne ouverte.
+        La date vaut aujourd'hui.
+        Le maximum de séances vaut 9.
+        Le cas vaut « maladie ».
 
 Quand on choisit une ordonnance dans l'écran des prescriptions :
-    L'ordonnance ouverte devient l'ordonnance choisie de l'écran.
-    L'usage ouvert devient l'usage de l'ordonnance ouverte.
-    Ouvrir l'écran de l'ordonnance.
+    L'usage ouvert devient l'usage de l'ordonnance choisie de l'écran.
+    Ouvrir l'écran de l'ordonnance pour l'ordonnance choisie de l'écran.
 
-Quand on ouvre l'écran de l'ordonnance :
-    Si l'ordonnance ouverte est présente :
-        Le o vaut l'ordonnance ouverte.
-        La date de l'écran devient la date du o.
-        Le médecin de l'écran devient le médecin du o.
-        Le numéro RCC du médecin de l'écran devient le numéro RCC du médecin du o.
-        Le numéro GLN du médecin de l'écran devient le numéro GLN du médecin du o.
-        Le maximum de séances de l'écran devient le maximum de séances du o.
-        Le cas de l'écran devient le cas du o.
-        Le scan de l'écran devient le scan du o.
-        La remarque de l'écran devient la remarque du o.
-        L'accord du médecin conseil de l'écran devient l'accord du médecin conseil du o.
-    Sinon :
-        La date de l'écran devient aujourd'hui.
-        Le maximum de séances de l'écran devient 9.
-        Le cas de l'écran devient « maladie ».
-
+Remarque : un scan absent de l'écran ne retire pas celui de l'ordonnance : sa zone n'est pas liée.
 Quand on clique sur « Enregistrer » dans l'écran de l'ordonnance :
     Si le maximum de séances de l'écran < 1 ou le maximum de séances de l'écran > 9, refuser « Une ordonnance couvre de une à neuf séances (OPAS art. 6, al. 2). ».
     Si le numéro GLN du médecin de l'écran est présent :
         Si la longueur du numéro GLN du médecin de l'écran ≠ 13, refuser « Un GLN a treize chiffres. ».
-    Si l'ordonnance ouverte est absente :
-        La nouvelle vaut une nouvelle ordonnance :
-            Le patient vaut la personne ouverte.
-            La date vaut la date de l'écran.
-            Le médecin vaut le médecin de l'écran.
-            Le maximum de séances vaut le maximum de séances de l'écran.
-            Le cas vaut le cas de l'écran.
-        Conserver la nouvelle.
-        L'ordonnance ouverte devient la nouvelle.
-    Le o vaut l'ordonnance ouverte.
-    La date du o devient la date de l'écran.
-    Le médecin du o devient le médecin de l'écran.
-    Le numéro RCC du médecin du o devient le numéro RCC du médecin de l'écran.
-    Le numéro GLN du médecin du o devient le numéro GLN du médecin de l'écran.
-    Le maximum de séances du o devient le maximum de séances de l'écran.
-    Le cas du o devient le cas de l'écran.
-    Si le scan de l'écran est présent, le scan du o devient le scan de l'écran.
-    La remarque du o devient la remarque de l'écran.
-    L'accord du médecin conseil du o devient l'accord du médecin conseil de l'écran.
+    Enregistrer l'ordonnance de l'écran.
+    Si le scan de l'écran est présent, le scan de l'ordonnance de l'écran devient le scan de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Voir le scan » dans l'écran de l'ordonnance :
-    Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
-    Si le scan de l'ordonnance ouverte est absent, refuser « Pas de scan pour cette ordonnance. ».
-    Ouvrir le scan de l'ordonnance ouverte.
+    Si l'ordonnance de l'écran est absente, refuser « Enregistre d'abord l'ordonnance. ».
+    Si le scan de l'ordonnance de l'écran est absent, refuser « Pas de scan pour cette ordonnance. ».
+    Ouvrir le scan de l'ordonnance de l'écran.
 
 Remarque : une ordonnance qui couvre déjà des séances ne se supprime pas : la facture tiers payant la cite.
 Quand on clique sur « Supprimer » dans l'écran de l'ordonnance :
-    Si l'ordonnance ouverte est absente, fermer l'écran.
-    Sinon :
-        Le o vaut l'ordonnance ouverte.
-        Si le nombre de séances conservées dont l'ordonnance = le o > 0, refuser « Des séances relèvent de cette ordonnance : elle reste. ».
-        Supprimer le o.
-        Fermer l'écran.
+    S'il existe une séance conservée dont l'ordonnance est l'ordonnance de l'écran, refuser « Des séances relèvent de cette ordonnance : elle reste. ».
+    Supprimer l'ordonnance de l'écran.
+    Fermer l'écran.
 
 Remarque : le tarif des assurances (chantier B, 23 octobre 2026) : la valeur du point du cabinet, et ses positions tarifaires.
 L'écran du tarif, « Tarif des assurances », montre :
@@ -3227,8 +3161,8 @@ L'écran du décompte, « Facture tiers payant », montre :
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Quand on clique sur « Facturer à l'assurance » dans l'écran de l'ordonnance :
-    Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
-    Décompter l'ordonnance ouverte.
+    Si l'ordonnance de l'écran est absente, refuser « Enregistre d'abord l'ordonnance. ».
+    Décompter l'ordonnance de l'écran.
 
 Quand on clique sur « Tarif des assurances » dans l'écran de configuration :
     Ouvrir l'écran du tarif.
@@ -3312,8 +3246,8 @@ Quand on clique sur « Voir la copie » dans l'écran du décompte :
 
 Remarque : l'annonce : une lettre à l'assureur, gardée dans l'ordonnance ; une seconde fois, la même lettre s'ouvre.
 Quand on clique sur « Annoncer à l'assureur » dans l'écran de l'ordonnance :
-    Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
-    Le o vaut l'ordonnance ouverte.
+    Si l'ordonnance de l'écran est absente, refuser « Enregistre d'abord l'ordonnance. ».
+    Le o vaut l'ordonnance de l'écran.
     Si la lettre d'annonce du o est présente :
         Ouvrir la lettre d'annonce du o.
     Sinon :
