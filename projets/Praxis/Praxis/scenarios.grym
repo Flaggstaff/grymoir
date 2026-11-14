@@ -409,3 +409,55 @@ Scénario « fermer l'écran du salarié sans enregistrer ne change rien » :
     On confirme.
     Ouvrir l'écran du personnel.
     Vérifier que le taux d'occupation de l'employée = 80.
+
+Remarque : le barème, la rubrique et le soin (12 novembre 2026) : trois écrans d'un objet de plus.
+Scénario « l'écran du barème montre l'année choisie et l'écrit » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    Le b vaut le barème conservé dont l'année est 2026.
+    On choisit le b dans l'écran des barèmes.
+    On écrit « 5,4 » dans le taux AVS de l'écran du barème.
+    On clique sur « Enregistrer » dans l'écran du barème.
+    Ouvrir l'écran des barèmes.
+    Vérifier que le taux AVS du b = 5,4.
+    Vérifier que le plafond AC du b = 148200.
+    Établir la feuille de l'employée et l'ouverture de 3 et de 2026, qui donne la f.
+    Vérifier que la retenue AVS de la f = 216.
+
+Scénario « renommer une rubrique par son écran » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Le r vaut une nouvelle rubrique :
+        Le nom vaut « Loyer ».
+    Conserver le r.
+    On choisit le r dans l'écran des rubriques.
+    On écrit « Loyer du cabinet » dans le nom de l'écran de la rubrique.
+    On clique sur « Enregistrer » dans l'écran de la rubrique.
+    Ouvrir l'écran des rubriques.
+    Vérifier que le nombre de rubriques conservées = 1.
+    Vérifier que le nom du r = « Loyer du cabinet ».
+
+Scénario « l'écran du soin écrit le soin choisi » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On choisit le s dans l'écran des soins.
+    On écrit « 135 » dans le tarif de l'écran du soin.
+    On écrit « 50 » dans la durée de l'écran du soin.
+    On clique sur « Enregistrer » dans l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que le tarif du s = 135.
+    Vérifier que la durée du s = 50.
+    Vérifier que le nom du s = « Massage ».
+    Vérifier que la facturation du s = « patient ».
+
+Scénario « une ordonnance exigée fait facturer le soin à l'assurance » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    La facturation aux assurances du cabinet conservé devient vrai.
+    On choisit le s dans l'écran des soins.
+    On écrit « vrai » dans l'ordonnance exigée de l'écran du soin.
+    On clique sur « Enregistrer » dans l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que l'ordonnance exigée du s est vraie.
+    Vérifier que la facturation du s = « assurance ».

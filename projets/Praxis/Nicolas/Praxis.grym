@@ -11,7 +11,6 @@ L'échec de sauvegarde vaut absent.
 L'avis des sauvegardes vaut absent.
 L'avis des accès vaut absent.
 Remarque : le personnel (3 novembre 2026) : le barème et la feuille dont la page est ouverte (le salarié : l'objet de son écran, 3.25) ; ce que les feuilles disent.
-Le barème ouvert vaut absent.
 La feuille ouverte vaut absent.
 L'avis du personnel vaut absent.
 Remarque : l'année des feuilles, celle du jour au départ ; les feuilles montrées vont du premier janvier au suivant, exclu.
@@ -66,7 +65,6 @@ L'avis des comptes vaut absent.
 Remarque : la quittance et le frais en cours.
 La pièce en cours vaut absent.
 Le frais ouvert vaut absent.
-La rubrique ouverte vaut absent.
 
 Remarque : l'année des comptes, choisie dans la Comptabilité, celle du jour au départ : du premier janvier au premier janvier suivant, exclu.
 L'année des comptes vaut (l'année d'aujourd'hui suivi de « ») en nombre entier.
@@ -134,7 +132,6 @@ Le décompte ouvert vaut absent.
 Le crédit ouvert vaut absent.
 L'annonce des crédits vaut "Choisis le fichier de la banque, puis « Lire l'avis ».".
 
-Le soin ouvert vaut absent.
 La note ouverte vaut absent.
 
 Remarque : les soins de départ (départ.grym), créés une seule fois ; ensuite, l'écran des soins les gère.
@@ -302,7 +299,7 @@ L'écran des barèmes, « Barèmes », montre :
         un bouton « Ajouter », principal,
     un bouton « Fermer », qui ferme l'écran.
 
-L'écran du barème, ("Barème " suivi de l'année du barème ouvert), montre :
+L'écran du barème, ("Barème " suivi de l'année du barème de l'écran), pour un barème, montre :
     le texte « Part du salarié », en petites capitales,
     côte à côte :
         un taux AVS (nombre), avec l'unité « % », avec l'indication « AVS, AI et APG ensemble ; 5,3 en 2026 »,
@@ -315,7 +312,7 @@ L'écran du barème, ("Barème " suivi de l'année du barème ouvert), montre :
         un taux allocations familiales (nombre), avec l'unité « % », avec l'indication « Selon la caisse de compensation du cabinet »,
         un taux LAA employeur (nombre), avec l'unité « % », avec l'indication « Accidents professionnels, selon l'assureur »,
     côte à côte :
-        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : les feuilles de salaire : l'année choisie ; « Établir le mois » fait la feuille de chaque salarié en poste qui n'en a
@@ -429,29 +426,7 @@ Quand on clique sur « Ajouter » dans l'écran des barèmes :
     La nouvelle année de l'écran devient absente.
 
 Quand on choisit un barème dans l'écran des barèmes :
-    Le barème ouvert devient le barème choisi de l'écran.
-    Ouvrir l'écran du barème.
-
-Quand on ouvre l'écran du barème :
-    Le b vaut le barème ouvert.
-    Le taux AVS de l'écran devient le taux AVS du b.
-    Le taux AC de l'écran devient le taux AC du b.
-    Le plafond AC de l'écran devient le plafond AC du b.
-    Le taux AVS employeur de l'écran devient le taux AVS employeur du b.
-    Le taux AC employeur de l'écran devient le taux AC employeur du b.
-    Le taux allocations familiales de l'écran devient le taux allocations familiales du b.
-    Le taux LAA employeur de l'écran devient le taux LAA employeur du b.
-
-Quand on clique sur « Enregistrer » dans l'écran du barème :
-    Le b vaut le barème ouvert.
-    Le taux AVS du b devient le taux AVS de l'écran.
-    Le taux AC du b devient le taux AC de l'écran.
-    Le plafond AC du b devient le plafond AC de l'écran.
-    Le taux AVS employeur du b devient le taux AVS employeur de l'écran.
-    Le taux AC employeur du b devient le taux AC employeur de l'écran.
-    Le taux allocations familiales du b devient le taux allocations familiales de l'écran.
-    Le taux LAA employeur du b devient le taux LAA employeur de l'écran.
-    Fermer l'écran.
+    Ouvrir l'écran du barème pour le barème choisi de l'écran.
 
 Quand on clique sur « Feuilles de salaire » dans l'écran du personnel :
     L'avis du personnel devient absent.
@@ -699,7 +674,7 @@ L'écran de la séance, « Séance », montre :
     un bouton « Séance suivante ».
 
 Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
-L'écran du soin, « Soin », montre :
+L'écran du soin, « Soin », pour un soin, montre :
     un nom (texte),
     un tarif (nombre), avec l'unité « CHF »,
     un tarif de suivi (nombre), facultatif, avec l'unité « CHF »,
@@ -708,7 +683,7 @@ L'écran du soin, « Soin », montre :
     une ordonnance exigée (vrai ou faux), en interrupteur, avec l'indication « L'ergothérapie : sur ordonnance, toujours facturée à l'assurance de base », visible si la facturation aux assurances du cabinet conservé,
     une facturation (« patient » ou « assurance »), avec l'indication « Sans ordonnance : au patient (QR-facture, quittance) ou à son assurance », visible si la facturation aux assurances du cabinet conservé,
     le texte « Justificatif de remboursement », en petites capitales,
-    le texte la composition du soin ouvert,
+    le texte la composition du soin de l'écran,
     la liste des actes conservés dont le soin = la méthode ouverte, par code, avec le code, le libellé, la quantité, le prix et la première séance seulement,
     une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
@@ -1272,10 +1247,10 @@ L'écran des rubriques, « Rubriques de frais », montre :
         un bouton « Ajouter », principal,
     un bouton « Fermer », qui ferme l'écran.
 
-L'écran de la rubrique, « Rubrique », montre :
+L'écran de la rubrique, « Rubrique », pour une rubrique, montre :
     un nom (texte),
     côte à côte :
-        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
 
@@ -2362,18 +2337,10 @@ Quand on clique sur « Ajouter » dans l'écran des rubriques :
     La nouvelle rubrique de l'écran devient absente.
 
 Quand on choisit une rubrique dans l'écran des rubriques :
-    La rubrique ouverte devient la rubrique choisie de l'écran.
-    Ouvrir l'écran de la rubrique.
-
-Quand on ouvre l'écran de la rubrique :
-    Le nom de l'écran devient le nom de la rubrique ouverte.
-
-Quand on clique sur « Enregistrer » dans l'écran de la rubrique :
-    Le nom de la rubrique ouverte devient le nom de l'écran.
-    Fermer l'écran.
+    Ouvrir l'écran de la rubrique pour la rubrique choisie de l'écran.
 
 Quand on clique sur « Supprimer » dans l'écran de la rubrique :
-    Supprimer la rubrique ouverte.
+    Supprimer la rubrique de l'écran.
     Fermer l'écran.
 
 Remarque : la page du patient montre ses données, ses séances, et le bouton d'une nouvelle séance.
@@ -2811,38 +2778,19 @@ Quand on clique sur « Facture » dans l'écran des encaissements :
     Facturer au comptoir la séance choisie de l'écran.
 
 Quand on choisit un soin dans l'écran des soins :
-    Le soin ouvert devient le soin choisi de l'écran.
-    Ouvrir l'écran du soin.
+    La méthode ouverte devient le soin choisi de l'écran.
+    Ouvrir l'écran du soin pour le soin choisi de l'écran.
 
-Quand on ouvre l'écran du soin :
-    Le s vaut le soin ouvert.
-    La méthode ouverte devient le s.
-    Le nom de l'écran devient le nom du s.
-    Le tarif de l'écran devient le tarif du s.
-    Le tarif de suivi de l'écran devient le tarif de suivi du s.
-    La durée de l'écran devient la durée du s.
-    Le code tarifaire de l'écran devient le code tarifaire du s.
-    L'ordonnance exigée de l'écran devient l'ordonnance exigée du s.
-    La facturation de l'écran devient la facturation du s.
-    La position tarifaire de l'écran devient la position tarifaire du s.
-
+Remarque : une ordonnance exigée (l'ergothérapie) fait facturer le soin à l'assurance, quand le cabinet y facture.
 Quand on clique sur « Enregistrer » dans l'écran du soin :
-    Le s vaut le soin ouvert.
-    Le nom du s devient le nom de l'écran.
-    Le tarif du s devient le tarif de l'écran.
-    Le tarif de suivi du s devient le tarif de suivi de l'écran.
-    La durée du s devient la durée de l'écran.
-    Le code tarifaire du s devient le code tarifaire de l'écran.
-    Si la facturation aux assurances du cabinet conservé :
-        L'ordonnance exigée du s devient l'ordonnance exigée de l'écran.
-        La facturation du s devient la facturation de l'écran.
-        La position tarifaire du s devient la position tarifaire de l'écran.
-        Si l'ordonnance exigée du s est vraie, la facturation du s devient « assurance ».
+    Enregistrer le soin de l'écran.
+    Si la facturation aux assurances du cabinet conservé et l'ordonnance exigée du soin de l'écran est vraie :
+        La facturation du soin de l'écran devient « assurance ».
     Fermer l'écran.
 
 Remarque : un soin ou une rubrique supprimé ne se propose plus ; les séances et les frais qui le désignent le gardent.
 Quand on clique sur « Supprimer » dans l'écran du soin :
-    Supprimer le soin ouvert.
+    Supprimer le soin de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Nouvel acte » dans l'écran du soin :
