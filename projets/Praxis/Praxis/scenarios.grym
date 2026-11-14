@@ -803,3 +803,28 @@ Scénario « un virement reçu s'écarte » :
     Ouvrir l'écran des crédits.
     Vérifier que l'état du c = « écarté ».
     Vérifier que le payeur du c = « Ana Roth ».
+
+Remarque : la feuille de salaire (12 novembre 2026) : son écran s'ouvre sur la feuille choisie et en écrit le versement et l'envoi.
+Scénario « la feuille choisie montre son net et note son versement » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    Établir la feuille de l'employée et l'ouverture de 11 et de 2026, qui donne la f.
+    On choisit la f dans l'écran des feuilles.
+    On écrit « 25.11.2026 » dans le versement de l'écran de la feuille.
+    On clique sur « Enregistrer » dans l'écran de la feuille.
+    Ouvrir l'écran des feuilles.
+    Vérifier que le versement de la f = 25.11.2026.
+    Vérifier que l'envoi de la f est absent.
+    Vérifier que le net de la f = 3554.
+
+Scénario « effacer une feuille depuis son écran » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    Établir la feuille de l'employée et l'ouverture de 11 et de 2026, qui donne la f.
+    On choisit la f dans l'écran des feuilles.
+    On clique sur « Effacer » dans l'écran de la feuille.
+    On confirme.
+    Ouvrir l'écran des feuilles.
+    Vérifier que le nombre de feuilles conservées = 0.

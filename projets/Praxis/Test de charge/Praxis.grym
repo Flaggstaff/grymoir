@@ -11,7 +11,7 @@ Remarque : une sauvegarde automatique ratée, que l'accueil montre ; ce que l'é
 L'échec de sauvegarde vaut absent.
 L'avis des sauvegardes vaut absent.
 L'avis des accès vaut absent.
-Remarque : le personnel (3 novembre 2026) : le barème et la feuille dont la page est ouverte (le salarié : l'objet de son écran, 3.25) ; ce que les feuilles disent.
+Remarque : le personnel (3 novembre 2026) : la feuille que son document imprime (le salarié, le barème, la feuille : l'objet de leur écran, 3.25) ; ce que les feuilles disent.
 La feuille ouverte vaut absent.
 L'avis du personnel vaut absent.
 Remarque : l'année des feuilles, celle du jour au départ ; les feuilles montrées vont du premier janvier au suivant, exclu.
@@ -323,21 +323,21 @@ L'écran des feuilles, ("Feuilles de salaire " suivi de l'année des feuilles), 
     la liste des feuilles conservées dont le mois ≥ le début des feuilles et le mois < la fin des feuilles, par mois décroissant, avec l'intitulé, le nom du salarié, le brut, le net, le versement et l'envoi,
     un bouton « Fermer », qui ferme l'écran.
 
-L'écran de la feuille, ("Feuille de salaire, " suivi de l'intitulé de la feuille ouverte), montre :
-    le texte l'appellation du salarié de la feuille ouverte, en petites capitales,
-    le texte "Salaire brut : CHF " suivi de l'arrondi du brut de la feuille ouverte à 0,01,
-    le texte "AVS/AI/APG : CHF " suivi de l'arrondi de la retenue AVS de la feuille ouverte à 0,01,
-    le texte "AC : CHF " suivi de l'arrondi de la retenue AC de la feuille ouverte à 0,01,
-    le texte "LAA non professionnelle : CHF " suivi de l'arrondi de la retenue LAA de la feuille ouverte à 0,01,
-    le texte "LPP : CHF " suivi de l'arrondi de la retenue LPP de la feuille ouverte à 0,01,
-    le texte "Impôt à la source : CHF " suivi de l'arrondi de la retenue d'impôt de la feuille ouverte à 0,01,
-    le texte "Salaire net : CHF " suivi de l'arrondi du net de la feuille ouverte à 0,01, en petites capitales,
+L'écran de la feuille, ("Feuille de salaire, " suivi de l'intitulé de la feuille de l'écran), pour une feuille, montre :
+    le texte l'appellation du salarié de la feuille de l'écran, en petites capitales,
+    le texte "Salaire brut : CHF " suivi de l'arrondi du brut de la feuille de l'écran à 0,01,
+    le texte "AVS/AI/APG : CHF " suivi de l'arrondi de la retenue AVS de la feuille de l'écran à 0,01,
+    le texte "AC : CHF " suivi de l'arrondi de la retenue AC de la feuille de l'écran à 0,01,
+    le texte "LAA non professionnelle : CHF " suivi de l'arrondi de la retenue LAA de la feuille de l'écran à 0,01,
+    le texte "LPP : CHF " suivi de l'arrondi de la retenue LPP de la feuille de l'écran à 0,01,
+    le texte "Impôt à la source : CHF " suivi de l'arrondi de la retenue d'impôt de la feuille de l'écran à 0,01,
+    le texte "Salaire net : CHF " suivi de l'arrondi du net de la feuille de l'écran à 0,01, en petites capitales,
     côte à côte :
         un versement (date), facultatif, avec l'indication « Le jour du virement »,
         un envoi (date), facultatif, avec l'indication « Le jour du courriel ou du courrier »,
     côte à côte :
         un bouton « Imprimer », principal, au clavier « P »,
-        un bouton « Enregistrer », au clavier « S »,
+        un bouton « Enregistrer », qui enregistre et ferme l'écran, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran,
         un bouton « Effacer », destructif, à confirmer par « Effacer cette feuille pour toujours ? Elle se refait depuis les feuilles, par le mois. » en tapant « effacer ».
 
@@ -513,24 +513,16 @@ Quand on clique sur « Écrire le fichier » dans l'écran des virements :
     L'avis du personnel devient le nombre fait suivi de " virement(s), CHF " suivi de (l'arrondi du total à 0,01) suivi de ", écrits dans " suivi du chemin suivi de " ; les feuilles sont marquées versées le " suivi de l'exécution du l suivi de « . ».
 
 Quand on choisit une feuille dans l'écran des feuilles :
-    La feuille ouverte devient la feuille choisie de l'écran.
-    Ouvrir l'écran de la feuille.
-
-Quand on ouvre l'écran de la feuille :
-    Le versement de l'écran devient le versement de la feuille ouverte.
-    L'envoi de l'écran devient l'envoi de la feuille ouverte.
-
-Quand on clique sur « Enregistrer » dans l'écran de la feuille :
-    Le versement de la feuille ouverte devient le versement de l'écran.
-    L'envoi de la feuille ouverte devient l'envoi de l'écran.
-    Fermer l'écran.
+    Ouvrir l'écran de la feuille pour la feuille choisie de l'écran.
 
 Remarque : l'aperçu du document, d'où l'on imprime ou enregistre un PDF (Cmd+P suffit à Nicolas) ; l'envoi se note à la main.
+Remarque : un document ne reçoit pas d'objet : « la feuille ouverte » le lui passe.
 Quand on clique sur « Imprimer » dans l'écran de la feuille :
+    La feuille ouverte devient la feuille de l'écran.
     Ouvrir le document de feuille.
 
 Quand on clique sur « Effacer » dans l'écran de la feuille :
-    Supprimer la feuille ouverte définitivement.
+    Supprimer la feuille de l'écran définitivement.
     Fermer l'écran.
 
 Remarque : quitter (24 octobre 2026) : le bouton « Fermer l'application » ou la croix de la fenêtre ferment l'accueil ; en
