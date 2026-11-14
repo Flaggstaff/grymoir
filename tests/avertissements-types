@@ -1,0 +1,51 @@
+#!/bin/sh
+# Les avertissements de types (grammaire 3.33) : l'analyse déduit le type d'une variable (sa création, son nom
+# d'entité), d'un champ, d'une zone d'écran, d'une recherche, et avertit d'une lecture qui échouerait à l'exécution :
+# le champ d'une valeur (la faute de la 3.31), un champ qu'aucune entité de la famille n'a. Aucun refus. Puis aucun
+# avertissement de ce genre sur les vrais programmes du dépôt : un faux avertissement est une régression.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+cd "$d" || exit 1
+cat > av.grym <<'FIN'
+Une facture, conservée, a :
+    un numéro (texte),
+    un montant (nombre).
+Une personne, conservée, a :
+    un nom (texte),
+    un âge (nombre).
+L'écran x montre :
+    une période (nombre), facultative.
+L'année des comptes vaut 2026.
+Afficher la période de l'année des comptes.
+La f vaut la facture conservée dont le numéro est « F1 ».
+Afficher l'âge de la f.
+Pour régler une facture :
+    Afficher le montant de la facture.
+    Afficher le nom de la facture.
+Le texte vaut « abc ».
+Afficher la longueur du texte.
+Le n vaut 3.
+Afficher le montant du n.
+Pour chaque personne conservée :
+    Afficher le montant de la personne.
+FIN
+"$grym" compiler av.grym > /dev/null 2> sortie.txt
+verifier "$?" "0" "les avertissements ne refusent rien"
+verifier "$(grep -c avertissement sortie.txt)" "5" "cinq avertissements"
+verifier "$(grep -c 'av.grym:10:10 : avertissement : « période » se lit ici comme le champ d.une valeur (nombre entier)' sortie.txt)" "1" "le champ d'une valeur"
+verifier "$(grep -c 'av.grym:12:10 : avertissement : « âge » n.est pas un champ de la facture' sortie.txt)" "1" "un champ hors de la famille"
+verifier "$(grep -c 'av.grym:15:14 : avertissement : « nom » n.est pas un champ de la facture' sortie.txt)" "1" "un paramètre nommé comme son entité"
+verifier "$(grep -c 'av.grym:19:10 : avertissement : « montant » se lit ici comme le champ d.une valeur' sortie.txt)" "1" "une variable créée par un nombre"
+verifier "$(grep -c 'av.grym:21:14 : avertissement : « montant » n.est pas un champ de la personne' sortie.txt)" "1" "une variable de boucle"
+for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
+    dir="$racine/projets/$(dirname "$f")"; b=$(basename "$f")
+    mkdir -p "$d/p" && cp -R "$dir/." "$d/p/" && (cd "$d/p" && "$grym" compiler "$b" > /dev/null 2> sortie.txt)
+    verifier "$(grep -c 'se lit ici comme le champ\|ni d.une entité qui en hérite' "$d/p/sortie.txt")" "0" "aucun faux avertissement : $f"
+    rm -rf "$d/p"
+done
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

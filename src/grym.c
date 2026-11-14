@@ -203,6 +203,11 @@ static void avertir_programme(const char *chemin, const char *source, size_t tai
     if (dits) return;
     dits = 1;
     if (!est_compact(chemin)) avertir_source(chemin, source, taille);
+    {   /* 3.33 : ce que l'analyse déduit des types, sans rien refuser */
+        const Avertissement *a = NULL;
+        const size_t n = analyse_avertissements(&a);
+        for (size_t k = 0; k < n; k++) fprintf(stderr, "%s:%d:%d : avertissement : %s\n", chemin, a[k].ligne, a[k].colonne, a[k].message);
+    }
     for (size_t k = 0; k < p->nb_fichiers; k++) {
         if (!p->fichiers[k] || est_compact(p->fichiers[k])) continue;
         FILE *f = grym_fopen(p->fichiers[k], "rb");

@@ -39,6 +39,11 @@ typedef struct {
                                              du fichier analysé qui y mène (pour l'éditeur), sinon 0 */
 } Diagnostic;
 
+#include "lexeur.h"
+/* Les avertissements de la dernière analyse (grammaire 3.33) : ce que l'analyse déduit des types sans rien refuser
+ * (« « période » se lit ici comme le champ d'une valeur… »). Valables jusqu'à la prochaine analyse ; ne pas libérer. */
+size_t analyse_avertissements(const Avertissement **sortie);
+
 /* Analyse une source complète. Renvoie 1 en cas de succès.
  * En cas d'échec, *diag décrit la première erreur, le programme reste vide
  * et la portée n'est pas modifiée : une phrase ratée ne déclare rien.

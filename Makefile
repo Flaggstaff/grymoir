@@ -107,6 +107,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/listes-sur-place
 	sh tests/sortes
 	sh tests/ecran-objet
+	sh tests/avertissements-types
 	sh tests/recherche-par-cle
 	sh tests/conflits
 	sh tests/connexion

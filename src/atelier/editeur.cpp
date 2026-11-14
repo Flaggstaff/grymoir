@@ -40,6 +40,11 @@ Diagnostic_atelier analyser_source(const QString &source, bool compacte, const Q
     const int ok = compacte ? analyser_compact(octets.constData(), (size_t)octets.size(), portee, &programme, &d)
                             : analyser(octets.constData(), (size_t)octets.size(), portee, 0, &programme, &d);
     if (declarations) *declarations = ok && programme_declarations_seules(&programme);
+    if (ok) {   // 3.33 : ce que l'analyse déduit des types ; lus avant toute autre analyse, qui les remplacerait
+        const Avertissement *at = nullptr;
+        const size_t na = analyse_avertissements(&at);
+        for (size_t k = 0; k < na; k++) r.avertissements.append({QString::fromUtf8(at[k].message), at[k].ligne, at[k].colonne});
+    }
     if (!ok) {
         r.message = QString::fromUtf8(d.message ? d.message : "Erreur.");
         r.ligne = d.ligne;

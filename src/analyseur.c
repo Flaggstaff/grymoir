@@ -50,6 +50,7 @@ typedef struct {
                              enfant), dans l'ordre ; NULL sans facultatif (2.98). Possédé, comme nom et classe. */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
     int rend;          /* une action qui rend une valeur (2.57) : « , qui donne … » à l'appel */
+    char *type_deduit; /* 3.33 : le type que l'analyse déduit (sa création, son nom d'entité), ou NULL ; possédé */
 } Symbole;
 
 /* Classe déclarée (§ 11 de la charte, grammaire § 13) : son nom, son genre, ses champs. */
@@ -243,7 +244,7 @@ static void classe_liberer(Classe *c) {
 }
 
 static void portee_vider(Portee *p) {
-    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); free(p->s[i].permises); free(p->s[i].types_params); }
+    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); noeud_liberer(p->s[i].facultatifs); free(p->s[i].permises); free(p->s[i].types_params); free(p->s[i].type_deduit); }
     free(p->s);
     p->s = NULL;
     p->n = p->cap = 0;
@@ -319,6 +320,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->s[i].facultatifs = noeud_copier(src->s[i].facultatifs);   /* 2.98 */
         dst->s[i].permises = src->s[i].permises ? grym_dupliquer(src->s[i].permises) : NULL;   /* § 16.16 */
         dst->s[i].types_params = src->s[i].types_params ? grym_dupliquer(src->s[i].types_params) : NULL;   /* 3.00 */
+        dst->s[i].type_deduit = src->s[i].type_deduit ? grym_dupliquer(src->s[i].type_deduit) : NULL;     /* 3.33 */
     }
     dst->fichier = src->fichier ? grym_dupliquer(src->fichier) : NULL;
     dst->fichier_index = src->fichier_index;
@@ -574,6 +576,8 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->facultatifs = NULL;   /* 2.98 */
     s->permises = NULL;      /* § 16.16 */
     s->types_params = NULL;  /* 3.00 */
+    /* 3.33 : un nom d'entité (« la séance », « Pour régler une séance ») est de cette entité, jusqu'à preuve du contraire */
+    s->type_deduit = classe_de(p, nom) ? grym_dupliquer(nom) : NULL;
     s->abstrait = 0;         /* § 13.7 bis */
     s->table = 0;   /* § 13.11 */
     s->classe = NULL;
@@ -591,6 +595,7 @@ static void portee_tronquer(Portee *p, size_t n) {
         noeud_liberer(p->s[p->n].facultatifs);
         free(p->s[p->n].permises);
         free(p->s[p->n].types_params);
+        free(p->s[p->n].type_deduit);
     }
 }
 
@@ -1483,6 +1488,99 @@ static char *chemin_mal_forme(Analyse *a, const Classe *e, size_t d) {
 }
 
 /* « le solde du client » : champ, puis l'objet après « de » / « du » (grammaire, § 13.3). */
+/* ---------------------------------------------------------------- */
+/* Types déduits et avertissements de l'analyse (3.33)               */
+/* ---------------------------------------------------------------- */
+
+/* Les avertissements de la dernière analyse, celle du fichier analysé, pas de ses fichiers utilisés : ils ne
+ * refusent rien ; grym, l'aide à la saisie et l'atelier les montrent. */
+static Avertissement *avertis;
+static size_t nb_avertis, cap_avertis;
+static int profondeur_utilise;   /* > 0 : on analyse un fichier utilisé (§ 21), qui avertit quand il est analysé seul */
+
+size_t analyse_avertissements(const Avertissement **sortie) {
+    *sortie = avertis;
+    return nb_avertis;
+}
+
+static void avertissements_vider(void) {
+    for (size_t k = 0; k < nb_avertis; k++) free(avertis[k].message);
+    nb_avertis = 0;
+}
+
+static void avertir(Analyse *a, int ligne, int colonne, char *message) {
+    if (profondeur_utilise > 0 || a->echec) { free(message); return; }
+    for (size_t k = 0; k < nb_avertis; k++)   /* une ligne relue (un retour arrière de l'analyse) n'avertit qu'une fois */
+        if (avertis[k].ligne == ligne && avertis[k].colonne == colonne) { free(message); return; }
+    if (nb_avertis == cap_avertis) {
+        cap_avertis = cap_avertis ? 2 * cap_avertis : 8;
+        avertis = realloc(avertis, cap_avertis * sizeof *avertis);
+        if (!avertis) { fputs("GrymoiR : mémoire épuisée\n", stderr); exit(EXIT_FAILURE); }
+    }
+    avertis[nb_avertis].ligne = ligne;
+    avertis[nb_avertis].colonne = colonne;
+    avertis[nb_avertis].message = message;
+    nb_avertis++;
+}
+
+/* Le type d'une expression tel que l'analyse peut le déduire : type_statique, plus les variables (par leur création ou
+ * leur nom d'entité), les champs d'un objet de classe connue, les zones d'un écran, les recherches. NULL : inconnu. */
+static const char *type_deduit(Analyse *a, const Noeud *n) {
+    const char *t = type_statique(n);
+    if (t || !n) return t;
+    switch (n->type) {
+    case N_NOM: {
+        const Symbole *s = n->texte ? visible(a, n->texte) : NULL;
+        return s && s->sorte == S_VARIABLE ? s->type_deduit : NULL;
+    }
+    case N_ECRAN: return n->texte;   /* la classe de l'écran */
+    case N_CHAMP: {
+        if (!n->nb_enfants) return NULL;
+        const char *ts = type_deduit(a, n->enfants[0]);
+        const Classe *c = ts ? classe_de(a->portee, ts) : NULL;
+        return c ? type_du_champ(a->portee, c, n->texte) : NULL;
+    }
+    case N_CHERCHER:
+        return n->forme == 1 ? n->texte : n->forme == 2 ? "nombre entier" : n->forme == 9 ? "vrai ou faux" : NULL;
+    case N_ARRONDI: return "nombre";
+    default: return NULL;
+    }
+}
+
+/* Une classe, ses ancêtres et ses aptitudes, ou une de ses héritières, a-t-elle ce champ ? Un objet désigné comme
+ * client peut être un membre : le champ d'une héritière n'est pas une faute. */
+static int champ_de_la_famille(Portee *p, const Classe *c, const char *champ) {
+    if (classe_champ(p, c, champ, NULL, NULL)) return 1;
+    for (size_t i = 0; i < p->nb_classes; i++) {
+        const Classe *h = &p->classes[i];
+        for (const Classe *x = h->parent ? classe_de(p, h->parent) : NULL; x; x = x->parent ? classe_de(p, x->parent) : NULL)
+            if (x == c) { if (classe_champ(p, h, champ, NULL, NULL)) return 1; break; }
+    }
+    return 0;
+}
+
+/* 3.33 : « le champ de x » quand le type de x est connu : une valeur n'a pas de champ (la faute de la 3.31, qui
+ * échouait à l'exécution), et un objet n'a que les champs de sa famille. */
+static void verifier_acces_champ(Analyse *a, const Noeud *n) {
+    if (a->echec || n->type != N_CHAMP || !n->nb_enfants) return;
+    const Noeud *sujet = n->enfants[0];
+    const char *ts = type_deduit(a, sujet);
+    if (!ts) return;
+    if (type_de_base(ts)) {
+        if (champ_integre(n->texte, NULL)) return;   /* l'année d'une date, la longueur d'un texte… */
+        avertir(a, n->ligne, n->colonne, grym_formater("« %s » se lit ici comme le champ d'une valeur (%s), qui n'a pas de champ : "
+                                                       "à l'exécution, cette lecture échouera. Un calcul « %s » manque-t-il, "
+                                                       "ou un autre objet était-il voulu ?", n->texte, ts, n->texte));
+        return;
+    }
+    const Classe *c = classe_de(a->portee, ts);
+    if (!c || c->aptitude || strncmp(c->nom, "écran ", 7) == 0) return;   /* les zones d'un écran : déjà vérifiées */
+    if (!champ_de_la_famille(a->portee, c, n->texte) && !champ_integre(n->texte, NULL))
+        avertir(a, n->ligne, n->colonne, grym_formater("« %s » n'est pas un champ %s %s, ni d'une entité qui en hérite : à "
+                                                       "l'exécution, cette lecture échouera.", n->texte,
+                                                       c->genre == GENRE_FEMININ ? "de la" : "du", c->nom));
+}
+
 static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, Article art,
                           const Jeton *premier, size_t k) {
     if (strcmp(champ, "jour") == 0 && k + 3 < a->n && est_mot(&a->j[k], "de") && est_mot(&a->j[k + 1], "la")
@@ -1522,6 +1620,7 @@ static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, A
     n->op_colonne = premier->colonne;
     noeud_ajouter(n, objet);
     n->fin = objet->fin;
+    verifier_acces_champ(a, n);   /* 3.33 */
     return n;
 }
 
@@ -5167,6 +5266,11 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
         portee_declarer(a->portee, nom, genre_de(art), tart->ligne);
         if (a->formule) a->portee->s[a->portee->n - 1].local = local = a->nb_locaux++;
         if (permises) a->portee->s[a->portee->n - 1].permises = grym_dupliquer(permises);
+        {   /* 3.33 : le type de sa valeur, s'il se déduit ; sinon, celui de son nom d'entité */
+            const char *te = type_deduit(a, e);
+            Symbole *sy = &a->portee->s[a->portee->n - 1];
+            if (te) { free(sy->type_deduit); sy->type_deduit = grym_dupliquer(te); }
+        }
     } else {
         local = s->local;
     }
@@ -11132,7 +11236,9 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
     Diagnostic d;
     size_t lc = strlen(chemin);
     int compact = lc > 6 && strcmp(chemin + lc - 6, ".grymc") == 0;
+    profondeur_utilise++;   /* 3.33 : ses avertissements sont les siens, dits quand il est analysé seul */
     int ok = analyser_interne(source, taille, p, 0, &prog, &d, NULL, compact);
+    profondeur_utilise--;
     free(source);
     /* analyser_interne a remplacé la portée par sa copie validée : on y retrouve nos champs */
     free(p->fichier);
@@ -13133,11 +13239,13 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
 
 int analyser(const char *source, size_t taille, Portee *portee, int interactif,
              Programme *programme, Diagnostic *diag) {
+    avertissements_vider();   /* 3.33 */
     return analyser_interne(source, taille, portee, interactif, programme, diag, NULL, 0);
 }
 
 int analyser_compact(const char *source, size_t taille, Portee *portee,
                      Programme *programme, Diagnostic *diag) {
+    avertissements_vider();   /* 3.33 */
     return analyser_interne(source, taille, portee, 0, programme, diag, NULL, 1);
 }
 

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.32 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.33 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1656,6 +1656,11 @@ Le typage des entités est vérifié (charte, art. 5) :
 - **sinon, avant toute écriture** : la valeur est vérifiée au moment de la ranger dans le champ, et jamais une valeur du mauvais type n'atteint la base.
 
 Un `(nombre entier)` refuse `2,5` et accepte `3,0` ; un `(nombre)` accepte `2`. Un lien accepte un objet de l'entité ou d'une entité qui en hérite. Une `(image)` refuse un fichier dont le format n'est pas reconnu : « « rapport.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP). »
+
+- **Les types déduits** *(3.33)* : l'analyse déduit aussi le type d'une variable, par sa création (`Le n vaut 3.`, `La f vaut la facture conservée dont …`) ou, à défaut, par son nom quand il est celui d'une entité (`Pour régler une facture :`, `Pour chaque personne conservée :`) ; celui d'un champ d'un objet de type connu, d'une zone lue dans un écran (`le patient de l'écran`), d'une recherche d'un objet (`la facture conservée dont …`) ou d'un nombre (`le nombre de …`). Elle **avertit, sans rien refuser**, d'une lecture qui échouerait à l'exécution :
+  - le champ d'une valeur : « « période » se lit ici comme le champ d'une valeur (nombre entier), qui n'a pas de champ : à l'exécution, cette lecture échouera. Un calcul « période » manque-t-il, ou un autre objet était-il voulu ? » (la faute que la 3.31 a corrigée dans Praxis, attrapée avant l'exécution) ; les champs intégrés (`l'année de la date`, `la longueur du texte`) n'en sont pas ;
+  - un champ qu'aucune entité de la famille n'a : « « âge » n'est pas un champ de la facture, ni d'une entité qui en hérite : … ». Le champ d'une héritière n'est pas une faute : une variable désignée comme client peut tenir un membre.
+  `grym` (`lancer`, `compiler`, `scenarios`…), l'aide à la saisie et l'atelier les montrent, comme ceux du § 1.5 ; ceux d'un fichier utilisé se montrent quand il est analysé seul. Les vrais programmes du dépôt (Praxis, Écoutille, les exemples) n'en ont aucun : `tests/avertissements-types` le garde. Mesuré sur Praxis, Écoutille et les actions de Praxis : le sujet d'une lecture de champ a désormais un type connu dans 77 à 91 % des cas (avant : presque jamais). Les calculs ne rendent pas encore de type déduit, ni un paramètre qui ne porte pas le nom d'une entité.
 
 ### 16.3 Conserver, modifier, supprimer
 
@@ -3322,3 +3327,4 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
 | 3.30 | 2026-11-12 | § 22.28 : `Ouvrir l'écran de l'acte pour un nouvel acte :` et son bloc : un nouvel objet reçoit, à l'ouverture, ce que l'écran ne montre pas (le soin d'où l'on vient) ; modèle caché de l'écran, conservé par `Enregistrer`. Forme compacte `_pour _nouveau acte _avec` |
 | 3.31 | 2026-11-12 | § 13.3 : une zone d'écran ne masque plus un calcul du même nom. « Un champ suivi de « de » l'emporte » valait aussi pour les zones : dans Praxis, la zone « période » de l'écran des prévues faisait lire `la période de l'année des comptes` comme un champ d'un nombre, au lieu du calcul `La période d'une année` ; dix ouvertures d'écran (Frais, Factures, Quittances…) échouaient à l'exécution (« « période » : la valeur n'est pas un objet »). Le calcul l'emporte désormais sur un champ qui n'existe que dans des écrans ; devant « l'écran » (`la période de l'écran`), la zone reste lue. Trouvé par les scénarios de la conversion de Praxis |
 | 3.32 | 2026-11-12 | § 22.28 : un document se déclare `pour une feuille` et s'ouvre `pour` un objet (`Ouvrir le document de feuille pour la feuille de l'écran.`), comme un écran ; le dernier usage des variables « … ouvert » de Praxis qu'un écran ne couvrait pas. Forme compacte `_ouvrir _document … _pour …` |
+| 3.33 | 2026-11-12 | § 16.2 : les types déduits (variables par leur création ou leur nom d'entité, champs, zones d'écran, recherches) et deux avertissements qui ne refusent rien : le champ d'une valeur, un champ hors de la famille de l'entité. Montrés par `grym`, l'aide à la saisie et l'atelier. Aucun sur les vrais programmes du dépôt ; `tests/avertissements-types` |

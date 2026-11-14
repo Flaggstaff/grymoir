@@ -183,6 +183,24 @@ int main(void) {
         free(r);
     }
 
+    /* --- Les avertissements de types (3.33) : le champ d'une valeur, en avertissement, ligne 3 --- */
+    {
+        const char *m[] = {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"capabilities\":{}}}",
+            ("{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\"file:///t.grym\","
+             "\"languageId\":\"grymoir\",\"version\":1,\"text\":\"Une facture, conservée, a :\\n    un montant (nombre).\\n"
+             "Le n vaut 3.\\nAfficher le montant du n.\\n\"}}}"),
+            "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}",
+        };
+        int code;
+        char *r = session(m, sizeof m / sizeof *m, &code);
+        V(strstr(r, "\"start\":{\"line\":3,") && strstr(r, "\"severity\":2") && strstr(r, "se lit ici comme le champ d'une valeur") != NULL,
+          "le champ d'une valeur, en avertissement", r);
+        V(strstr(r, "\"severity\":1") == NULL, "aucune erreur : le programme est correct", r);
+        free(r);
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -197,6 +197,21 @@ static void publier_diagnostics(Serveur *s, const Document *d) {
     int premier = 1;   /* faut-il une virgule avant le diagnostic suivant */
     if (analyser_document(d, &p, &diag)) {
         programme_liberer(&p);
+        /* 3.33 : ce que l'analyse déduit des types, en avertissement */
+        const Avertissement *a = NULL;
+        const size_t n = analyse_avertissements(&a);
+        for (size_t k = 0; k < n; k++) {
+            long f4;
+            const long d4 = colonne_utf16(d->texte, a[k].ligne, a[k].colonne > 0 ? a[k].colonne : 1, &f4);
+            char t[256];
+            snprintf(t, sizeof t, "%s{\"range\":{\"start\":{\"line\":%d,\"character\":%ld},\"end\":{\"line\":%d,\"character\":%ld}},"
+                                  "\"severity\":2,\"source\":\"grym\",\"message\":", premier ? "" : ",", a[k].ligne - 1, d4,
+                     a[k].ligne - 1, f4);
+            chaine_ajouter(&c, t);
+            json_ecrire_texte(&c, a[k].message);
+            chaine_ajouter(&c, "}");
+            premier = 0;
+        }
     } else {
         premier = 0;
         /* une erreur dans un fichier utilisé se signale sur la phrase « Utiliser » qui y mène (§ 21) */
