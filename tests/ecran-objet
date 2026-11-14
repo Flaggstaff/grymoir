@@ -162,5 +162,91 @@ verifier "$(printf '%s\n' "$sortie" | tail -1)" "9 scénarios, 9 réussis : tout
 verifier "$("$grym" formater l.grym)" "$(cat l.grym)" "forme canonique"
 mkdir c && cp l.grym c/ && cd c && "$grym" traduire l.grym > /dev/null 2>&1 && rm l.grym && "$grym" traduire l.grymc > /dev/null 2>&1
 verifier "$(cat l.grym 2>/dev/null)" "$(cat ../l.grym)" "aller-retour par la forme compacte"
+# Le nouvel objet qui reçoit son contexte (grammaire 3.30) : « Ouvrir l'écran de l'acte pour un nouvel acte : Le soin vaut … » ;
+# le modèle sert après un refus ; garder deux fois n'en crée qu'un.
+cd "$d" || exit 1
+cat > nv.grym <<'FIN'
+Un soin, conservé, a :
+    un nom (texte).
+Un acte, conservé, a :
+    un soin (soin),
+    un code (texte), unique,
+    une quantité (nombre).
+L'écran de l'acte, pour un acte, montre :
+    un code (texte),
+    une quantité (nombre),
+    un bouton « OK », qui enregistre et ferme l'écran,
+    un bouton « Garder ».
+Quand on clique sur « Garder » dans l'écran de l'acte :
+    Enregistrer l'acte de l'écran.
+L'écran du soin, pour un soin, montre :
+    un nom (texte),
+    un bouton « Nouvel acte ».
+Quand on clique sur « Nouvel acte » dans l'écran du soin :
+    Ouvrir l'écran de l'acte pour un nouvel acte :
+        Le soin vaut le soin de l'écran.
+        La quantité vaut 3.
+L'écran des soins montre :
+    la liste des soins conservés.
+Quand on choisit un soin dans l'écran des soins :
+    Ouvrir l'écran du soin pour le soin choisi de l'écran.
+FIN
+cat > nvs.grym <<'FIN'
+Ces scénarios éprouvent « nv ».
+Scénario « un acte nouveau reçoit son soin » :
+    Le s vaut un nouveau soin :
+        Le nom vaut « Massage ».
+    Conserver le s.
+    On choisit le s dans l'écran des soins.
+    On clique sur « Nouvel acte » dans l'écran du soin.
+    On écrit « A1 » dans le code de l'écran de l'acte.
+    On clique sur « OK » dans l'écran de l'acte.
+    On ferme l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que le nombre d'actes conservés = 1.
+    Le a vaut l'acte conservé dont le code est « A1 ».
+    Vérifier que le soin du a = s.
+    Vérifier que la quantité du a = 3.
+Scénario « garder deux fois un acte nouveau n'en crée qu'un » :
+    Le s vaut un nouveau soin :
+        Le nom vaut « Massage ».
+    Conserver le s.
+    On choisit le s dans l'écran des soins.
+    On clique sur « Nouvel acte » dans l'écran du soin.
+    On écrit « A1 » dans le code de l'écran de l'acte.
+    On clique sur « Garder » dans l'écran de l'acte.
+    On écrit « 5 » dans la quantité de l'écran de l'acte.
+    On clique sur « Garder » dans l'écran de l'acte.
+    On ferme l'écran de l'acte.
+    On ferme l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que le nombre d'actes conservés = 1.
+    Vérifier que la quantité de l'acte conservé dont le code est « A1 » = 5.
+Scénario « après un refus, le modèle sert encore » :
+    Le s vaut un nouveau soin :
+        Le nom vaut « Massage ».
+    Conserver le s.
+    Le x vaut un nouvel acte :
+        Le soin vaut s.
+        Le code vaut « A1 ».
+        La quantité vaut 1.
+    Conserver le x.
+    On choisit le s dans l'écran des soins.
+    On clique sur « Nouvel acte » dans l'écran du soin.
+    On écrit « A1 » dans le code de l'écran de l'acte.
+    On clique sur « Garder » dans l'écran de l'acte.
+    On voit l'erreur "« code » est unique : un autre acte conservé a déjà « A1 »." dans l'écran de l'acte.
+    On écrit « A2 » dans le code de l'écran de l'acte.
+    On clique sur « OK » dans l'écran de l'acte.
+    On ferme l'écran du soin.
+    Ouvrir l'écran des soins.
+    Vérifier que le nombre d'actes conservés = 2.
+    Vérifier que le soin de l'acte conservé dont le code est « A2 » = s.
+FIN
+sortie=$("$grym" scenarios nvs.grym 2>&1)
+verifier "$(printf '%s\n' "$sortie" | tail -1)" "3 scénarios, 3 réussis : tout est juste." "les trois parcours du modèle"
+verifier "$("$grym" formater nv.grym)" "$(cat nv.grym)" "forme canonique du modèle"
+mkdir m && cp nv.grym m/ && cd m && "$grym" traduire nv.grym > /dev/null 2>&1 && rm nv.grym && "$grym" traduire nv.grymc > /dev/null 2>&1
+verifier "$(cat nv.grym 2>/dev/null)" "$(cat ../nv.grym)" "aller-retour du modèle par la forme compacte"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]

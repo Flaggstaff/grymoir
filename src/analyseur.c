@@ -10696,6 +10696,29 @@ static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
         a->i = pour + 1;
         pour_objet = expression(a);
         if (!pour_objet) { free(nom); return NULL; }
+        /* « pour un nouvel acte : Le soin vaut … » (3.30) : un nouveau qui reçoit ce que l'écran ne montre pas */
+        if (pour_objet->type == N_NOUVEAU && cour(a)->type == J_DEUX_POINTS) {
+            if (pour_objet->op == 'S') {
+                Noeud *r = erreur(a, t, grym_dupliquer("Un objet « saisi » se remplit par un formulaire, pas par un écran."));
+                noeud_liberer(pour_objet); free(nom);
+                return r;
+            }
+            if (strcmp(pour_objet->texte, e->objet) != 0 && !est_sous_classe(a->portee, pour_objet->texte, e->objet)) {
+                Noeud *r = erreur(a, &a->j[pour + 1], grym_formater("L'écran « %s » montre un objet « %s » : « pour » ne reçoit pas un %s.",
+                                                                    nom, e->objet, pour_objet->texte));
+                noeud_liberer(pour_objet); free(nom);
+                return r;
+            }
+            if (!bloc_initialisation(a, pour_objet, t)) { noeud_liberer(pour_objet); free(nom); return NULL; }
+            Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
+            n->texte = nom;
+            n->forme = 4;
+            noeud_ajouter(n, pour_objet);
+            n->local = a->nb_locaux;
+            a->nb_locaux += 2;
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+            return n;
+        }
         const char *ty = type_statique(pour_objet);
         if (ty && (type_de_base(ty) || (classe_de(a->portee, ty) && !est_sous_classe(a->portee, ty, e->objet)))) {
             Noeud *r = erreur(a, &a->j[pour + 1], grym_formater("L'écran « %s » montre un objet « %s » : « pour » ne reçoit pas une valeur (%s).",

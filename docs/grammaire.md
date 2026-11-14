@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 3.29 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
+Version 3.30 de la spécification, révisée le 12 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -3070,6 +3070,14 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
 - **Une zone liée** est une zone qui porte le nom d'un champ du salarié (hérités et aptitudes compris). Elle a le type du champ, sinon l'analyse refuse (« La zone « taux » est (texte), le champ « taux » du salarié est (nombre) : … ») ; un champ facultatif demande une zone facultative. Une zone qui porte ce nom sans devoir s'y lier s'écrit **`, non liée`** (`non lié` au masculin). Les autres zones restent des zones ordinaires. Les choix multiples (`des genres (genre)`) et les zones d'une partie ne se lient pas.
 - **`Ouvrir l'écran du salarié pour s.`** : après les valeurs de départ des zones et avant `Quand on ouvre`, chaque zone liée reçoit le champ de `s`. `s` se lit avant l'ouverture, là où `l'écran` désigne encore celui d'où l'on vient (`le salarié choisi de l'écran`). Un `s` absent vaut un nouveau. Le chargement ne compte pas comme une modification : `si l'écran est modifié` (§ 22.6) ne s'allume qu'après une saisie. Un écran qui ne montre pas d'objet refuse `pour` ; un écran dont le nom contient déjà « pour » garde son nom entier s'il est déclaré.
 - **`Enregistrer le salarié de l'écran.`** dans un événement de l'écran : un salarié absent naît des zones liées, se conserve et devient le salarié de l'écran ; présent, il reçoit les zones liées, et ses champs sans zone ne changent pas. L'écriture est celle de l'événement : un `Refuser` écrit avant n'enregistre rien, une règle (§ 16.14) ou une unicité violée annulent tout, **le salarié posé dans l'écran compris** : après le refus, le nouveau reste nouveau, et un second enregistrement ne vise pas un objet jamais conservé. Un champ obligatoire sans zone fait échouer la conservation (« Le champ « … » n'a pas de valeur : un salarié incomplet ne se conserve pas. »).
+- **Un nouveau qui reçoit son contexte** *(3.30)* : ce que l'écran ne montre pas, un nouvel objet le reçoit à l'ouverture, par le bloc de création (§ 13.2) placé après `pour` :
+  ```
+  Quand on clique sur « Nouvel acte » dans l'écran du soin :
+      Ouvrir l'écran de l'acte pour un nouvel acte :
+          Le soin vaut le soin de l'écran.
+          La quantité vaut 1.
+  ```
+  Le bloc se lit à l'ouverture, là où `l'écran` désigne encore celui d'où l'on vient : le soin est celui de l'écran du soin, sans variable globale. L'objet n'est pas conservé : il attend, comme modèle caché de l'écran, et `l'acte de l'écran` reste absent jusqu'à l'enregistrement. Les zones liées que le bloc nomme reçoivent sa valeur (la quantité, ici) ; les autres gardent leur départ. `Enregistrer l'acte de l'écran.` part du modèle au lieu d'un objet vide, y verse les zones liées, puis le conserve ; un refus annule tout, et le modèle sert encore. L'entité du bloc est celle de l'écran, ou une héritière (« L'écran « de l'acte » montre un objet « acte » : « pour » ne reçoit pas un soin. ») ; un objet `saisi` (§ 19) n'y est pas admis. En forme compacte : `_ouvrir de_l'acte _pour _nouveau acte _avec`, puis le bloc (`soin << _écran.soin`) et `_fin`.
 - **`, qui enregistre et ferme l'écran`** : le bouton fait `Enregistrer le salarié de l'écran.` puis `Fermer l'écran.`, sans événement écrit, comme `qui ferme l'écran` (3.22) ; écrire aussi l'événement est refusé.
 - **Les valeurs de départ.** Pour un nouveau, chaque zone part de sa propre valeur de départ, écrite dans l'écran. Les valeurs `… au départ` d'une entité ne servent qu'à la migration (§ 16.7) : un objet neuf ne les reçoit pas.
 - **Une zone obligatoire lue dans `Quand on ouvre`** est exigée à l'ouverture, comme dans tout événement : pour un nouveau, l'écran montre « Remplis « Nom » : … ». Pour afficher l'objet à l'ouverture, lire son champ, `le nom du salarié de l'écran`, pas la zone.
@@ -3310,3 +3318,4 @@ Quand on clique sur « Supprimer » dans l'écran du salarié :
 | 3.27 | 2026-11-12 | § 16.4 : `S'il existe un barème conservé dont …`, `S'il n'existe aucune facture conservée dont …`, `Sinon s'il …` : la base s'arrête au premier objet (recherche de mode `g`, vm 2.13). Forme compacte `_existe _un …`, `_aucun …` |
 | 3.28 | 2026-11-12 | § 16.21 : les adjectifs définis, `Une facture est impayée si …` ; employés dans les recherches (`les factures conservées impayées dont …`) et sur un objet (`Si f est impayée`), les deux par la base et la même définition. Recherche `(S?k)` : l'objet lui-même (vm 2.14). Forme compacte `_adjectif`, `_est`, `_n_est_pas` |
 | 3.29 | 2026-11-12 | § 22.28 : le titre calculé d'un écran se lit après la naissance de sa classe, et peut lire l'objet de l'écran (`("Barème " suivi de l'année du barème de l'écran)`) ; trouvé en convertissant Praxis |
+| 3.30 | 2026-11-12 | § 22.28 : `Ouvrir l'écran de l'acte pour un nouvel acte :` et son bloc : un nouvel objet reçoit, à l'ouverture, ce que l'écran ne montre pas (le soin d'où l'on vient) ; modèle caché de l'écran, conservé par `Enregistrer`. Forme compacte `_pour _nouveau acte _avec` |

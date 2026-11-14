@@ -2516,16 +2516,21 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             else { aj(im, "Ouvrir le document "); aj(im, nd); aj(im, ".\n"); }
             return;
         }
-        if (c) {
-            aj(im, "_ouvrir ");
-            ecrire_nom(im, n->texte, 0);
-            if (n->forme == 4) { aj(im, " _pour "); expression(im, n->enfants[0]); }   /* 3.25 */
-            aj(im, "\n");
-        } else {
-            aj(im, "Ouvrir l'écran ");
-            aj_sigles(im, n->texte);
-            if (n->forme == 4) { aj(im, " pour "); expression(im, n->enfants[0]); }
-            aj(im, ".\n");
+        {
+            /* « pour un nouvel acte : Le soin vaut … » (3.30) : le bloc du modèle */
+            const Noeud *modele = n->forme == 4 ? nouveau_en_bloc(n->enfants[0]) : NULL;
+            if (c) {
+                aj(im, "_ouvrir ");
+                ecrire_nom(im, n->texte, 0);
+                if (n->forme == 4) { aj(im, " _pour "); expression(im, n->enfants[0]); }   /* 3.25 */
+                aj(im, "\n");
+            } else {
+                aj(im, "Ouvrir l'écran ");
+                aj_sigles(im, n->texte);
+                if (n->forme == 4) { aj(im, " pour "); expression(im, n->enfants[0]); }
+                aj(im, modele ? " :\n" : ".\n");
+            }
+            if (modele) initialisation(im, modele, niveau);
         }
         return;
     case P_FERMER:

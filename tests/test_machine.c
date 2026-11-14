@@ -2548,6 +2548,11 @@ int main(void) {
     PROG("Un barème, conservé, a :\n    une année (nombre entier).\n"
          "L'écran du barème, (\"Barème \" suivi de l'année du barème de l'écran), pour un barème, montre :\n    une année (nombre entier).\n"
          "Afficher « ok ».", "ok");
+    /* 3.30 : « pour un nouvel acte : … » ; les refus */
+    PROG("Un acte, conservé, a :\n    un code (texte).\nUn soin, conservé, a :\n    un nom (texte).\n"
+         "L'écran de l'acte, pour un acte, montre :\n    un code (texte).\n"
+         "Ouvrir l'écran de l'acte pour un nouveau soin :\n    Le nom vaut « x ».",
+         "ERREUR 7:31 L'écran « de l'acte » montre un objet « acte » : « pour » ne reçoit pas un soin.");
 #define ECRAN_OBJET_E "Un salarié, conservé, a :\n    un nom (texte),\n    un courriel (texte), facultatif,\n    un taux (nombre).\n"
     PROG(ECRAN_OBJET_E "L'écran x, pour une salarié, montre :\n    un nom (texte).", "ERREUR 5:17 Accord : « pour un salarié ».");
     PROG(ECRAN_OBJET_E "L'écran x, pour un client, montre :\n    un nom (texte).", "ERREUR 5:20 « client » n'est pas une entité conservée : un écran montre un objet conservé, « pour un salarié ».");

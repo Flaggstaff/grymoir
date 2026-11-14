@@ -2462,6 +2462,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         mot(r, t->valeur, t);
         emettre(r, J_ELISION, "l", t, 1);
         mot(r, "écran", t);
+        /* _ouvrir de_l'acte _pour _nouveau acte _avec (3.30) : le bloc du modèle suit, comme après « << _nouveau acte _avec » */
+        const int modele = ouvre && f >= d + 4 && est_cle(&r->e[f - 1], "avec") && r->e[f - 2].type == J_CROCHETS
+                           && est_cle(&r->e[f - 3], "nouveau");
+        if (modele) f--;
         const size_t pour = ouvre ? chercher(r, d + 1, f, "pour") : f;   /* _ouvrir du_salarié _pour s (3.25) */
         if (ouvre && (pour == d + 1 || pour + 1 == f)) {
             echouer(r, t, grym_dupliquer("Forme attendue : « _ouvrir du_salarié _pour s »."));
@@ -2472,6 +2476,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "pour", &r->e[pour]);
             expression(r, pour + 1, f);
         }
+        if (modele) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
         point(r, f);
         fixer_retrait(r, premier, prof);
         return;

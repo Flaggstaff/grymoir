@@ -1137,6 +1137,10 @@ static void document(Compilation *c, const Noeud *n, int montrer) {
     emettre(c, I_DOCUMENT, montrer, n->ligne, n->colonne);
 }
 
+/* Le modèle caché d'un écran d'un objet (3.30) : le nouvel objet de « pour un nouvel acte : Le soin vaut … », pas
+ * encore conservé ; « Enregistrer » part de lui. Un nom qu'aucune zone ne peut porter (une parenthèse). */
+#define MODELE_ECRAN "(modèle)"
+
 /* L'écran d'un objet (3.25) : ses zones liées sont celles que l'analyse a marquées (entier 65536), chacune au nom de son
  * champ. L'objet est le champ caché de l'écran qui porte le nom de l'entité (« le salarié de l'écran »). */
 static int nom_ou_echec(Compilation *c, const char *nom, int ligne, int colonne, long *k) {
@@ -1183,7 +1187,19 @@ static void enregistrer_objet(Compilation *c, const Noeud *e, int l, int col) {
     emettre(c, I_EST_ABSENT, 0, l, col);
     const size_t vers_present = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
     emettre(c, I_ECRAN_OBJET, 0, l, col);   /* la cible : l'objet ira dans le champ caché de l'écran */
-    emettre(c, I_NOUVEAU, ko, l, col);      /* le nom de l'entité est celui du champ caché */
+    /* le modèle de « pour un nouvel acte : … » (3.30), sinon un objet neuf (le nom de l'entité est celui du champ caché) */
+    long km;
+    if (!nom_ou_echec(c, MODELE_ECRAN, l, col, &km)) return;
+    emettre(c, I_ECRAN_OBJET, 0, l, col);
+    emettre(c, I_LIRE_CHAMP, km, l, col);
+    emettre(c, I_EST_ABSENT, 0, l, col);
+    const size_t vers_modele = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+    emettre(c, I_NOUVEAU, ko, l, col);
+    const size_t vers_zones = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+    bloc_corriger_saut(c->b, vers_modele, c->b->taille_code);
+    emettre(c, I_ECRAN_OBJET, 0, l, col);
+    emettre(c, I_LIRE_CHAMP, km, l, col);
+    bloc_corriger_saut(c->b, vers_zones, c->b->taille_code);
     for (size_t k = 0; k < e->nb_enfants; k++) {
         const Noeud *z = e->enfants[k];
         if (z->type != N_NOM || !(z->entier & 65536)) continue;
@@ -1906,6 +1922,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
             classe_ajouter_champ(cm, ph->texte3);
             classe_typer_dernier_champ(cm, ph->texte3, 0);
             classe_facultatif_dernier_champ(cm);
+            classe_ajouter_champ(cm, MODELE_ECRAN);   /* et son modèle (3.30) */
+            classe_typer_dernier_champ(cm, ph->texte3, 0);
+            classe_facultatif_dernier_champ(cm);
         }
         return;
     }
@@ -1958,7 +1977,28 @@ static void phrase(Compilation *c, const Noeud *ph) {
             if (nz < 0) { trop_grand(c, ph); return; }
             emettre(c, I_ECRIRE_CHAMP, nz, ph->ligne, ph->colonne);
         }
-        if (ph->forme == 4) {   /* l'objet de l'écran, puis ses champs dans les zones liées, avant « Quand on ouvre » (3.25) */
+        if (ph->forme == 4 && ph->enfants[0]->type == N_NOUVEAU) {
+            /* « pour un nouvel acte : Le soin vaut … » (3.30) : le modèle, et les zones liées que son bloc nomme */
+            long km;
+            if (!nom_ou_echec(c, MODELE_ECRAN, ph->ligne, ph->colonne, &km)) return;
+            emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
+            emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+            emettre(c, I_ECRIRE_CHAMP, km, ph->ligne, ph->colonne);
+            const Noeud *nv = ph->enfants[0];
+            for (size_t q = 0; q < nv->nb_enfants; q++) {
+                const char *champ = nv->enfants[q]->texte;
+                int liee = 0;
+                for (size_t k = 0; k < e->nb_enfants && !liee; k++)
+                    liee = e->enfants[k]->type == N_NOM && (e->enfants[k]->entier & 65536) && strcmp(e->enfants[k]->texte, champ) == 0;
+                if (!liee) continue;
+                long kz;
+                if (!nom_ou_echec(c, champ, ph->ligne, ph->colonne, &kz)) return;
+                emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
+                emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+                emettre(c, I_LIRE_CHAMP, kz, ph->ligne, ph->colonne);
+                emettre(c, I_ECRIRE_CHAMP, kz, ph->ligne, ph->colonne);
+            }
+        } else if (ph->forme == 4) {   /* l'objet de l'écran, puis ses champs dans les zones liées, avant « Quand on ouvre » (3.25) */
             long ko;
             if (!nom_ou_echec(c, e->texte3, ph->ligne, ph->colonne, &ko)) return;
             emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
