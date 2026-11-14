@@ -62,7 +62,6 @@ L'avis des comptes vaut absent.
 
 Remarque : la quittance et le frais en cours.
 La pièce en cours vaut absent.
-Le frais ouvert vaut absent.
 
 Remarque : l'année des comptes, choisie dans la Comptabilité, celle du jour au départ : du premier janvier au premier janvier suivant, exclu.
 L'année des comptes vaut (l'année d'aujourd'hui suivi de « ») en nombre entier.
@@ -94,7 +93,6 @@ Le cas en cours vaut « ».
 Le point en cours vaut « ».
 L'ordonnance annoncée vaut absent.
 Le destinataire en cours vaut « ».
-La position ouverte vaut absent.
 Remarque : le justificatif de remboursement en cours d'impression (27 octobre 2026) : sa pièce, son patient, sa date, son montant,
 Remarque : et la période du traitement, de sa première à sa dernière ligne.
 Le numéro justifié vaut « ».
@@ -124,7 +122,6 @@ La date du rappel électronique vaut aujourd'hui.
 L'horodatage du rappel électronique vaut 0.
 Le niveau du rappel électronique vaut 1.
 L'avis des factures vaut « ».
-Le décompte ouvert vaut absent.
 Le crédit ouvert vaut absent.
 L'annonce des crédits vaut "Choisis le fichier de la banque, puis « Lire l'avis ».".
 
@@ -829,20 +826,20 @@ L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
         un bouton « Fermer », qui ferme l'écran,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer le frais choisi ? Il part dans la corbeille. ».
 
-L'écran du frais, « Frais », montre :
+L'écran du frais, « Frais », pour un frais, montre :
     en position libre :
         une date (date), à 0 de la gauche et 0 du haut, large de 200,
         un montant (nombre), avec l'unité « CHF », à 216 de la gauche et 0 du haut, large de 200,
         un libellé (texte), à 0 de la gauche et 72 du haut, large de 520,
         une rubrique (rubrique), à 0 de la gauche et 144 du haut, large de 520,
         un moyen (« espèces », « Twint », « virement » ou « carte »), à 0 de la gauche et 216 du haut, large de 520,
-        un justificatif (fichier), facultatif, avec l'indication « Un scan, une photo ou un PDF », à 552 de la gauche et 0 du haut, large de 520,
+        un justificatif (fichier), facultatif, non lié, avec l'indication « Un scan, une photo ou un PDF », à 552 de la gauche et 0 du haut, large de 520,
         un bouton « Voir le justificatif », à 552 de la gauche et 96 du haut, actif si le justificatif de l'écran est présent,
         un bouton « Retirer le justificatif », à 552 de la gauche et 144 du haut, actif si le justificatif de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce frais ? Il part dans la corbeille. », visible si le frais de l'écran est présent.
 
 Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, les séances et leur paiement, le montant reçu ; ce qu'une
 Remarque : assurance complémentaire demande pour rembourser : le thérapeute, la méthode, la date, la durée, le prix.
@@ -1985,45 +1982,24 @@ Quand on clique sur « Annuler la quittance » dans l'écran des quittances :
     Défaire la quittance choisie de l'écran.
 
 Quand on clique sur « Nouveau frais » dans l'écran des frais :
-    Le frais ouvert devient absent.
-    Ouvrir l'écran du frais.
+    Ouvrir l'écran du frais pour un nouveau frais :
+        La date vaut aujourd'hui.
 
 Quand on choisit un frais dans l'écran des frais :
-    Le frais ouvert devient le frais choisi de l'écran.
-    Ouvrir l'écran du frais.
+    Ouvrir l'écran du frais pour le frais choisi de l'écran.
 
 Remarque : un frais saisi par erreur va dans la corbeille (rien ne disparaît définitivement).
 Quand on clique sur « Supprimer » dans l'écran des frais :
     Si le frais choisi de l'écran est absent, refuser « Choisis d'abord un frais dans la liste. ».
     Supprimer le frais choisi de l'écran.
 
+Remarque : le justificatif n'est pas lié : un justificatif absent de l'écran ne retire pas celui du frais (« Retirer » le fait).
 Quand on ouvre l'écran du frais :
-    Si le frais ouvert est absent :
-        La date de l'écran devient aujourd'hui.
-    Sinon :
-        La date de l'écran devient la date du frais ouvert.
-        Le libellé de l'écran devient le libellé du frais ouvert.
-        Le montant de l'écran devient le montant du frais ouvert.
-        La rubrique de l'écran devient la rubrique du frais ouvert.
-        Le moyen de l'écran devient le moyen du frais ouvert.
-        Le justificatif de l'écran devient le justificatif du frais ouvert.
+    Si le frais de l'écran est présent, le justificatif de l'écran devient le justificatif du frais de l'écran.
 
 Quand on clique sur « Enregistrer » dans l'écran du frais :
-    Si le frais ouvert est absent :
-        Le f vaut un nouveau frais :
-            La date vaut la date de l'écran.
-            Le libellé vaut le libellé de l'écran.
-            Le montant vaut le montant de l'écran.
-            La rubrique vaut la rubrique de l'écran.
-            Le moyen vaut le moyen de l'écran.
-        Conserver le f.
-        Le frais ouvert devient le f.
-    La date du frais ouvert devient la date de l'écran.
-    Le libellé du frais ouvert devient le libellé de l'écran.
-    Le montant du frais ouvert devient le montant de l'écran.
-    La rubrique du frais ouvert devient la rubrique de l'écran.
-    Le moyen du frais ouvert devient le moyen de l'écran.
-    Si le justificatif de l'écran est présent, le justificatif du frais ouvert devient le justificatif de l'écran.
+    Enregistrer le frais de l'écran.
+    Si le justificatif de l'écran est présent, le justificatif du frais de l'écran devient le justificatif de l'écran.
     Fermer l'écran.
 
 Remarque : le justificatif choisi ou gardé, dans la visionneuse du système.
@@ -2032,12 +2008,12 @@ Quand on clique sur « Voir le justificatif » dans l'écran du frais :
 
 Remarque : le justificatif retiré quitte le frais tout de suite (il reste dans les sauvegardes d'avant).
 Quand on clique sur « Retirer le justificatif » dans l'écran du frais :
-    Si le frais ouvert est présent, le justificatif du frais ouvert devient absent.
+    Si le frais de l'écran est présent, le justificatif du frais de l'écran devient absent.
     Le justificatif de l'écran devient absent.
 
 Remarque : supprimer depuis la page du frais, comme pour un patient ou une séance : il va dans la corbeille.
 Quand on clique sur « Supprimer » dans l'écran du frais :
-    Si le frais ouvert est présent, supprimer le frais ouvert.
+    Supprimer le frais de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Configuration » dans l'écran d'accueil :
@@ -3104,7 +3080,10 @@ Quand on choisit une ordonnance dans l'écran des prescriptions :
     L'usage ouvert devient l'usage de l'ordonnance choisie de l'écran.
     Ouvrir l'écran de l'ordonnance pour l'ordonnance choisie de l'écran.
 
-Remarque : un scan absent de l'écran ne retire pas celui de l'ordonnance : sa zone n'est pas liée.
+Remarque : un scan absent de l'écran ne retire pas celui de l'ordonnance : sa zone n'est pas liée ; elle le montre à l'ouverture.
+Quand on ouvre l'écran de l'ordonnance :
+    Si l'ordonnance de l'écran est présente, le scan de l'écran devient le scan de l'ordonnance de l'écran.
+
 Quand on clique sur « Enregistrer » dans l'écran de l'ordonnance :
     Si le maximum de séances de l'écran < 1 ou le maximum de séances de l'écran > 9, refuser « Une ordonnance couvre de une à neuf séances (OPAS art. 6, al. 2). ».
     Si le numéro GLN du médecin de l'écran est présent :
@@ -3133,26 +3112,26 @@ L'écran du tarif, « Tarif des assurances », montre :
         un bouton « Nouvelle position »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
-L'écran de la position, « Position tarifaire », montre :
+L'écran de la position, « Position tarifaire », pour une position, montre :
     un code (texte), avec l'indication « Le chiffre du tarif : 7601 »,
     un libellé (texte), avec l'indication « Traitement individuel »,
     une valeur en points (nombre),
     une unité (« quart d'heure » ou « séance »), avec l'indication « Par quart d'heure entier ou entamé, ou par séance »,
     côte à côte :
-        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran, au clavier « S »,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette position tarifaire ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette position tarifaire ? », visible si la position de l'écran est présente.
 
 Remarque : les factures tiers payant, la plus récente en tête ; une facture choisie s'ouvre : ses PDF, et son règlement.
 L'écran des assurances, « Factures aux assurances », montre :
     la liste des décomptes conservés, par date décroissant, avec le numéro, la date, le nom du patient, le nom de l'assureur, le montant et l'état,
     un bouton « Fermer », qui ferme l'écran.
 
-L'écran du décompte, « Facture tiers payant », montre :
-    le texte "N° " suivi du numéro du décompte ouvert suivi de ", du " suivi de la date du décompte ouvert,
-    le texte "Patient : " suivi du nom du patient du décompte ouvert,
-    le texte "Assureur : " suivi du nom de l'assureur du décompte ouvert,
-    le texte "Montant : CHF " suivi de l'arrondi du montant du décompte ouvert à 0,01 suivi de " ; " suivi de l'état du décompte ouvert,
+L'écran du décompte, « Facture tiers payant », pour un décompte, montre :
+    le texte "N° " suivi du numéro du décompte de l'écran suivi de ", du " suivi de la date du décompte de l'écran,
+    le texte "Patient : " suivi du nom du patient du décompte de l'écran,
+    le texte "Assureur : " suivi du nom de l'assureur du décompte de l'écran,
+    le texte "Montant : CHF " suivi de l'arrondi du montant du décompte de l'écran à 0,01 suivi de " ; " suivi de l'état du décompte de l'écran,
     un règlement (date), facultatif, avec l'indication « Le jour où l'assureur a payé : ses séances sont alors encaissées »,
     côte à côte :
         un bouton « Réglée », principal,
@@ -3176,62 +3155,29 @@ Quand on clique sur « Enregistrer » dans l'écran du tarif :
     Fermer l'écran.
 
 Quand on clique sur « Nouvelle position » dans l'écran du tarif :
-    La position ouverte devient absent.
-    Ouvrir l'écran de la position.
+    Ouvrir l'écran de la position pour une nouvelle position :
+        L'unité vaut « quart d'heure ».
 
 Quand on choisit une position dans l'écran du tarif :
-    La position ouverte devient la position choisie de l'écran.
-    Ouvrir l'écran de la position.
-
-Quand on ouvre l'écran de la position :
-    Si la position ouverte est présente :
-        La p vaut la position ouverte.
-        Le code de l'écran devient le code de la p.
-        Le libellé de l'écran devient le libellé de la p.
-        La valeur en points de l'écran devient la valeur en points de la p.
-        L'unité de l'écran devient l'unité de la p.
-    Sinon, l'unité de l'écran devient « quart d'heure ».
-
-Quand on clique sur « Enregistrer » dans l'écran de la position :
-    Si la position ouverte est absente :
-        La nouvelle vaut une nouvelle position :
-            Le code vaut le code de l'écran.
-            Le libellé vaut le libellé de l'écran.
-            La valeur en points vaut la valeur en points de l'écran.
-            L'unité vaut l'unité de l'écran.
-        Conserver la nouvelle.
-        La position ouverte devient la nouvelle.
-    La p vaut la position ouverte.
-    Le code de la p devient le code de l'écran.
-    Le libellé de la p devient le libellé de l'écran.
-    La valeur en points de la p devient la valeur en points de l'écran.
-    L'unité de la p devient l'unité de l'écran.
-    Fermer l'écran.
+    Ouvrir l'écran de la position pour la position choisie de l'écran.
 
 Remarque : une position qu'un soin désigne encore ne se supprime pas.
 Quand on clique sur « Supprimer » dans l'écran de la position :
-    Si la position ouverte est absente, fermer l'écran.
-    Sinon :
-        La p vaut la position ouverte.
-        Si le nombre de soins conservés dont la position tarifaire = la p > 0, refuser « Un soin facture encore cette position : change d'abord le soin. ».
-        Supprimer la p.
-        Fermer l'écran.
+    S'il existe un soin conservé dont la position tarifaire est la position de l'écran, refuser « Un soin facture encore cette position : change d'abord le soin. ».
+    Supprimer la position de l'écran.
+    Fermer l'écran.
 
 Remarque : les factures tiers payant, une tuile de la Comptabilité depuis le 27 octobre 2026 (avant : l'accueil).
 Quand on clique sur « Assurances » dans l'écran de caisse :
     Ouvrir l'écran des assurances.
 
 Quand on choisit un décompte dans l'écran des assurances :
-    Le décompte ouvert devient le décompte choisi de l'écran.
-    Ouvrir l'écran du décompte.
-
-Quand on ouvre l'écran du décompte :
-    Le règlement de l'écran devient le règlement du décompte ouvert.
+    Ouvrir l'écran du décompte pour le décompte choisi de l'écran.
 
 Remarque : réglée par l'assureur : ses séances sont encaissées ce jour-là, et entrent dans les recettes de l'année.
 Quand on clique sur « Réglée » dans l'écran du décompte :
     Si le règlement de l'écran est absent, refuser « Donne le jour du règlement. ».
-    Le d vaut le décompte ouvert.
+    Le d vaut le décompte de l'écran.
     L'état du d devient « réglé ».
     Le règlement du d devient le règlement de l'écran.
     Pour chaque séance conservée dont le décompte = le d :
@@ -3239,10 +3185,10 @@ Quand on clique sur « Réglée » dans l'écran du décompte :
     Fermer l'écran.
 
 Quand on clique sur « Voir la facture » dans l'écran du décompte :
-    Ouvrir l'exemplaire du décompte ouvert.
+    Ouvrir l'exemplaire du décompte de l'écran.
 
 Quand on clique sur « Voir la copie » dans l'écran du décompte :
-    Ouvrir la copie du décompte ouvert.
+    Ouvrir la copie du décompte de l'écran.
 
 Remarque : l'annonce : une lettre à l'assureur, gardée dans l'ordonnance ; une seconde fois, la même lettre s'ouvre.
 Quand on clique sur « Annoncer à l'assureur » dans l'écran de l'ordonnance :

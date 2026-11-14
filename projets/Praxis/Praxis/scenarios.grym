@@ -639,3 +639,107 @@ Scénario « une ordonnance choisie se modifie, son scan gardé » :
     Vérifier que le maximum de séances de l'o = 6.
     Vérifier que la date de l'o = 01.11.2026.
     Vérifier que le scan de l'o est présent.
+
+Remarque : le frais, la position et le décompte (12 novembre 2026) : un frais nouveau prend la date du jour, une position nouvelle
+Remarque : le quart d'heure (grammaire 3.30) ; le justificatif d'un frais ne part que par « Retirer le justificatif ».
+Scénario « un frais naît de son écran à la date du jour » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    L'exercice vaut un nouvel exercice :
+        Le millésime vaut « 2026 ».
+    Conserver l'exercice.
+    Le r vaut une nouvelle rubrique :
+        Le nom vaut « Loyer ».
+    Conserver le r.
+    On clique sur « Nouveau frais » dans l'écran des frais.
+    On écrit « Loyer de novembre » dans le libellé de l'écran du frais.
+    On écrit « 1200 » dans le montant de l'écran du frais.
+    On choisit « Loyer » dans la rubrique de l'écran du frais.
+    On choisit « virement » dans le moyen de l'écran du frais.
+    On clique sur « Enregistrer » dans l'écran du frais.
+    Ouvrir l'écran des frais.
+    Vérifier que le nombre de frais conservés = 1.
+    Le f vaut le frais conservé dont le libellé est « Loyer de novembre ».
+    Vérifier que la date du f = 10.11.2026.
+    Vérifier que le montant du f = 1200.
+    Vérifier que le justificatif du f est absent.
+
+Scénario « un frais modifié garde son justificatif » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    L'exercice vaut un nouvel exercice :
+        Le millésime vaut « 2026 ».
+    Conserver l'exercice.
+    Le r vaut une nouvelle rubrique :
+        Le nom vaut « Loyer ».
+    Conserver le r.
+    Le f vaut un nouveau frais :
+        La date vaut 05.11.2026.
+        Le libellé vaut « Loyer ».
+        Le montant vaut 1200.
+        La rubrique vaut r.
+        Le moyen vaut « virement ».
+        Le justificatif vaut « %PDF-1.4 » en fichier.
+    Conserver le f.
+    On choisit le f dans l'écran des frais.
+    On écrit « 1250 » dans le montant de l'écran du frais.
+    On clique sur « Enregistrer » dans l'écran du frais.
+    Ouvrir l'écran des frais.
+    Vérifier que le montant du f = 1250.
+    Vérifier que la date du f = 05.11.2026.
+    Vérifier que le justificatif du f est présent.
+
+Scénario « retirer le justificatif d'un frais » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    L'exercice vaut un nouvel exercice :
+        Le millésime vaut « 2026 ».
+    Conserver l'exercice.
+    Le r vaut une nouvelle rubrique :
+        Le nom vaut « Loyer ».
+    Conserver le r.
+    Le f vaut un nouveau frais :
+        La date vaut 05.11.2026.
+        Le libellé vaut « Loyer ».
+        Le montant vaut 1200.
+        La rubrique vaut r.
+        Le moyen vaut « virement ».
+        Le justificatif vaut « %PDF-1.4 » en fichier.
+    Conserver le f.
+    On choisit le f dans l'écran des frais.
+    On clique sur « Retirer le justificatif » dans l'écran du frais.
+    On clique sur « Enregistrer » dans l'écran du frais.
+    Ouvrir l'écran des frais.
+    Vérifier que le justificatif du f est absent.
+
+Scénario « une position nouvelle se compte au quart d'heure » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    On clique sur « Nouvelle position » dans l'écran du tarif.
+    On écrit « 7601 » dans le code de l'écran de la position.
+    On écrit « Traitement individuel » dans le libellé de l'écran de la position.
+    On écrit « 48 » dans la valeur en points de l'écran de la position.
+    On clique sur « Enregistrer » dans l'écran de la position.
+    Ouvrir l'écran du tarif.
+    Vérifier que le nombre de positions conservées = 1.
+    La p vaut la position conservée dont le code est « 7601 ».
+    Vérifier que l'unité de la p = « quart d'heure ».
+    Vérifier que la valeur en points de la p = 48.
+
+Scénario « une position qu'un soin facture ne se supprime pas » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    La p vaut une nouvelle position :
+        Le code vaut « 7601 ».
+        Le libellé vaut « Traitement individuel ».
+        La valeur en points vaut 48.
+        L'unité vaut « séance ».
+    Conserver la p.
+    La position tarifaire du s devient la p.
+    On choisit la p dans l'écran du tarif.
+    On clique sur « Supprimer » dans l'écran de la position.
+    On confirme.
+    On voit l'erreur « Un soin facture encore cette position : change d'abord le soin. » dans l'écran de la position.
+    On ferme l'écran de la position.
+    Ouvrir l'écran du tarif.
+    Vérifier que le nombre de positions conservées = 1.
