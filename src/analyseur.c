@@ -554,6 +554,8 @@ static int champ_hors_ecrans(Portee *p, const char *nom) {
     return 0;
 }
 
+static int type_de_base(const char *t);
+
 static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     if (p->n == p->cap) {
         size_t cap = p->cap ? p->cap * 2 : 16;
@@ -577,7 +579,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->permises = NULL;      /* § 16.16 */
     s->types_params = NULL;  /* 3.00 */
     /* 3.33 : un nom d'entité (« la séance », « Pour régler une séance ») est de cette entité, jusqu'à preuve du contraire */
-    s->type_deduit = classe_de(p, nom) ? grym_dupliquer(nom) : NULL;
+    s->type_deduit = classe_de(p, nom) || type_de_base(nom) ? grym_dupliquer(nom) : NULL;   /* « d'un nombre », 3.34 */
     s->abstrait = 0;         /* § 13.7 bis */
     s->table = 0;   /* § 13.11 */
     s->classe = NULL;
@@ -1543,8 +1545,63 @@ static const char *type_deduit(Analyse *a, const Noeud *n) {
     case N_CHERCHER:
         return n->forme == 1 ? n->texte : n->forme == 2 ? "nombre entier" : n->forme == 9 ? "vrai ou faux" : NULL;
     case N_ARRONDI: return "nombre";
+    case N_GROUPE: return n->nb_enfants ? type_deduit(a, n->enfants[0]) : NULL;
+    case N_OPERATION: {   /* 3.34 : des nombres donnent un nombre ; une date et un nombre, une date */
+        if (n->nb_enfants != 2) return NULL;
+        const char *t1 = type_deduit(a, n->enfants[0]);
+        if (t1 && strcmp(t1, "date") == 0 && n->enfants[1]->type == N_DUREE) return "date";   /* « d + 3 mois » */
+        const char *t2 = type_deduit(a, n->enfants[1]);
+        if (!t1 || !t2) return NULL;
+        const int n1 = strcmp(t1, "nombre") == 0 || strcmp(t1, "nombre entier") == 0;
+        const int n2 = strcmp(t2, "nombre") == 0 || strcmp(t2, "nombre entier") == 0;
+        if (n1 && n2) return "nombre";
+        if (strcmp(t1, "date") == 0 && n2 && (n->op == '+' || n->op == '-')) return "date";
+        return NULL;
+    }
+    case N_APPEL: {   /* 3.34 : le type que rendent toutes les versions du calcul, s'il est le même */
+        if (!n->texte) return NULL;
+        const char *t = NULL;
+        for (size_t k = 0; k < a->portee->n; k++) {
+            const Symbole *x = &a->portee->s[k];
+            if (x->sorte != S_CALCUL || strcmp(x->nom, n->texte) != 0) continue;
+            if (!x->type_deduit || (t && strcmp(t, x->type_deduit) != 0)) return NULL;
+            t = x->type_deduit;
+        }
+        return t;
+    }
     default: return NULL;
     }
+}
+
+/* 3.34 : le type que rend un corps de calcul : sa valeur, ou chacun de ses « Rendre », s'ils s'accordent (des nombres
+ * entiers et décimaux font des nombres). Lu avant la sortie de la formule, ses paramètres encore visibles. */
+static const char *type_rendu(Analyse *a, const Noeud *corps, int forme) {
+    if (!corps) return NULL;
+    if (forme == 0) return type_deduit(a, corps);
+    const char *t = NULL;
+    int vu = 0, inconnu = 0;
+    const Noeud *pile[256];
+    size_t np = 0;
+    pile[np++] = corps;
+    while (np && !inconnu) {
+        const Noeud *x = pile[--np];
+        if (x->type == P_RENDRE) {
+            const char *tx = x->nb_enfants ? type_deduit(a, x->enfants[0]) : NULL;
+            if (!tx) { inconnu = 1; break; }
+            if (t && strcmp(t, tx) != 0) {
+                const int nt = strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0;
+                const int nx = strcmp(tx, "nombre") == 0 || strcmp(tx, "nombre entier") == 0;
+                if (nt && nx) t = "nombre";
+                else { inconnu = 1; break; }
+            } else if (!t) t = tx;
+            vu = 1;
+            continue;
+        }
+        if (x->type == P_CALCUL || x->type == P_ACTION) continue;
+        for (size_t k = 0; k < x->nb_enfants && np < 256; k++) pile[np++] = x->enfants[k];
+        if (np >= 256) inconnu = 1;
+    }
+    return vu && !inconnu ? t : NULL;
 }
 
 /* Une classe, ses ancêtres et ses aptitudes, ou une de ses héritières, a-t-elle ce champ ? Un objet désigné comme
@@ -4735,7 +4792,49 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
 }
 
 /* comparaison = expression [ comparateur expression | "est" relation | "n'est pas" relation ] */
+/* 3.34 : la famille d'un type, pour comparer : N nombre (et année), D date, H heure, B vrai ou faux, T texte, O objet ;
+ * 0 si l'analyse ne sait pas. */
+static char famille_de_type(Analyse *a, const char *t) {
+    if (!t) return 0;
+    if (strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0 || strcmp(t, "année") == 0) return 'N';
+    if (strcmp(t, "date") == 0) return 'D';
+    if (strcmp(t, "heure") == 0) return 'H';
+    if (strcmp(t, "vrai ou faux") == 0) return 'B';
+    if (type_textuel(t)) return 'T';
+    const Classe *c = classe_de(a->portee, t);
+    return c && !c->aptitude && strncmp(c->nom, "écran ", 7) != 0 ? 'O' : 0;
+}
+
+static const char *nom_de_famille(char f) {
+    return f == 'N' ? "un nombre" : f == 'D' ? "une date" : f == 'H' ? "une heure" : f == 'B' ? "vrai ou faux"
+         : f == 'T' ? "un texte" : "un objet";
+}
+
+/* 3.34 : une comparaison que l'exécution refuserait toujours, les deux types connus : deux familles différentes
+ * (« Comparaison impossible entre un texte et un nombre. »), ou un ordre entre textes, vrais ou faux, objets. */
+static void verifier_comparaison(Analyse *a, const Noeud *n) {
+    if (a->echec || !n || n->type != N_COMPARAISON || n->nb_enfants != 2) return;
+    if (!strchr("=!<>lg", n->op) || !n->op) return;
+    const char f1 = famille_de_type(a, type_deduit(a, n->enfants[0])), f2 = famille_de_type(a, type_deduit(a, n->enfants[1]));
+    if (!f1 || !f2) return;
+    const int ligne = n->op_ligne ? n->op_ligne : n->ligne, colonne = n->op_ligne ? n->op_colonne : n->colonne;
+    if (f1 != f2)
+        avertir(a, ligne, colonne, grym_formater("Ici, %s se compare à %s : à l'exécution, la comparaison sera impossible.",
+                                                 nom_de_famille(f1), nom_de_famille(f2)));
+    else if (strchr("<>lg", n->op) && (f1 == 'T' || f1 == 'B' || f1 == 'O'))
+        avertir(a, ligne, colonne, grym_formater("Seuls des nombres, des dates ou des heures se comparent par ordre : ici, %s.",
+                                                 f1 == 'T' ? "des textes" : f1 == 'B' ? "des vrai ou faux" : "des objets"));
+}
+
+static Noeud *comparaison_lue(Analyse *a);
+
 static Noeud *comparaison(Analyse *a) {
+    Noeud *n = comparaison_lue(a);
+    verifier_comparaison(a, n);   /* 3.34 */
+    return n;
+}
+
+static Noeud *comparaison_lue(Analyse *a) {
     Noeud *x = expression(a);
     if (!x) return NULL;
     attendre(a, A_COMPARAISON);
@@ -5273,6 +5372,12 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
         }
     } else {
         local = s->local;
+        /* 3.34 : « La créance en cours vaut absent. » puis « … devient la f. » : la première valeur typée donne le type */
+        Symbole *sv = visible(a, nom);   /* relu : la lecture de la valeur a pu déplacer les symboles */
+        if (sv && sv->sorte == S_VARIABLE && !sv->type_deduit) {
+            const char *te = type_deduit(a, e);
+            if (te) sv->type_deduit = grym_dupliquer(te);
+        }
     }
 
     Noeud *n = noeud_creer(creation ? P_CREATION : P_MODIFICATION,
@@ -5801,11 +5906,14 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     if (refus) { noeud_liberer(params); free(nom); return NULL; }
 
     portee_declarer(a->portee, nom, genre_de(art), tart->ligne);
+    const size_t rang_calcul = a->portee->n - 1;   /* 3.34 : le symbole bougera peut-être (les locaux du corps) */
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_CALCUL;
     s->nb_parametres = (int)params->nb_enfants;
     s->types_params = types_des_parametres(params);   /* 3.00 */
     s->classe = classe;
+    free(s->type_deduit);   /* un calcul ne prend pas le type de son nom : son corps le dira */
+    s->type_deduit = NULL;
 
     Contexte ctx = entrer_formule(a, 1, params);
     Jeton *verbe = &a->j[fin_entete];
@@ -5843,6 +5951,10 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
         }
     }
     int locaux = a->nb_locaux;
+    if (corps) {   /* 3.34 : le type rendu, lu tant que les paramètres sont visibles */
+        const char *tr = type_rendu(a, corps, forme);
+        if (tr && rang_calcul < a->portee->n) a->portee->s[rang_calcul].type_deduit = grym_dupliquer(tr);
+    }
     sortir_formule(a, ctx);
     if (!corps) {
         noeud_liberer(params);

@@ -41,10 +41,56 @@ verifier "$(grep -c 'av.grym:12:10 : avertissement : « âge » n.est pas un cha
 verifier "$(grep -c 'av.grym:15:14 : avertissement : « nom » n.est pas un champ de la facture' sortie.txt)" "1" "un paramètre nommé comme son entité"
 verifier "$(grep -c 'av.grym:19:10 : avertissement : « montant » se lit ici comme le champ d.une valeur' sortie.txt)" "1" "une variable créée par un nombre"
 verifier "$(grep -c 'av.grym:21:14 : avertissement : « montant » n.est pas un champ de la personne' sortie.txt)" "1" "une variable de boucle"
+# 3.34 : le type que rend un calcul, un paramètre nommé comme un type de base, les comparaisons impossibles
+cat > av3.grym <<'FIN'
+Une facture, conservée, a :
+    un numéro (texte),
+    un montant (nombre),
+    une échéance (date).
+Une personne, conservée, a :
+    un nom (texte).
+Le double d'un nombre vaut nombre × 2.
+La dernière d'une référence :
+    Rendre la facture conservée dont le numéro est référence.
+La relance d'une facture vaut l'échéance de la facture + 30.
+Afficher le montant du double de 3.
+Afficher le montant de la dernière de « F1 ».
+Afficher le nom de la dernière de « F1 ».
+Afficher le jour de la relance de la dernière de « F1 ».
+Afficher le montant de la relance de la dernière de « F1 ».
+FIN
+"$grym" compiler av3.grym > /dev/null 2> s3.txt
+verifier "$(grep -c avertissement s3.txt)" "3" "trois avertissements par des calculs typés"
+verifier "$(grep -c 'av3.grym:11:10 : avertissement : « montant » se lit ici comme le champ d.une valeur (nombre)' s3.txt)" "1" "le calcul « double » rend un nombre"
+verifier "$(grep -c 'av3.grym:13:10 : avertissement : « nom » n.est pas un champ de la facture' s3.txt)" "1" "le calcul « dernière » rend une facture"
+verifier "$(grep -c 'av3.grym:15:10 : avertissement : « montant » se lit ici comme le champ d.une valeur (date)' s3.txt)" "1" "une date plus un nombre est une date"
+cat > av4.grym <<'FIN'
+Une facture, conservée, a :
+    un numéro (texte),
+    un montant (nombre),
+    une échéance (date),
+    un payé (vrai ou faux).
+La f vaut la facture conservée dont le numéro est « F1 ».
+Le double d'un nombre vaut nombre × 2.
+Si le numéro de la f = le montant de la f, afficher 1.
+Si le numéro de la f < « F2 », afficher 2.
+Si l'échéance de la f > 3, afficher 3.
+Si le double de 4 = « x », afficher 4.
+Si le montant de la f ≥ le double de 4, afficher 5.
+Si l'échéance de la f < aujourd'hui, afficher 6.
+Si la f = la f, afficher 7.
+Si l'année d'aujourd'hui = 2026, afficher 8.
+FIN
+"$grym" compiler av4.grym > /dev/null 2> s4.txt
+verifier "$(grep -c avertissement s4.txt)" "4" "quatre comparaisons impossibles"
+verifier "$(grep -c 'av4.grym:8:22 : avertissement : Ici, un texte se compare à un nombre' s4.txt)" "1" "un texte et un nombre"
+verifier "$(grep -c 'av4.grym:9:22 : avertissement : Seuls des nombres, des dates ou des heures se comparent par ordre : ici, des textes.' s4.txt)" "1" "un ordre entre textes"
+verifier "$(grep -c 'av4.grym:10:23 : avertissement : Ici, une date se compare à un nombre' s4.txt)" "1" "une date et un nombre"
+verifier "$(grep -c 'av4.grym:11:19 : avertissement : Ici, un nombre se compare à un texte' s4.txt)" "1" "le résultat d'un calcul et un texte"
 for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
     dir="$racine/projets/$(dirname "$f")"; b=$(basename "$f")
     mkdir -p "$d/p" && cp -R "$dir/." "$d/p/" && (cd "$d/p" && "$grym" compiler "$b" > /dev/null 2> sortie.txt)
-    verifier "$(grep -c 'se lit ici comme le champ\|ni d.une entité qui en hérite' "$d/p/sortie.txt")" "0" "aucun faux avertissement : $f"
+    verifier "$(grep -c 'avertissement' "$d/p/sortie.txt")" "0" "aucun faux avertissement : $f"
     rm -rf "$d/p"
 done
 echo "$((total - echecs))/$total tests réussis"
