@@ -743,3 +743,63 @@ Scénario « une position qu'un soin facture ne se supprime pas » :
     On ferme l'écran de la position.
     Ouvrir l'écran du tarif.
     Vérifier que le nombre de positions conservées = 1.
+
+Remarque : la séance et le virement reçu (12 novembre 2026) : la fiche d'une séance s'ouvre sur sa séance (grammaire 3.25) ; son
+Remarque : paiement n'est pas lié (offert et assurance s'y montrent « à payer ») ; son enregistrement garde ses règles.
+Scénario « la fiche d'une séance la montre et l'écrit » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    On choisit la séance dans l'écran des encaissements.
+    On écrit « 100 » dans le prix de l'écran de la séance.
+    On écrit « Bonne séance » dans le commentaire de l'écran de la séance.
+    On clique sur « Enregistrer » dans l'écran de la séance.
+    Ouvrir l'écran des encaissements.
+    Vérifier que le prix de la séance = 100.
+    Vérifier que le commentaire de la séance = « Bonne séance ».
+    Vérifier que le statut de la séance = « faite ».
+    Vérifier que le paiement de la séance = « à payer ».
+    Vérifier que la date de la séance = 10.11.2026.
+
+Scénario « une séance payée depuis sa fiche » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    On choisit la séance dans l'écran des encaissements.
+    On clique sur « Twint » dans l'écran de la séance.
+    Ouvrir l'écran des encaissements.
+    Vérifier que le paiement de la séance = « Twint ».
+    Vérifier que l'encaissement de la séance = 10.11.2026.
+
+Scénario « une séance offerte le reste à l'enregistrement de sa fiche » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Le paiement de la séance devient « offert ».
+    On choisit la séance dans l'écran du calendrier.
+    On écrit « 90 » dans le prix de l'écran de la séance.
+    On clique sur « Enregistrer » dans l'écran de la séance.
+    Ouvrir l'écran du calendrier.
+    Vérifier que le paiement de la séance = « offert ».
+    Vérifier que le prix de la séance = 90.
+    Vérifier que l'encaissement de la séance est absent.
+
+Scénario « un virement reçu s'écarte » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    L'exercice vaut un nouvel exercice :
+        Le millésime vaut « 2026 ».
+    Conserver l'exercice.
+    Le c vaut un nouveau crédit :
+        La source vaut « essai-1 ».
+        La date vaut 05.11.2026.
+        Le montant vaut 120.
+        La monnaie vaut « CHF ».
+        Le payeur vaut « Ana Roth ».
+        L'état vaut « à vérifier ».
+    Conserver le c.
+    On choisit le c dans l'écran des crédits.
+    On clique sur « Écarter » dans l'écran du crédit.
+    Ouvrir l'écran des crédits.
+    Vérifier que l'état du c = « écarté ».
+    Vérifier que le payeur du c = « Ana Roth ».

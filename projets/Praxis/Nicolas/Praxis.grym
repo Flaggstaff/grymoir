@@ -29,7 +29,6 @@ La personne ouverte vaut absent.
 La personne proposée vaut absent.
 
 Remarque : la séance et le soin dont la page est ouverte.
-La séance ouverte vaut absent.
 Remarque : où en est l'ordonnance de l'écran, calculé avant d'ouvrir son écran (un calcul appelé depuis l'écran le dérangeait).
 L'usage ouvert vaut « ».
 Remarque : ce que le service SMS a répondu au dernier essai, tel quel.
@@ -122,7 +121,6 @@ La date du rappel électronique vaut aujourd'hui.
 L'horodatage du rappel électronique vaut 0.
 Le niveau du rappel électronique vaut 1.
 L'avis des factures vaut « ».
-Le crédit ouvert vaut absent.
 L'annonce des crédits vaut "Choisis le fichier de la banque, puis « Lire l'avis ».".
 
 La note ouverte vaut absent.
@@ -638,7 +636,7 @@ L'écran de la fusion, « Fusionner deux fiches », montre :
         un bouton « Fermer », qui ferme l'écran.
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
-L'écran de la séance, « Séance », montre :
+L'écran de la séance, « Séance », pour une séance, montre :
     en position libre :
         un patient (patient), à 0 de la gauche et 0 du haut, large de 380,
         un bouton « Voir le patient », à 396 de la gauche et 23 du haut,
@@ -648,7 +646,7 @@ L'écran de la séance, « Séance », montre :
         une durée (nombre entier), facultative, avec l'unité « min », à 352 de la gauche et 144 du haut, large de 168,
         un prix (nombre), avec l'unité « CHF », à 0 de la gauche et 216 du haut, large de 200,
         un statut (« prévue », « faite », « annulée » ou « absence »), à 0 de la gauche et 288 du haut, large de 520,
-        un paiement (« à payer », « espèces », « Twint » ou « virement »), en lecture seule, avec l'indication « Les boutons du bas le changent, même déjà réglée : Espèces, Twint, Virement, À payer », à 0 de la gauche et 360 du haut, large de 520,
+        un paiement (« à payer », « espèces », « Twint » ou « virement »), non lié, en lecture seule, avec l'indication « Les boutons du bas le changent, même déjà réglée : Espèces, Twint, Virement, À payer », à 0 de la gauche et 360 du haut, large de 520,
         une offerte (vrai ou faux), à 0 de la gauche et 420 du haut,
         un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
@@ -656,7 +654,7 @@ L'écran de la séance, « Séance », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Facture ou quittance »,
-        un bouton « Annuler sa facture », destructif, à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance ouverte est présente,
+        un bouton « Annuler sa facture », destructif, à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance de l'écran est présente,
         un bouton « Fermer », qui ferme l'écran, à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », destructif, à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
     côte à côte :
@@ -1016,17 +1014,17 @@ L'écran des crédits, ("Virements reçus " suivi de l'année des comptes), mont
 
 Remarque : un virement à vérifier : la facture qu'il règle, choisie à la main, se solde au jour du virement ; « Écarter » le met de
 Remarque : côté (un remboursement, un virement privé) ; « À vérifier » l'y remet.
-L'écran du crédit, « Virement reçu », montre :
-    le texte "Reçu le " suivi de la date du crédit ouvert suivi de " : CHF " suivi de (l'arrondi du montant du crédit ouvert à 0,01) suivi de « . »,
-    le texte "Payeur : " suivi de l'annonce du payeur du crédit ouvert,
-    le texte "Référence : " suivi de l'annonce de la référence du crédit ouvert,
-    le texte "Message : " suivi de l'annonce du message du crédit ouvert,
-    le texte l'annonce de la raison du crédit ouvert,
+L'écran du crédit, « Virement reçu », pour un crédit, montre :
+    le texte "Reçu le " suivi de la date du crédit de l'écran suivi de " : CHF " suivi de (l'arrondi du montant du crédit de l'écran à 0,01) suivi de « . »,
+    le texte "Payeur : " suivi de l'annonce du payeur du crédit de l'écran,
+    le texte "Référence : " suivi de l'annonce de la référence du crédit de l'écran,
+    le texte "Message : " suivi de l'annonce du message du crédit de l'écran,
+    le texte l'annonce de la raison du crédit de l'écran,
     une facture (facture dont l'état ≠ « réglée »), facultative, avec recherche, avec l'indication « La facture que ce virement règle »,
     côte à côte :
-        un bouton « Rapprocher », principal, actif si l'état du crédit ouvert ≠ « rapproché »,
-        un bouton « Écarter », actif si l'état du crédit ouvert = « à vérifier »,
-        un bouton « À vérifier », actif si l'état du crédit ouvert = « écarté »,
+        un bouton « Rapprocher », principal, actif si l'état du crédit de l'écran ≠ « rapproché »,
+        un bouton « Écarter », actif si l'état du crédit de l'écran = « à vérifier »,
+        un bouton « À vérifier », actif si l'état du crédit de l'écran = « écarté »,
         un bouton « Fermer », qui ferme l'écran.
 
 Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
@@ -1783,23 +1781,19 @@ Quand on clique sur « Lire l'avis » dans l'écran des crédits :
     Signaler l'annonce des crédits.
 
 Quand on choisit un crédit dans l'écran des crédits :
-    Le crédit ouvert devient le crédit choisi de l'écran.
-    Ouvrir l'écran du crédit.
-
-Quand on ouvre l'écran du crédit :
-    La facture de l'écran devient la facture du crédit ouvert.
+    Ouvrir l'écran du crédit pour le crédit choisi de l'écran.
 
 Quand on clique sur « Rapprocher » dans l'écran du crédit :
-    Attribuer le crédit ouvert et la facture de l'écran.
-    Signaler "Facture " suivi du numéro de la facture du crédit ouvert suivi de « réglée par ce virement. ».
+    Attribuer le crédit de l'écran et la facture de l'écran.
+    Signaler "Facture " suivi du numéro de la facture du crédit de l'écran suivi de « réglée par ce virement. ».
     Fermer l'écran.
 
 Quand on clique sur « Écarter » dans l'écran du crédit :
-    L'état du crédit ouvert devient « écarté ».
+    L'état du crédit de l'écran devient « écarté ».
     Fermer l'écran.
 
 Quand on clique sur « À vérifier » dans l'écran du crédit :
-    L'état du crédit ouvert devient « à vérifier ».
+    L'état du crédit de l'écran devient « à vérifier ».
 
 Quand on clique sur « Comptabilité » dans l'écran d'accueil :
     Ouvrir l'écran de comptabilité.
@@ -2120,8 +2114,7 @@ Quand on clique sur « Aujourd'hui » dans l'écran du calendrier :
     Caler aujourd'hui.
 
 Quand on choisit une séance dans l'écran du calendrier :
-    La séance ouverte devient la séance.
-    Ouvrir l'écran de la séance.
+    Ouvrir l'écran de la séance pour la séance.
 
 Remarque : une séance glissée ailleurs (1er novembre 2026) : seule une prévue se déplace ; facturée, la règle des séances
 Remarque : facturées la refuse ; son rappel SMS suit sa nouvelle date.
@@ -2415,7 +2408,7 @@ Quand on clique sur « Nouvelle séance » dans l'écran du patient :
 Remarque : la séance suivante (2 novembre 2026), depuis la fiche d'une séance : même patient, même soin, même heure, une
 Remarque : semaine plus tard (une semaine après aujourd'hui pour une séance ancienne) ; tout reste modifiable avant d'enregistrer.
 Quand on clique sur « Séance suivante » dans l'écran de la séance :
-    La s vaut la séance ouverte.
+    La s vaut la séance de l'écran.
     La personne proposée devient le patient de la s.
     Le soin proposé devient le soin de la s.
     La date proposée devient la date de la s + 7.
@@ -2428,8 +2421,7 @@ Quand on clique sur « Séance suivante » dans l'écran de la séance :
     L'heure proposée devient absente.
 
 Quand on choisit une séance dans l'écran du patient :
-    La séance ouverte devient la séance choisie de l'écran.
-    Ouvrir l'écran de la séance.
+    Ouvrir l'écran de la séance pour la séance choisie de l'écran.
 
 Quand on clique sur « Notes » dans l'écran du patient :
     Ouvrir l'écran des notes.
@@ -2617,8 +2609,7 @@ Quand on clique sur « Attestation annuelle » dans l'écran du patient :
     Signaler "Attestation " suivi de l'année des comptes suivi de " : une autre année se choisit dans la Comptabilité.".
 
 Quand on choisit une séance dans l'écran d'accueil :
-    La séance ouverte devient la séance choisie de l'écran.
-    Ouvrir l'écran de la séance.
+    Ouvrir l'écran de la séance pour la séance choisie de l'écran.
 
 Remarque : la séance du jour se règle depuis l'accueil (31 octobre 2026) : un clic sur sa carte la choisit, puis Espèces, Twint ou
 Remarque : Facture, comme depuis « Séances » ; le double-clic ouvre toujours sa fiche.
@@ -2637,8 +2628,7 @@ Quand on clique sur « Facture » dans l'écran d'accueil :
 Remarque : un clic sur une ligne la choisit seulement (31 octobre 2026) : les boutons agissent sur elle ; « Fiche » l'ouvre.
 Quand on clique sur « Fiche » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    La séance ouverte devient la séance choisie de l'écran.
-    Ouvrir l'écran de la séance.
+    Ouvrir l'écran de la séance pour la séance choisie de l'écran.
 
 Remarque : un double-clic sur une ligne (Entrée aussi) ouvre sa fiche, comme dans les autres listes (31 octobre 2026).
 Quand on choisit une séance dans l'écran des prévues :
@@ -2721,8 +2711,7 @@ Quand on clique sur « Facture » dans l'écran des prévues :
 Remarque : un clic sur une ligne la choisit seulement (31 octobre 2026) : les boutons agissent sur elle ; « Fiche » l'ouvre.
 Quand on clique sur « Fiche » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    La séance ouverte devient la séance choisie de l'écran.
-    Ouvrir l'écran de la séance.
+    Ouvrir l'écran de la séance pour la séance choisie de l'écran.
 
 Quand on choisit une séance dans l'écran des encaissements :
     Faire comme un clic sur « Fiche ».
@@ -2781,26 +2770,17 @@ Quand on clique sur « Supprimer » dans l'écran de l'acte :
     Fermer l'écran.
 
 Remarque : la page d'une séance ; son patient s'ouvre sur sa page, jamais sur la fiche déduite.
+Remarque : le paiement n'est pas lié : offert et assurance s'y montrent « à payer », l'interrupteur « offerte » dit le premier.
 Quand on ouvre l'écran de la séance :
-    Le s vaut la séance ouverte.
-    Le patient de l'écran devient le patient du s.
-    Le soin de l'écran devient le soin du s.
-    La date de l'écran devient la date du s.
-    L'heure de l'écran devient l'heure du s.
-    La durée de l'écran devient la durée du s.
-    Le prix de l'écran devient le prix du s.
-    Le statut de l'écran devient le statut du s.
+    Le s vaut la séance de l'écran.
     Si le paiement du s = « offert » :
         L'offerte de l'écran devient vrai.
         Le paiement de l'écran devient « à payer ».
     Sinon si le paiement du s = « assurance », le paiement de l'écran devient « à payer ».
     Sinon, le paiement de l'écran devient le paiement du s.
-    Le commentaire dicté de l'écran devient le commentaire dicté du s.
-    Le commentaire de l'écran devient le commentaire du s.
-    L'encaissement de l'écran devient l'encaissement du s.
 
 Quand on clique sur « Enregistrer » dans l'écran de la séance :
-    Le s vaut la séance ouverte.
+    Le s vaut la séance de l'écran.
     Le nouveau paiement vaut le paiement de l'écran.
     Si l'offerte de l'écran est vraie, le nouveau paiement devient « offert ».
     Si la facturation du soin de l'écran = « assurance », le nouveau paiement devient « assurance ».
@@ -2841,30 +2821,30 @@ Remarque : changements tant que sa facture n'est pas annulée, par « Annuler sa
 Remarque : une séance facturée qui ne se doit plus (annulée, prévue, absence non facturée) libère sa facture : « dégager ».
 Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
-    Attester la séance ouverte.
+    Attester la séance de l'écran.
 
 Remarque : payée depuis sa fiche (31 octobre 2026), comme depuis « Séances » : enregistrée telle qu'à l'écran, puis réglée.
 Quand on clique sur « Espèces » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
-    Payer autrement la séance ouverte et « espèces » et (absent).
+    Payer autrement la séance de l'écran et « espèces » et (absent).
 
 Quand on clique sur « Twint » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
-    Payer autrement la séance ouverte et « Twint » et (absent).
+    Payer autrement la séance de l'écran et « Twint » et (absent).
 
 Quand on clique sur « Virement » dans l'écran de la séance :
     Le jour reçu vaut l'encaissement de l'écran.
     Faire comme un clic sur « Enregistrer ».
-    Payer autrement la séance ouverte et « virement » et le jour reçu.
+    Payer autrement la séance de l'écran et « virement » et le jour reçu.
 
 Quand on clique sur « Annuler sa facture » dans l'écran de la séance :
-    Si la facture de la séance ouverte est absente, refuser « Cette séance n'a pas de facture. ».
-    Retirer la facture de la séance ouverte.
+    Si la facture de la séance de l'écran est absente, refuser « Cette séance n'a pas de facture. ».
+    Retirer la facture de la séance de l'écran.
 
 Remarque : une séance réglée par erreur redevient à payer (31 octobre 2026) : enregistrée telle qu'à l'écran, puis remise.
 Quand on clique sur « À payer » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
-    Remettre à payer la séance ouverte.
+    Remettre à payer la séance de l'écran.
 
 Remarque : facturer un patient depuis sa page (31 octobre 2026) : toutes ses séances dues pas encore facturées, sur une facture.
 Quand on clique sur « Facturer » dans l'écran du patient :
@@ -2876,14 +2856,14 @@ Quand on clique sur « Facturer » dans l'écran du patient :
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :
     Le précédent vaut la personne ouverte.
-    La personne ouverte devient le patient de la séance ouverte.
+    La personne ouverte devient le patient de la séance de l'écran.
     Ouvrir l'écran du patient.
     La personne ouverte devient le précédent.
 
 Remarque : une séance supprimée va dans la corbeille, d'où elle se rétablit ; sa quittance est d'abord annulée ; facturée, elle
 Remarque : attend que sa facture le soit, par « Annuler sa facture » (31 octobre 2026).
 Quand on clique sur « Supprimer » dans l'écran de la séance :
-    Le s vaut la séance ouverte.
+    Le s vaut la séance de l'écran.
     Si la facture du s est présente, refuser le refus de facture du s.
     Si la quittance du s est présente, défaire la quittance du s.
     Annuler le rappel du s.
