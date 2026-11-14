@@ -839,3 +839,68 @@ Scénario « la feuille s'imprime depuis son écran » :
     On ferme l'écran de la feuille.
     Ouvrir l'écran des feuilles.
     Vérifier que « Feuille de salaire » est parmi les documents sortis.
+
+Remarque : le patient (12 novembre 2026) : sa page est l'écran d'un objet ; ses notes, son historique, ses ordonnances, la fusion
+Remarque : et l'attestation le reçoivent à l'ouverture (3.25, 3.32) : « la personne ouverte » n'existe plus.
+Scénario « la page du patient le montre et l'écrit » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Le p vaut le patient de la séance.
+    On choisit le p dans l'écran des patients.
+    On écrit « Bulle » dans la localité de l'écran du patient.
+    On écrit « 1630 » dans le numéro postal de l'écran du patient.
+    On clique sur « Enregistrer » dans l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que la localité du p = « Bulle ».
+    Vérifier que le numéro postal du p = « 1630 ».
+    Vérifier que le nom du p = « Ana Roth ».
+    Vérifier que le nombre de patients conservés = 1.
+
+Scénario « une note s'ajoute au patient de la page » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Le p vaut le patient de la séance.
+    On choisit le p dans l'écran des patients.
+    On clique sur « Notes » dans l'écran du patient.
+    On écrit « Douleurs lombaires » dans la nouvelle note de l'écran des notes.
+    On clique sur « Ajouter » dans l'écran des notes.
+    On ferme l'écran des notes.
+    On ferme l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que le nombre de notes conservées = 1.
+    Vérifier que le patient de la note conservée dont le contenu est « Douleurs lombaires » = le p.
+
+Scénario « un patient s'archive depuis sa page » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Le p vaut le patient de la séance.
+    On choisit le p dans l'écran des patients.
+    On clique sur « Archiver » dans l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que l'archivage du p = 10.11.2026.
+
+Scénario « la fiche d'une séance ouvre la page de son patient » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    On choisit la séance dans l'écran des encaissements.
+    On clique sur « Voir le patient » dans l'écran de la séance.
+    On écrit « Fribourg » dans la localité de l'écran du patient.
+    On clique sur « Enregistrer » dans l'écran du patient.
+    On ferme l'écran de la séance.
+    Ouvrir l'écran des encaissements.
+    Vérifier que la localité du patient de la séance = « Fribourg ».
+
+Scénario « l'attestation reçoit le patient de la page » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Poser le s et « Ana Roth » et aujourd'hui et « faite », qui donne la séance.
+    Le p vaut le patient de la séance.
+    On choisit le p dans l'écran des patients.
+    On clique sur « Attestation annuelle » dans l'écran du patient.
+    On ferme l'écran du patient.
+    Ouvrir l'écran des patients.
+    Vérifier que « Attestation 2026 » est parmi les documents sortis.

@@ -24,7 +24,6 @@ Remarque : le dernier patient inscrit par l'écran d'inscription ; absent avant.
 L'inscrit vaut absent.
 
 Remarque : le patient dont la page est ouverte ; celui qu'une nouvelle séance reçoit d'office, absent sinon.
-La personne ouverte vaut absent.
 La personne proposée vaut absent.
 
 Remarque : la séance et le soin dont la page est ouverte.
@@ -569,9 +568,9 @@ L'écran d'inscription, « Nouveau patient », montre :
 
 Remarque : la page d'un patient, comme son inscription, puis ses séances ; on y corrige ses données directement.
 Remarque : l'ajout, dicté ou tapé, s'ajoute à la fin de l'anamnèse, daté, à l'enregistrement : rien de ce qui est déjà écrit ne se perd.
-L'écran du patient, « Patient », montre :
+L'écran du patient, « Patient », pour un patient, montre :
     en position libre :
-        un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
+        un nom (texte), non lié, à 0 de la gauche et 0 du haut, large de 260,
         un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
         une rue (texte), facultative, à 0 de la gauche et 72 du haut, large de 260,
         un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
@@ -582,7 +581,7 @@ L'écran du patient, « Patient », montre :
         un téléphone (téléphone), facultatif, à 0 de la gauche et 288 du haut, large de 260,
         un courriel (courriel), facultatif, à 276 de la gauche et 288 du haut, large de 260,
         une date de naissance (date), facultative, à 0 de la gauche et 360 du haut, large de 260,
-        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Un SMS la veille de ses séances », à 276 de la gauche et 360 du haut, large de 260, visible si le choix d'agenda du cabinet conservé,
+        un rappel par SMS (vrai ou faux), facultatif, non lié, avec l'indication « Un SMS la veille de ses séances », à 276 de la gauche et 360 du haut, large de 260, visible si le choix d'agenda du cabinet conservé,
         un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 456 du haut, large de 260,
         un numéro d'assuré (texte), facultatif, à 276 de la gauche et 456 du haut, large de 260,
         un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 528 du haut, large de 260,
@@ -596,13 +595,13 @@ L'écran du patient, « Patient », montre :
         un numéro AVS (texte), facultatif, avec l'indication « 756.1234.5678.97 », à 828 de la gauche et 448 du haut, large de 244,
         un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
-    le texte "Séances de " suivi du nom de la personne ouverte, en petites capitales,
-    le texte le reste dû de la personne ouverte et d'aujourd'hui,
-    la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
+    le texte "Séances de " suivi du nom du patient de l'écran, en petites capitales,
+    le texte le reste dû du patient de l'écran et d'aujourd'hui,
+    la liste des séances conservées dont le patient = le patient de l'écran, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Nouvelle séance », au clavier « N »,
-        un bouton « Facturer », actif si le dû facturable de la personne ouverte et d'aujourd'hui > 0,
+        un bouton « Facturer », actif si le dû facturable du patient de l'écran et d'aujourd'hui > 0,
         un bouton « Notes »,
         un bouton « Attestation annuelle »,
         un bouton « Historique »,
@@ -616,8 +615,8 @@ L'écran du patient, « Patient », montre :
 
 Remarque : fusionner deux fiches (2 novembre 2026) : celle qu'on a ouverte est gardée ; l'autre s'y verse, puis part vide dans
 Remarque : la corbeille. Les numéros des factures et quittances ne changent pas.
-L'écran de la fusion, « Fusionner deux fiches », montre :
-    le texte "Fiche gardée : " suivi du nom de la personne ouverte suivi de ". " suivi du bilan de la personne ouverte,
+L'écran de la fusion, « Fusionner deux fiches », pour un patient, montre :
+    le texte "Fiche gardée : " suivi du nom du patient de l'écran suivi de ". " suivi du bilan du patient de l'écran,
     un doublon (patient), facultatif, avec recherche, avec l'indication « La fiche en double : tout ce qu'elle a passe sur la fiche gardée »,
     le texte le bilan du doublon de l'écran,
     côte à côte :
@@ -848,9 +847,9 @@ Le document de quittance, « Quittance », montre :
 Remarque : l'historique d'un patient (5 novembre 2026) : chaque changement de sa fiche, le plus récent d'abord, avec l'avant et
 Remarque : l'après ; un mot de passe ou un secret n'y paraît jamais. Le journal : les 500 derniers changements des patients, des
 Remarque : séances, des factures et des virements reçus ; signés Direction ou Équipe quand la page de garde est en service.
-L'écran de l'historique, « Historique », montre :
-    le texte le nom de la personne ouverte, en petites capitales,
-    le texte l'historique de la personne ouverte,
+L'écran de l'historique, « Historique », pour un patient, montre :
+    le texte le nom du patient de l'écran, en petites capitales,
+    le texte l'historique du patient de l'écran,
     un bouton « Fermer », qui ferme l'écran.
 
 L'écran du journal, « Journal des changements », montre :
@@ -860,19 +859,19 @@ L'écran du journal, « Journal des changements », montre :
 Remarque : l'attestation annuelle (4 novembre 2026) : ce que le patient a payé lui-même dans l'année choisie dans la Comptabilité,
 Remarque : séance par séance, au jour du paiement, avec sa pièce ; pour sa déclaration d'impôt ou son assurance complémentaire. Les
 Remarque : séances payées par l'assurance (tiers payant) et les séances offertes n'y figurent pas.
-Le document d'attestation, ("Attestation " suivi de l'année des comptes), montre :
+Le document d'attestation, ("Attestation " suivi de l'année des comptes), pour un patient, montre :
     côte à côte :
         la partie « en-tête du cabinet »,
         l'un sous l'autre :
             le texte « Patient », en petites capitales,
-            le texte le nom de la personne ouverte,
-            le texte l'adresse de la personne ouverte,
-            le texte la ville de la personne ouverte,
-            le texte la naissance de la personne ouverte,
+            le texte le nom du patient de l'écran,
+            le texte l'adresse du patient de l'écran,
+            le texte la ville du patient de l'écran,
+            le texte la naissance du patient de l'écran,
     le texte "Attestation des soins payés en " suivi de l'année des comptes suivi de ", établie le " suivi d'aujourd'hui en toutes lettres,
     le texte « Séances », en petites capitales,
-    la liste des séances conservées dont le patient = la personne ouverte et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par date, avec la date, le nom du soin, le code tarifaire du soin, la durée, le prix, le paiement, l'encaissement, le numéro de la facture et le numéro de la quittance,
-    le texte "Total payé en " suivi de l'année des comptes suivi de " : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont le patient = la personne ouverte et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
+    la liste des séances conservées dont le patient = le patient de l'écran et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par date, avec la date, le nom du soin, le code tarifaire du soin, la durée, le prix, le paiement, l'encaissement, le numéro de la facture et le numéro de la quittance,
+    le texte "Total payé en " suivi de l'année des comptes suivi de " : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont le patient = le patient de l'écran et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
     le texte "Pour attestation, " suivi du nom du cabinet conservé.
 
 Remarque : le justificatif de remboursement (Tarif 590, 27 octobre 2026), joint à la facture ou à la quittance d'un patient qui a
@@ -1057,9 +1056,9 @@ L'écran du cabinet, « Le cabinet », montre :
         un bouton « Retirer la signature ».
 
 Remarque : les notes confidentielles d'un patient : jamais dans sa fiche ni sa page, qu'on ouvre devant lui ; datées, dictées ou tapées.
-L'écran des notes, « Notes confidentielles », montre :
-    le texte "Notes de " suivi du nom de la personne ouverte, en petites capitales,
-    la liste des notes conservées dont le patient = la personne ouverte, par date décroissant, avec la date et le contenu,
+L'écran des notes, « Notes confidentielles », pour un patient, montre :
+    le texte "Notes de " suivi du nom du patient de l'écran, en petites capitales,
+    la liste des notes conservées dont le patient = le patient de l'écran, par date décroissant, avec la date et le contenu,
     une dictée (son), facultative,
     une nouvelle note (texte), facultative, sur plusieurs lignes, transcrite de la dictée,
     côte à côte :
@@ -2275,8 +2274,7 @@ Quand on clique sur « Archives » dans l'écran de configuration :
     Ouvrir l'écran des archives.
 
 Quand on choisit un patient dans l'écran des archives :
-    La personne ouverte devient le patient choisi de l'écran.
-    Ouvrir l'écran du patient.
+    Ouvrir l'écran du patient pour le patient choisi de l'écran.
 
 Remarque : désarchivé, le patient revient dans la liste des patients.
 Quand on clique sur « Désarchiver » dans l'écran des archives :
@@ -2299,36 +2297,16 @@ Quand on clique sur « Supprimer » dans l'écran de la rubrique :
 
 Remarque : la page du patient montre ses données, ses séances, et le bouton d'une nouvelle séance.
 Quand on choisit un patient dans l'écran des patients :
-    La personne ouverte devient le patient choisi de l'écran.
-    Ouvrir l'écran du patient.
+    Ouvrir l'écran du patient pour le patient choisi de l'écran.
 
+Remarque : la page du patient (3.25) : ses zones liées le montrent ; le nom (sans le prénom, pour un patient d'après le
+Remarque : 24 octobre 2026) et l'accord du rappel par SMS, non liés, s'écrivent ici.
 Quand on ouvre l'écran du patient :
-    Le p vaut la personne ouverte.
+    Le p vaut le patient de l'écran.
     Remarque : un patient d'avant le 24 octobre 2026 n'a qu'un nom, entier : il reste dans « Nom », à partager si on veut.
     Si le nom de famille du p est présent, le nom de l'écran devient le nom de famille du p.
     Sinon, le nom de l'écran devient le nom du p.
-    Le prénom de l'écran devient le prénom du p.
-    Le téléphone de l'écran devient le téléphone du p.
     Le rappel par SMS de l'écran devient l'accord de rappel du p.
-    Le courriel de l'écran devient le courriel du p.
-    La date de naissance de l'écran devient la date de naissance du p.
-    La rue de l'écran devient la rue du p.
-    Le numéro de maison de l'écran devient le numéro de maison du p.
-    Le complément d'adresse de l'écran devient le complément d'adresse du p.
-    Le numéro postal de l'écran devient le numéro postal du p.
-    La localité de l'écran devient la localité du p.
-    Le pays de l'écran devient le pays du p.
-    L'anamnèse de l'écran devient l'anamnèse du p.
-    L'assureur de l'écran devient l'assureur du p.
-    Le numéro d'assuré de l'écran devient le numéro d'assuré du p.
-    Le numéro de carte d'assuré de l'écran devient le numéro de carte d'assuré du p.
-    L'assureur complémentaire de l'écran devient l'assureur complémentaire du p.
-    Le numéro d'assuré complémentaire de l'écran devient le numéro d'assuré complémentaire du p.
-    La facturation complémentaire de l'écran devient la facturation complémentaire du p.
-    Le sexe de l'écran devient le sexe du p.
-    Le numéro AVS de l'écran devient le numéro AVS du p.
-    Le numéro de cas de l'écran devient le numéro de cas du p.
-    Le diagnostic de l'écran devient le diagnostic du p.
 
 Remarque : le nom réuni (« Alain Thiémard ») d'après le nom et le prénom de l'écran ; un homonyme est refusé, sauf l'ancien nom
 Remarque : du même patient (24 octobre 2026 : une seule écriture pour l'inscription et la page du patient).
@@ -2368,7 +2346,7 @@ Pour noter un patient, dans l'écran d'inscription ou l'écran du patient :
         Si le rappel par SMS de l'écran est vrai, le rappel par SMS du patient devient vrai.
 
 Quand on clique sur « Enregistrer » dans l'écran du patient :
-    Le p vaut la personne ouverte.
+    Le p vaut le patient de l'écran.
     Le rappel d'avant vaut l'accord de rappel du p.
     Le téléphone d'avant vaut le téléphone du p.
     Réunir le nom sauf le nom du p, qui donne le complet.
@@ -2390,7 +2368,7 @@ Quand on clique sur « Enregistrer » dans l'écran du patient :
 
 Remarque : une séance ouverte depuis la page d'un patient le reçoit d'office.
 Quand on clique sur « Nouvelle séance » dans l'écran du patient :
-    La personne proposée devient la personne ouverte.
+    La personne proposée devient le patient de l'écran.
     Ouvrir l'écran de séance.
     La personne proposée devient absent.
 
@@ -2413,18 +2391,18 @@ Quand on choisit une séance dans l'écran du patient :
     Ouvrir l'écran de la séance pour la séance choisie de l'écran.
 
 Quand on clique sur « Notes » dans l'écran du patient :
-    Ouvrir l'écran des notes.
+    Ouvrir l'écran des notes pour le patient de l'écran.
 
 Remarque : un patient supprimé emporte ses séances, ses notes et ses pièces dans la corbeille ; la Configuration les rétablit ensemble.
 Quand on clique sur « Supprimer » dans l'écran du patient :
-    Si le compte des pièces de la personne ouverte > 0, refuser « Ce patient a des factures ou des quittances, gardées dix ans : archive-le plutôt. ».
-    Supprimer la personne ouverte.
+    Si le compte des pièces du patient de l'écran > 0, refuser « Ce patient a des factures ou des quittances, gardées dix ans : archive-le plutôt. ».
+    Supprimer le patient de l'écran.
     Fermer l'écran.
 
 Remarque : fusionner (2 novembre 2026) : une fiche en double se verse dans celle-ci (actions.grym, « verser »).
 Quand on clique sur « Fusionner » dans l'écran du patient :
     La fusion faite devient faux.
-    Ouvrir l'écran de la fusion.
+    Ouvrir l'écran de la fusion pour le patient de l'écran.
     Remarque : la fiche a reçu ce qui lui manquait : rouverte, elle le montre ; Enregistrer ne l'écrase pas avec l'écran d'avant.
     Si la fusion faite, fermer l'écran.
 
@@ -2432,21 +2410,21 @@ Quand on clique sur « Fusionner » dans l'écran de la fusion :
     Si le doublon de l'écran est absent, refuser « Choisis d'abord la fiche en double. ».
     La d vaut le doublon de l'écran.
     Le versé vaut le nom de la d.
-    Verser la d et la personne ouverte.
+    Verser la d et le patient de l'écran.
     La fusion faite devient vrai.
-    Signaler "Fiche « " suivi du versé suivi de " » versée dans « " suivi du nom de la personne ouverte suivi de " » ; elle est dans la corbeille.".
+    Signaler "Fiche « " suivi du versé suivi de " » versée dans « " suivi du nom du patient de l'écran suivi de " » ; elle est dans la corbeille.".
     Fermer l'écran.
 
 Remarque : archiver : le patient quitte la liste des patients, rien ne se perd ; « Archives » le montre et le ramène.
 Quand on clique sur « Archiver » dans l'écran du patient :
-    L'archivage de la personne ouverte devient aujourd'hui.
+    L'archivage du patient de l'écran devient aujourd'hui.
     Fermer l'écran.
 
 Remarque : une note s'ajoute, datée ; rien de ce qui est déjà noté ne se perd.
 Quand on clique sur « Ajouter » dans l'écran des notes :
     Si la nouvelle note de l'écran est absente, refuser « Écris ou dicte d'abord la note. ».
     La n vaut une nouvelle note :
-        Le patient vaut la personne ouverte.
+        Le patient vaut le patient de l'écran.
         La date vaut aujourd'hui.
         Le contenu vaut la nouvelle note de l'écran.
     Conserver la n.
@@ -2478,8 +2456,7 @@ Quand on change le patient à ouvrir dans l'écran des patients :
         Le p vaut le patient à ouvrir de l'écran.
         Le patient à ouvrir de l'écran devient absent.
         Si l'archivage du p est présent, refuser « Ce patient est archivé : la Configuration le montre, sous Archives. ».
-        La personne ouverte devient le p.
-        Ouvrir l'écran du patient.
+        Ouvrir l'écran du patient pour le p.
 
 Quand on change la recherche dans l'écran des patients :
     Si la recherche de l'écran est présente, la recherche des patients devient la recherche de l'écran.
@@ -2507,8 +2484,7 @@ Quand on clique sur « Nouveau patient » dans l'écran des patients :
     L'inscrit devient absent.
     Ouvrir l'écran d'inscription.
     Si l'inscrit est présent :
-        La personne ouverte devient l'inscrit.
-        Ouvrir l'écran du patient.
+        Ouvrir l'écran du patient pour l'inscrit.
 
 Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
@@ -2588,13 +2564,13 @@ Quand on clique sur « Enregistrer » dans l'écran d'inscription :
     Fermer l'écran.
 
 Quand on clique sur « Historique » dans l'écran du patient :
-    Ouvrir l'écran de l'historique.
+    Ouvrir l'écran de l'historique pour le patient de l'écran.
 
 Quand on clique sur « Journal » dans l'écran de configuration :
     Ouvrir l'écran du journal.
 
 Quand on clique sur « Attestation annuelle » dans l'écran du patient :
-    Ouvrir le document d'attestation.
+    Ouvrir le document d'attestation pour le patient de l'écran.
     Signaler "Attestation " suivi de l'année des comptes suivi de " : une autre année se choisit dans la Comptabilité.".
 
 Quand on choisit une séance dans l'écran d'accueil :
@@ -2837,17 +2813,13 @@ Quand on clique sur « À payer » dans l'écran de la séance :
 
 Remarque : facturer un patient depuis sa page (31 octobre 2026) : toutes ses séances dues pas encore facturées, sur une facture.
 Quand on clique sur « Facturer » dans l'écran du patient :
-    Si la personne ouverte est absente, refuser « Enregistre d'abord ce patient. ».
-    Si le dû facturable de la personne ouverte et d'aujourd'hui = 0, refuser « Rien à facturer : ses séances dues sont déjà sur une facture, ou rien n'est dû. ».
-    Pour chaque séance conservée dont le patient = la personne ouverte et le paiement = « à payer » et la facture est absente et le statut ≠ « annulée » et le statut ≠ « prévue » et le statut ≠ l'exclu du cabinet conservé et la date ≤ aujourd'hui, par date :
+    Si le dû facturable du patient de l'écran et d'aujourd'hui = 0, refuser « Rien à facturer : ses séances dues sont déjà sur une facture, ou rien n'est dû. ».
+    Pour chaque séance conservée dont le patient = le patient de l'écran et le paiement = « à payer » et la facture est absente et le statut ≠ « annulée » et le statut ≠ « prévue » et le statut ≠ l'exclu du cabinet conservé et la date ≤ aujourd'hui, par date :
         Si la facture de la séance est absente, attester la séance.
 
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :
-    Le précédent vaut la personne ouverte.
-    La personne ouverte devient le patient de la séance de l'écran.
-    Ouvrir l'écran du patient.
-    La personne ouverte devient le précédent.
+    Ouvrir l'écran du patient pour le patient de la séance de l'écran.
 
 Remarque : une séance supprimée va dans la corbeille, d'où elle se rétablit ; sa quittance est d'abord annulée ; facturée, elle
 Remarque : attend que sa facture le soit, par « Annuler sa facture » (31 octobre 2026).
@@ -2987,9 +2959,9 @@ L'écran de l'assureur, « Assureur », pour un assureur, montre :
 
 Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
 Remarque : la plus récente en tête ; une nouvelle s'ouvre vide, une choisie s'ouvre remplie.
-L'écran des prescriptions, « Ordonnances », montre :
-    le texte "Ordonnances de " suivi du nom de la personne ouverte, en petites capitales,
-    la liste des ordonnances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, le médecin, le maximum de séances et le cas,
+L'écran des prescriptions, « Ordonnances », pour un patient, montre :
+    le texte "Ordonnances de " suivi du nom du patient de l'écran, en petites capitales,
+    la liste des ordonnances conservées dont le patient = le patient de l'écran, par date décroissant, avec la date, le médecin, le maximum de séances et le cas,
     côte à côte :
         un bouton « Nouvelle ordonnance », principal,
         un bouton « Fermer », qui ferme l'écran.
@@ -3035,12 +3007,12 @@ Quand on clique sur « Supprimer » dans l'écran de l'assureur :
     Fermer l'écran.
 
 Quand on clique sur « Ordonnances » dans l'écran du patient :
-    Ouvrir l'écran des prescriptions.
+    Ouvrir l'écran des prescriptions pour le patient de l'écran.
 
 Quand on clique sur « Nouvelle ordonnance » dans l'écran des prescriptions :
     L'usage ouvert devient « Une nouvelle ordonnance : ses séances se comptent dès la première. ».
     Ouvrir l'écran de l'ordonnance pour une nouvelle ordonnance :
-        Le patient vaut la personne ouverte.
+        Le patient vaut le patient de l'écran.
         La date vaut aujourd'hui.
         Le maximum de séances vaut 9.
         Le cas vaut « maladie ».
@@ -3253,4 +3225,4 @@ Quand on clique sur « Rappel d'essai » dans l'écran des SMS :
     L'état SMS devient "Rappel d'essai programmé : " suivi de la réponse.
 
 Quand on clique sur « Facturer la complémentaire » dans l'écran du patient :
-    Décompter la complémentaire de la personne ouverte.
+    Décompter la complémentaire du patient de l'écran.
