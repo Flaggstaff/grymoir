@@ -828,3 +828,14 @@ Scénario « effacer une feuille depuis son écran » :
     On confirme.
     Ouvrir l'écran des feuilles.
     Vérifier que le nombre de feuilles conservées = 0.
+
+Scénario « la feuille s'imprime depuis son écran » :
+    On est le 10.11.2026.
+    Installer, qui donne le s.
+    Engager 5000 et 80, qui donne l'employée.
+    Établir la feuille de l'employée et l'ouverture de 11 et de 2026, qui donne la f.
+    On choisit la f dans l'écran des feuilles.
+    On clique sur « Imprimer » dans l'écran de la feuille.
+    On ferme l'écran de la feuille.
+    Ouvrir l'écran des feuilles.
+    Vérifier que « Feuille de salaire » est parmi les documents sortis.
