@@ -641,6 +641,9 @@ typedef struct {
     const char *ecran_objet; /* l'écran déclaré est « pour un salarié » (3.25) : « salarié », sinon NULL */
     int libre;               /* l'élément d'écran en cours est dans un bloc « en position libre : » (§ 22.9) */
     int menu;                /* … dans un menu (§ 22.12) : des boutons seulement */
+    char *rendu_type;        /* 3.35 : le type des « Rendre » de la formule en cours, s'ils s'accordent ; possédé */
+    int rendu_etat;          /* 0 : aucun « Rendre » ; 1 : rendu_type ; 2 : un « Rendre » de type inconnu, ou un désaccord */
+    const char *nom_formule; /* 3.35 : le calcul ou l'action dont on lit les paramètres, pour leurs indices */
     int document;            /* … dans un document (2.25) : une taille se dit partout (« l'image « logo.png », large de 40 ») */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int dans_xml;            /* le corps d'un XML déclaré (2.46) : attributs, contenus, éléments */
@@ -1525,6 +1528,115 @@ static void avertir(Analyse *a, int ligne, int colonne, char *message) {
     nb_avertis++;
 }
 
+/* 3.35 : les indices d'une première lecture. Une variable globale prend le type de toutes les valeurs qu'elle reçoit, où
+ * qu'elles soient écrites ; un paramètre, celui de tous les arguments de ses appels, avant ou après sa définition. La
+ * première lecture relève, la seconde applique ; un désaccord ou une valeur de type inconnu, et l'indice se tait. */
+typedef struct { char *cle, *type; int conflit; } Indice;
+typedef struct { Indice *v; size_t n, cap; } Indices;
+static Indices releves, appliques;   /* ce que la lecture en cours relève ; ce que la précédente a relevé */
+static int relever, appliquer;
+
+static void indices_vider(Indices *t) {
+    for (size_t k = 0; k < t->n; k++) { free(t->v[k].cle); free(t->v[k].type); }
+    t->n = 0;
+}
+
+static Indice *indice_de(Indices *t, const char *cle) {
+    for (size_t k = 0; k < t->n; k++) if (strcmp(t->v[k].cle, cle) == 0) return &t->v[k];
+    return NULL;
+}
+
+/* Le premier ancêtre commun de deux entités (elles-mêmes comprises), ou NULL. */
+static const char *ancetre_commun(Portee *p, const char *t1, const char *t2) {
+    for (const Classe *x = classe_de(p, t1); x; x = x->parent ? classe_de(p, x->parent) : NULL)
+        for (const Classe *y = classe_de(p, t2); y; y = y->parent ? classe_de(p, y->parent) : NULL)
+            if (x == y) return x->nom;
+    return NULL;
+}
+
+static const char *type_deduit(Analyse *a, const Noeud *n);
+
+static void noter_indice(Analyse *a, char *cle, const Noeud *v) {
+    if (!relever || !v || v->type == N_ABSENT) { free(cle); return; }
+    const char *t = type_deduit(a, v);
+    Indice *x = indice_de(&releves, cle);
+    if (!x) {
+        if (releves.n == releves.cap) {
+            releves.cap = releves.cap ? 2 * releves.cap : 32;
+            releves.v = realloc(releves.v, releves.cap * sizeof *releves.v);
+            if (!releves.v) { fputs("GrymoiR : mémoire épuisée\n", stderr); exit(EXIT_FAILURE); }
+        }
+        x = &releves.v[releves.n++];
+        x->cle = cle;
+        x->type = t ? grym_dupliquer(t) : NULL;
+        x->conflit = t == NULL;
+        return;
+    }
+    free(cle);
+    if (x->conflit) return;
+    if (!t) { x->conflit = 1; return; }
+    if (strcmp(x->type, t) == 0) return;
+    const int n1 = strcmp(x->type, "nombre") == 0 || strcmp(x->type, "nombre entier") == 0;
+    const int n2 = strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0;
+    const char *c = n1 && n2 ? "nombre" : ancetre_commun(a->portee, x->type, t);
+    if (!c) { x->conflit = 1; return; }
+    char *nc = grym_dupliquer(c);
+    free(x->type);
+    x->type = nc;
+}
+
+static const char *indice(const char *cle) {
+    const Indice *x = appliquer ? indice_de(&appliques, cle) : NULL;
+    return x && !x->conflit ? x->type : NULL;
+}
+
+/* Après une lecture : un paramètre d'une formule à plusieurs versions n'a pas d'indice (l'appel choisit sa version à
+ * l'exécution) ; rend le nombre d'indices qui restent. */
+static size_t indices_utiles(Indices *t, const Portee *p) {
+    size_t utiles = 0;
+    for (size_t k = 0; k < t->n; k++) {
+        Indice *x = &t->v[k];
+        if (x->conflit) continue;
+        if (x->cle[0] == 'P') {
+            const char *nom = x->cle + 2, *f = strrchr(x->cle, '\x1f');
+            const size_t l = (size_t)(f - nom);
+            int versions = 0;
+            for (size_t q = 0; q < p->n; q++)
+                versions += (p->s[q].sorte == S_CALCUL || p->s[q].sorte == S_ACTION) && strlen(p->s[q].nom) == l
+                            && strncmp(p->s[q].nom, nom, l) == 0;
+            if (versions != 1) { x->conflit = 1; continue; }
+        }
+        utiles++;
+    }
+    return utiles;
+}
+
+/* Les deux relevés disent-ils la même chose ? */
+static int indices_egaux(Indices *t1, Indices *t2) {
+    size_t n1 = 0;
+    for (size_t k = 0; k < t1->n; k++) {
+        if (t1->v[k].conflit) continue;
+        n1++;
+        const Indice *y = indice_de(t2, t1->v[k].cle);
+        if (!y || y->conflit || strcmp(y->type, t1->v[k].type) != 0) return 0;
+    }
+    size_t n2 = 0;
+    for (size_t k = 0; k < t2->n; k++) n2 += !t2->v[k].conflit;
+    return n1 == n2;
+}
+
+/* 3.35 : le type d'un champ intégré d'une valeur, tel que l'exécution le rend (vm.c, I_LIRE_CHAMP) ; NULL si la valeur n'a
+ * pas ce champ, ou si l'analyse ne le dit pas. */
+static const char *type_integre(const char *t, const char *champ) {
+    if (type_textuel(t)) return strcmp(champ, "longueur") == 0 ? "nombre entier" : NULL;
+    if (strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0)
+        return strcmp(champ, "valeur absolue") == 0 || strcmp(champ, "partie entière") == 0 ? "nombre" : NULL;
+    if (strcmp(t, "date") == 0)
+        return strcmp(champ, "année") == 0 ? "année" : strcmp(champ, "mois") == 0 || strcmp(champ, "jour") == 0 ? "nombre entier"
+             : strcmp(champ, "jour de la semaine") == 0 ? "texte" : NULL;
+    return NULL;
+}
+
 /* Le type d'une expression tel que l'analyse peut le déduire : type_statique, plus les variables (par leur création ou
  * leur nom d'entité), les champs d'un objet de classe connue, les zones d'un écran, les recherches. NULL : inconnu. */
 static const char *type_deduit(Analyse *a, const Noeud *n) {
@@ -1539,8 +1651,13 @@ static const char *type_deduit(Analyse *a, const Noeud *n) {
     case N_CHAMP: {
         if (!n->nb_enfants) return NULL;
         const char *ts = type_deduit(a, n->enfants[0]);
+        if (ts && type_de_base(ts)) return type_integre(ts, n->texte);   /* 3.35 : « la longueur du nom » */
         const Classe *c = ts ? classe_de(a->portee, ts) : NULL;
         return c ? type_du_champ(a->portee, c, n->texte) : NULL;
+    }
+    case N_CHAMP_DONT: {   /* 3.35 : « dont la date est … » : le champ de l'entité cherchée */
+        const Classe *c = a->dont ? classe_de(a->portee, a->dont) : NULL;
+        return c && n->texte ? type_du_champ(a->portee, c, n->texte) : NULL;
     }
     case N_CHERCHER:
         return n->forme == 1 ? n->texte : n->forme == 2 ? "nombre entier" : n->forme == 9 ? "vrai ou faux" : NULL;
@@ -1563,7 +1680,7 @@ static const char *type_deduit(Analyse *a, const Noeud *n) {
         const char *t = NULL;
         for (size_t k = 0; k < a->portee->n; k++) {
             const Symbole *x = &a->portee->s[k];
-            if (x->sorte != S_CALCUL || strcmp(x->nom, n->texte) != 0) continue;
+            if ((x->sorte != S_CALCUL && x->sorte != S_ACTION) || strcmp(x->nom, n->texte) != 0) continue;   /* 3.35 : l'action qui rend */
             if (!x->type_deduit || (t && strcmp(t, x->type_deduit) != 0)) return NULL;
             t = x->type_deduit;
         }
@@ -1574,34 +1691,28 @@ static const char *type_deduit(Analyse *a, const Noeud *n) {
 }
 
 /* 3.34 : le type que rend un corps de calcul : sa valeur, ou chacun de ses « Rendre », s'ils s'accordent (des nombres
- * entiers et décimaux font des nombres). Lu avant la sortie de la formule, ses paramètres encore visibles. */
+ * entiers et décimaux font des nombres). 3.35 : chaque « Rendre » se type à sa lecture, ses variables locales encore
+ * visibles (la fin d'un bloc les efface) ; le corps en bloc n'a plus qu'à lire le cumul. */
+static void noter_rendu(Analyse *a, const Noeud *v) {
+    if (a->rendu_etat == 2) return;
+    const char *t = type_deduit(a, v);
+    if (!t) { a->rendu_etat = 2; return; }
+    if (a->rendu_etat == 1 && strcmp(a->rendu_type, t) != 0) {
+        const int nt = strcmp(a->rendu_type, "nombre") == 0 || strcmp(a->rendu_type, "nombre entier") == 0;
+        const int nx = strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0;
+        if (!(nt && nx)) { a->rendu_etat = 2; return; }
+        t = "nombre";
+    }
+    char *c = grym_dupliquer(t);
+    free(a->rendu_type);
+    a->rendu_type = c;
+    a->rendu_etat = 1;
+}
+
 static const char *type_rendu(Analyse *a, const Noeud *corps, int forme) {
     if (!corps) return NULL;
     if (forme == 0) return type_deduit(a, corps);
-    const char *t = NULL;
-    int vu = 0, inconnu = 0;
-    const Noeud *pile[256];
-    size_t np = 0;
-    pile[np++] = corps;
-    while (np && !inconnu) {
-        const Noeud *x = pile[--np];
-        if (x->type == P_RENDRE) {
-            const char *tx = x->nb_enfants ? type_deduit(a, x->enfants[0]) : NULL;
-            if (!tx) { inconnu = 1; break; }
-            if (t && strcmp(t, tx) != 0) {
-                const int nt = strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0;
-                const int nx = strcmp(tx, "nombre") == 0 || strcmp(tx, "nombre entier") == 0;
-                if (nt && nx) t = "nombre";
-                else { inconnu = 1; break; }
-            } else if (!t) t = tx;
-            vu = 1;
-            continue;
-        }
-        if (x->type == P_CALCUL || x->type == P_ACTION) continue;
-        for (size_t k = 0; k < x->nb_enfants && np < 256; k++) pile[np++] = x->enfants[k];
-        if (np >= 256) inconnu = 1;
-    }
-    return vu && !inconnu ? t : NULL;
+    return a->rendu_etat == 1 ? a->rendu_type : NULL;
 }
 
 /* Une classe, ses ancêtres et ses aptitudes, ou une de ses héritières, a-t-elle ce champ ? Un objet désigné comme
@@ -1618,6 +1729,7 @@ static int champ_de_la_famille(Portee *p, const Classe *c, const char *champ) {
 
 /* 3.33 : « le champ de x » quand le type de x est connu : une valeur n'a pas de champ (la faute de la 3.31, qui
  * échouait à l'exécution), et un objet n'a que les champs de sa famille. */
+
 static void verifier_acces_champ(Analyse *a, const Noeud *n) {
     if (a->echec || n->type != N_CHAMP || !n->nb_enfants) return;
     const Noeud *sujet = n->enfants[0];
@@ -4815,6 +4927,7 @@ static const char *nom_de_famille(char f) {
 static void verifier_comparaison(Analyse *a, const Noeud *n) {
     if (a->echec || !n || n->type != N_COMPARAISON || n->nb_enfants != 2) return;
     if (!strchr("=!<>lg", n->op) || !n->op) return;
+    if (contient_champ_dont(n)) return;   /* 3.35 : une condition « dont » a sa propre vérification (verifier_dont) */
     const char f1 = famille_de_type(a, type_deduit(a, n->enfants[0])), f2 = famille_de_type(a, type_deduit(a, n->enfants[1]));
     if (!f1 || !f2) return;
     const int ligne = n->op_ligne ? n->op_ligne : n->ligne, colonne = n->op_ligne ? n->op_colonne : n->colonne;
@@ -5369,11 +5482,18 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
             const char *te = type_deduit(a, e);
             Symbole *sy = &a->portee->s[a->portee->n - 1];
             if (te) { free(sy->type_deduit); sy->type_deduit = grym_dupliquer(te); }
+            if (local < 0) {   /* 3.35 : une variable globale, et toutes les valeurs qu'elle reçoit */
+                char *cle = grym_formater("G\x1f%s", nom);
+                const char *ti = indice(cle);
+                if (ti && (!sy->type_deduit || e->type == N_ABSENT)) { free(sy->type_deduit); sy->type_deduit = grym_dupliquer(ti); }
+                noter_indice(a, cle, e);
+            }
         }
     } else {
         local = s->local;
         /* 3.34 : « La créance en cours vaut absent. » puis « … devient la f. » : la première valeur typée donne le type */
         Symbole *sv = visible(a, nom);   /* relu : la lecture de la valeur a pu déplacer les symboles */
+        if (sv && sv->sorte == S_VARIABLE && sv->local < 0) noter_indice(a, grym_formater("G\x1f%s", nom), e);   /* 3.35 */
         if (sv && sv->sorte == S_VARIABLE && !sv->type_deduit) {
             const char *te = type_deduit(a, e);
             if (te) sv->type_deduit = grym_dupliquer(te);
@@ -5842,11 +5962,25 @@ static Contexte entrer_formule(Analyse *a, int sorte, Noeud *params) {
     a->boucle = 0;
     a->nb_locaux = 0;
     a->barriere = a->portee->n;
+    free(a->rendu_type);   /* 3.35 : les « Rendre » de cette formule */
+    a->rendu_type = NULL;
+    a->rendu_etat = 0;
     for (size_t k = 0; k < params->nb_enfants; k++) {
         Noeud *p = params->enfants[k];
         portee_declarer(a->portee, p->texte, p->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN, p->ligne);
         a->portee->s[a->portee->n - 1].local = p->local = a->nb_locaux++;
         if (p->texte3 && p->type == N_NOM && p->entier != 1) a->portee->s[a->portee->n - 1].permises = grym_dupliquer(p->texte3);
+        Symbole *sp = &a->portee->s[a->portee->n - 1];
+        if (a->nom_formule && appliquer) {   /* 3.35 : le type de tous les arguments de ses appels */
+            char *cle = grym_formater("P\x1f%s\x1f%zu", a->nom_formule, k);
+            const char *ti = indice(cle);
+            free(cle);
+            if (ti) { free(sp->type_deduit); sp->type_deduit = grym_dupliquer(ti); }
+        }
+        if (p->texte3 && p->type == N_NOM && p->entier != 1 && p->texte3[0] == '\x1c') {   /* 3.35 : « d'un seuil (nombre) » */
+            const char *f = strchr(p->texte3 + 1, '\x1c');
+            if (f) { free(sp->type_deduit); sp->type_deduit = grym_formater("%.*s", (int)(f - p->texte3 - 1), p->texte3 + 1); }
+        }
     }
     return c;
 }
@@ -5915,7 +6049,9 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     free(s->type_deduit);   /* un calcul ne prend pas le type de son nom : son corps le dira */
     s->type_deduit = NULL;
 
+    a->nom_formule = nom;   /* 3.35 */
     Contexte ctx = entrer_formule(a, 1, params);
+    a->nom_formule = NULL;
     Jeton *verbe = &a->j[fin_entete];
     a->i = fin_entete + 1;
     Noeud *corps;
@@ -6047,6 +6183,8 @@ static char *types_des_parametres(const Noeud *params) {
 
 /* Les arguments d'un appel, contre les types des paramètres : une constante se juge ici, le reste en tête de la formule. */
 static int verifier_arguments(Analyse *a, const Symbole *s, const Noeud *appel) {
+    for (size_t k = 0; relever && k < appel->nb_enfants && (int)k < s->nb_parametres; k++)   /* 3.35 */
+        noter_indice(a, grym_formater("P\x1f%s\x1f%zu", s->nom, k), appel->enfants[k]);
     if (!s->types_params) return 1;
     const char *p = s->types_params;
     for (size_t k = 0; k < appel->nb_enfants && p; k++) {
@@ -6382,13 +6520,21 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     const size_t indice_symbole = a->portee->n - 1;
     const int rend_avant = a->action_rend;
     a->action_rend = 0;
+    a->nom_formule = nom;   /* 3.35 */
     Contexte ctx = entrer_formule(a, 2, params);
+    a->nom_formule = NULL;
     const char *ecran_avant = a->ecran;
     if (dans_ecran) a->ecran = dans_ecran;
     a->i = fin + 1;
     Noeud *corps = corps_en_bloc(a, &a->j[fin], colonne);
     a->ecran = ecran_avant;
-    if (indice_symbole < a->portee->n) a->portee->s[indice_symbole].rend = a->action_rend;
+    if (indice_symbole < a->portee->n) {
+        Symbole *sa = &a->portee->s[indice_symbole];
+        sa->rend = a->action_rend;
+        free(sa->type_deduit);   /* 3.35 : ce que l'action rend (« , qui donne … »), s'il se déduit */
+        const char *tr = corps && a->action_rend ? type_rendu(a, corps, 1) : NULL;
+        sa->type_deduit = tr ? grym_dupliquer(tr) : NULL;
+    }
     a->action_rend = rend_avant;
     int locaux = a->nb_locaux;
     sortir_formule(a, ctx);
@@ -6612,6 +6758,19 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
             if (a->formule) a->portee->s[a->portee->n - 1].local = local = a->nb_locaux++;
         }
         n->type = N_APPEL;   /* l'appel devient une valeur */
+        {   /* 3.35 : la variable prend le type que rend l'action, comme « vaut » */
+            Symbole *sv = visible(a, nom);
+            if (sv && sv->sorte == S_VARIABLE) {
+                const char *te = type_deduit(a, n);
+                if (te && (!v || !sv->type_deduit)) { free(sv->type_deduit); sv->type_deduit = grym_dupliquer(te); }
+                if (local < 0) {
+                    char *cle = grym_formater("G\x1f%s", nom);
+                    const char *ti = indice(cle);
+                    if (ti && !sv->type_deduit) sv->type_deduit = grym_dupliquer(ti);
+                    noter_indice(a, cle, n);
+                }
+            }
+        }
         Noeud *m = noeud_creer(v ? P_MODIFICATION : P_CREATION, t->ligne, t->colonne, t->debut);
         m->local = local;
         m->texte = nom;
@@ -12717,6 +12876,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         Noeud *v = valeur(a);
         if (!v) return NULL;
         if (!fin_phrase(a, 0)) { noeud_liberer(v); return NULL; }
+        noter_rendu(a, v);   /* 3.35 */
         Noeud *n = noeud_creer(P_RENDRE, t->ligne, t->colonne, t->debut);
         noeud_ajouter(n, v);
         n->fin = v->fin;
@@ -13333,6 +13493,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     free(a.scenarios);   /* § 9.7 : les titres eux-mêmes appartiennent aux jetons */
     liberer_noms_fin(&a);
     free(a.a_completer);
+    free(a.rendu_type);   /* 3.35 */
     liberer_jetons(j, n);
 
     if (a.echec) {
@@ -13349,16 +13510,52 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     return 1;
 }
 
+/* 3.35 : plusieurs lectures. La première relève les indices (les valeurs des variables globales, les arguments des
+ * appels) ; la suivante les applique et relève à nouveau, ce qu'un indice appliqué a permis de déduire ; trois lectures
+ * au plus, moins si rien ne change. Les types déduits ne servent qu'aux avertissements : chaque lecture fait le même
+ * programme, la dernière avertit mieux. La boucle interactive lit une fois. */
+static int analyser_deux_fois(const char *source, size_t taille, Portee *portee, int interactif,
+                              Programme *programme, Diagnostic *diag, int compact) {
+    avertissements_vider();   /* 3.33 */
+    if (interactif) return analyser_interne(source, taille, portee, interactif, programme, diag, NULL, compact);
+    Portee avant;
+    portee_copier(&avant, portee);
+    indices_vider(&releves);
+    indices_vider(&appliques);
+    relever = 1;
+    appliquer = 0;
+    int ok = analyser_interne(source, taille, portee, 0, programme, diag, NULL, compact);
+    for (int lecture = 2; ok && lecture <= 3; lecture++) {
+        if (!indices_utiles(&releves, portee) || (appliquer && indices_egaux(&releves, &appliques))) break;
+        Indices x = appliques;   /* le relevé devient ce qu'on applique */
+        appliques = releves;
+        releves = x;
+        indices_vider(&releves);
+        appliquer = 1;
+        relever = lecture < 3;
+        Portee p;
+        portee_copier(&p, &avant);
+        programme_liberer(programme);
+        portee_vider(portee);
+        *portee = p;
+        avertissements_vider();
+        ok = analyser_interne(source, taille, portee, 0, programme, diag, NULL, compact);
+    }
+    relever = appliquer = 0;
+    portee_vider(&avant);
+    indices_vider(&releves);
+    indices_vider(&appliques);
+    return ok;
+}
+
 int analyser(const char *source, size_t taille, Portee *portee, int interactif,
              Programme *programme, Diagnostic *diag) {
-    avertissements_vider();   /* 3.33 */
-    return analyser_interne(source, taille, portee, interactif, programme, diag, NULL, 0);
+    return analyser_deux_fois(source, taille, portee, interactif, programme, diag, 0);
 }
 
 int analyser_compact(const char *source, size_t taille, Portee *portee,
                      Programme *programme, Diagnostic *diag) {
-    avertissements_vider();   /* 3.33 */
-    return analyser_interne(source, taille, portee, 0, programme, diag, NULL, 1);
+    return analyser_deux_fois(source, taille, portee, 0, programme, diag, 1);
 }
 
 /* Efface (garde seulement les sauts de ligne) la déclaration de premier niveau qui contient la ligne l (à partir de 1).

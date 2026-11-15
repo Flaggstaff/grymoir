@@ -87,11 +87,71 @@ verifier "$(grep -c 'av4.grym:8:22 : avertissement : Ici, un texte se compare à
 verifier "$(grep -c 'av4.grym:9:22 : avertissement : Seuls des nombres, des dates ou des heures se comparent par ordre : ici, des textes.' s4.txt)" "1" "un ordre entre textes"
 verifier "$(grep -c 'av4.grym:10:23 : avertissement : Ici, une date se compare à un nombre' s4.txt)" "1" "une date et un nombre"
 verifier "$(grep -c 'av4.grym:11:19 : avertissement : Ici, un nombre se compare à un texte' s4.txt)" "1" "le résultat d'un calcul et un texte"
-for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
+# 3.35 : plusieurs lectures. Un paramètre prend le type de tous les arguments de ses appels, même écrits après lui ; une
+# variable globale, celui de toutes les valeurs qu'elle reçoit ; une action qui rend, le type de ses « Rendre ». Un
+# désaccord, une formule à plusieurs versions : rien. Une condition « dont » garde sa propre vérification.
+cat > av5.grym <<'FIN'
+Une facture, conservée, a :
+    un numéro (texte),
+    un montant (nombre).
+Une personne, conservée, a :
+    un nom (texte).
+La pièce en cours vaut absente.
+Pour régler une pièce :
+    Afficher le nom de la pièce.
+Pour montrer :
+    Afficher le nom de la pièce en cours.
+Pour fabriquer :
+    La x vaut une nouvelle facture :
+        Le numéro vaut « F1 ».
+        Le montant vaut 10.
+    Rendre la x.
+Pour vérifier une limite (nombre) :
+    Afficher le montant de la limite.
+Pour saluer un invité :
+    Afficher le nom de l'invité.
+Pour noter un a et un b :
+    Afficher le montant du a.
+Fabriquer, qui donne la q.
+Afficher le nom de la q.
+Si la longueur du numéro de la q = « a », afficher 1.
+Régler la q.
+La pièce en cours devient la q.
+Saluer la q.
+Saluer la personne conservée dont le nom est « Ana ».
+Noter 1 et 2.
+Noter la q et 2.
+Pour chaque facture conservée dont le numéro ≥ « F- » et le numéro < « G », afficher le montant de la facture.
+FIN
+"$grym" compiler av5.grym > /dev/null 2> s5.txt
+verifier "$?" "0" "3.35 : rien n'est refusé"
+verifier "$(grep -c avertissement s5.txt)" "5" "cinq avertissements par les indices"
+verifier "$(grep -c 'av5.grym:8:14 : avertissement : « nom » n.est pas un champ de la facture' s5.txt)" "1" "un paramètre typé par son appel, écrit plus bas"
+verifier "$(grep -c 'av5.grym:10:14 : avertissement : « nom » n.est pas un champ de la facture' s5.txt)" "1" "une variable globale typée par sa valeur, écrite plus bas"
+verifier "$(grep -c 'av5.grym:17:14 : avertissement : « montant » se lit ici comme le champ d.une valeur (nombre)' s5.txt)" "1" "un paramètre annoté (nombre)"
+verifier "$(grep -c 'av5.grym:23:10 : avertissement : « nom » n.est pas un champ de la facture' s5.txt)" "1" "ce que rend une action, « qui donne la q »"
+verifier "$(grep -c 'av5.grym:24:34 : avertissement : Ici, un nombre se compare à un texte' s5.txt)" "1" "la longueur d'un texte est un nombre"
+cat > av6.grym <<'FIN'
+Une facture, conservée, a :
+    un numéro (texte).
+Une personne, conservée, a :
+    un nom (texte).
+Pour classer une facture :
+    Afficher le numéro de la facture.
+Pour classer une personne :
+    Afficher le nom de la personne.
+La f vaut la facture conservée dont le numéro est « F1 ».
+Classer la f.
+FIN
+"$grym" compiler av6.grym > /dev/null 2> s6.txt
+verifier "$(grep -c avertissement s6.txt)" "0" "une formule à deux versions ne prend pas le type de ses appels"
+for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Praxis/Test de charge/charge.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
     dir="$racine/projets/$(dirname "$f")"; b=$(basename "$f")
     mkdir -p "$d/p" && cp -R "$dir/." "$d/p/" && (cd "$d/p" && "$grym" compiler "$b" > /dev/null 2> sortie.txt)
     verifier "$(grep -c 'avertissement' "$d/p/sortie.txt")" "0" "aucun faux avertissement : $f"
     rm -rf "$d/p"
 done
+mkdir -p "$d/g" && cp -R "$racine/docs/guide/." "$d/g/" && (cd "$d/g" && "$grym" compiler chapitre-08.grym > /dev/null 2> sortie.txt)
+verifier "$(grep -c 'avertissement' "$d/g/sortie.txt")" "0" "un ordre entre textes dans une condition « dont » : le guide, chapitre 8"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]

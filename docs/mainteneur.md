@@ -1,6 +1,6 @@
 # GrymoiR : manuel du mainteneur
 
-Version 1.14, révisée le 12 novembre 2026 (rédigée le 24 septembre 2026).
+Version 1.15, révisée le 15 novembre 2026 (rédigée le 24 septembre 2026).
 Référence : Charte de GrymoiR v1.38, art. 14 ; grammaire 1.38 ; `docs/vm.md` 1.33.
 Toute modification passe par une révision numérotée. Ce manuel se révise à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 
@@ -168,6 +168,8 @@ Les outils de l'analyse :
 - `fin_phrase()` exige le point final ;
 - `valeur(a)` et `expression(a)` lisent une valeur ou un calcul.
 
+L'analyse d'un fichier (`analyser`, `analyser_compact`) peut lire le programme jusqu'à trois fois (grammaire 3.35) : la première relève des indices de types (`noter_indice`), la suivante les applique (`indice`). Seuls les avertissements en dépendent ; une phrase nouvelle ne doit donc rien décider d'autre à partir de `type_deduit` ou des indices, sinon les lectures ne feraient plus le même programme. L'état propre à une lecture vit dans `Analyse` (remis à zéro à chaque lecture), jamais dans une variable globale.
+
 Si le premier mot commence désormais une construction, l'ajouter à `mot_de_construction()` : il ne pourra plus commencer le nom d'une action. Pour qu'il soit proposé par l'aide à la saisie, l'ajouter aussi aux propositions de `suites_valides_fichier()` (le bloc `if (m & A_DEBUT)`).
 
 ### 4.4 L'impression : `src/imprimeur.c`
@@ -308,3 +310,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.12 | 2026-11-10 | § 2 : `outils/essais-par-mutation` |
 | 1.13 | 2026-11-10 | § 2 : `outils/essais-du-serveur` |
 | 1.14 | 2026-11-12 | § 4.10 et § 6 : la sorte d'un échec se pose avec son motif (`grym_echec`, grammaire 3.24) ; `tests/sortes` |
+| 1.15 | 2026-11-15 | § 4.3 : l'analyse lit jusqu'à trois fois ; seuls les avertissements dépendent des types déduits (grammaire 3.35) |
