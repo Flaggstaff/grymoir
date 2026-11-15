@@ -1,3 +1,32 @@
+# GrymoiR 3.3
+
+Publiée le 15 novembre 2026. Le langage passe à la grammaire 3.38. Tout ce qui s'écrivait en 3.2 s'écrit encore :
+rien n'est retiré, et les avertissements nouveaux ne refusent rien.
+
+- **L'écran d'un objet** (3.25, 3.29, 3.30) : `L'écran du patient, « Patient », montre :` reçoit le patient qu'on
+  ouvre (`Ouvrir l'écran du patient pour le patient choisi.`), lie ses zones aux champs du même nom, et son titre
+  calculé le lit. `pour un nouvel acte : bloc` ouvre l'écran sur un objet neuf. Un document reçoit son objet de même
+  (3.32).
+- **« dont » plus riche** : deux champs du même objet se comparent (`dont le payé < le montant`, 3.26) ;
+  `S'il existe un patient conservé dont …` et `S'il n'existe aucun …` (3.27) ; les adjectifs définis
+  (`Une facture est impayée si …`, puis `les factures conservées impayées`, 3.28).
+- **La sorte d'un échec se pose là où l'échec naît** (3.24), jamais d'après les mots de son motif.
+- **Les types déduits** (3.33 à 3.38) : l'analyse devine le type des valeurs (par leur nom, leur valeur, les appels
+  d'un paramètre, ce que rend un calcul ou une action) et **avertit**, sans rien refuser, de ce que l'exécution
+  refuserait toujours : un champ qu'aucune entité n'a, une comparaison entre un texte et une date, un ordre entre
+  textes hors `dont`, la longueur d'un nombre, un texte rangé dans un champ nombre. Aucun avertissement sur les
+  programmes du dépôt ; le programme compilé ne change pas d'un octet.
+- **Corrigé** : une zone d'écran masquait un calcul du même nom (3.31) ; `On est le …` fuyait de la mémoire ; un
+  certificat de l'outil de messagerie sur 128 pouvait avoir un numéro de série refusé.
+- **L'atelier** : la dictée par segments (le texte est prêt à l'arrêt) ; pour les essais, le geste `confirmer`.
+- **La page « Apprendre GrymoiR »** est refaite en grammaire 3.38, son moteur recompilé.
+- **Praxis** : vingt écrans et documents deviennent des écrans d'un objet ; 58 scénarios.
+- **Écoutille** : les scénarios, le pays d'un indicatif, l'alerte par courriel, le S-mètre, le tableau de chasse, le
+  résumé du jour, la distance et le cap des décodages, la fiche d'un indicatif, la météo du soleil, les annonces DX ;
+  39 scénarios, et la veille éprouvée dans l'atelier avec un faux poste.
+- **Pas encore** : rien de ce qui passe par internet dans Écoutille (HamQTH, NOAA, courriels) ni rien qui demande une
+  vraie radio n'a tourné chez son destinataire (`docs/essais-sur-place.md`).
+
 # GrymoiR 3.2
 
 Publiée le 10 novembre 2026. Le langage passe à la grammaire 3.20.
