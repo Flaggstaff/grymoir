@@ -102,6 +102,9 @@ Sur un poste branché en USB, en veille :
     première écoute. Après quelques minutes de FT8 (WSJT-X), le tableau se remplit sans message, l'avis de l'écran
     « WSJT-X » compte les prises nouvelles. À rapporter : un pays faux avec son indicatif (un mot mal transcrit qui a la
     forme d'un indicatif ouvre une fausse prise).
+    Les onglets : « Pays par bande » et « Pays par mois » en barres, « Passages par bande » et « Passages par poste » pour
+    l'activité (un passage sans bande se range sous « — »). « Exporter en CSV » écrit `Chasse AAAA-MM-JJ.csv` dans
+    Documents/Écoutille : l'ouvrir dans un tableur.
 13. **Résumé du jour** : la messagerie remplie (essai 10), « Réglages », « Envoyer le résumé ». Attendu : un courriel
     « Écoutille : le résumé du … » avec les passages par poste, les indicatifs et leurs pays, les bandes, les décodages, les
     pays du jour et les prises nouvelles. Puis poser une heure du résumé deux minutes plus tard, enregistrer, laisser la

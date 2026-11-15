@@ -1235,10 +1235,25 @@ Remarque : ce que le tableau de chasse dit en tête.
 Le bilan de chasse d'une journée :
     Rendre (le cumul des contrées de (la journée − 36500)) suivi de " pays entendu(s) en tout, " suivi du compte des contrées de la journée suivi de " aujourd'hui ; " suivi de (le nombre de prises conservées dont le jour = la journée) suivi de " prise(s) nouvelle(s) aujourd'hui.".
 
+Remarque : les onglets (15 novembre 2026) : les prises ; puis, en barres, les pays par bande, les pays ouverts mois après mois,
+Remarque : et l'activité de la veille, les passages par bande et par poste. Un passage sans bande (poste sans pilotage) se
+Remarque : range sous « — ». « Exporter en CSV » écrit les prises dans Documents/Écoutille, pour un tableur.
 L'écran de chasse, « Tableau de chasse », montre :
     le texte le bilan de chasse d'aujourd'hui,
-    la liste des prises conservées, par contrée puis bande, avec la contrée, la bande, le premier indicatif, le jour, le dernier jour et le total,
-    un bouton « Fermer ».
+    les onglets :
+        l'onglet « Prises » :
+            la liste des prises conservées, par contrée puis bande, avec la contrée, la bande, le premier indicatif, le jour, le dernier jour et le total,
+        l'onglet « Pays par bande » :
+            le graphique des prises conservées, par bande,
+        l'onglet « Pays par mois » :
+            le graphique des prises conservées, par mois du jour,
+        l'onglet « Passages par bande » :
+            le graphique des passages conservés, par bande,
+        l'onglet « Passages par poste » :
+            le graphique des passages conservés, par nom du poste,
+    côte à côte :
+        un bouton « Exporter en CSV »,
+        un bouton « Fermer ».
 
 Remarque : le résumé du jour (15 novembre 2026) : ce que la veille a donné ce jour-là, en un texte, pour un courriel. Les
 Remarque : passages par poste ; les indicatifs de la parole et du morse, avec leur pays (ceux de WSJT-X, trop nombreux, ne
@@ -1437,6 +1452,15 @@ Toutes les 5 secondes dans l'écran de veille :
 
 Quand on clique sur « Chasse » dans l'écran de veille :
     Ouvrir l'écran de chasse.
+
+Quand on clique sur « Exporter en CSV » dans l'écran de chasse :
+    La date vaut aujourd'hui en format technique.
+    Le chemin vaut "~/Documents/Écoutille/Chasse " suivi de la date suivi de « .csv ».
+    Essayer :
+        Exporter les prises conservées, par contrée, avec la contrée, la bande, le premier indicatif, le jour, le dernier jour et le total, dans ("~/Documents/Écoutille/Chasse " suivi de la date suivi de « .csv »).
+        Signaler « Tableau de chasse exporté dans » puis le chemin.
+    En cas d'échec :
+        Refuser le motif de l'échec.
 
 Quand on clique sur « Fermer » dans l'écran de chasse :
     Fermer l'écran.
