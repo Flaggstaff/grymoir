@@ -418,3 +418,43 @@ Scénario « le locator des Réglages se vérifie à l'enregistrement » :
     On clique sur « Enregistrer » dans l'écran des réglages.
     Ouvrir l'écran des réglages.
     Vérifier que le locator du r = « JN36mo ».
+
+Remarque : la fiche d'un indicatif (15 novembre 2026). La première réponse est celle de HamQTH pour HB9ABC, relevée ce jour-là ;
+Remarque : les autres sont fabriquées sur son modèle, pour l'ouest (une longitude négative) et les cas incomplets.
+Scénario « la fiche d'un indicatif se range d'après la réponse de HamQTH » :
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+        Le signal relevé vaut vrai.
+        Le locator vaut « JN36 ».
+    Conserver le r.
+    Ranger « {"callsign":"HB9ABC", "name":"Switzerland", "details":"Switzerland, Full License", "continent":"EU", "utc":"-1", "waz":"14", "itu":"28", "lat":"46.2", "lng":"6.14", "adif":"287"} » et « HB9ABC ».
+    Vérifier que le nombre de fiches conservées = 1.
+    Pour chaque fiche conservée :
+        Vérifier que l'appel de la fiche = « HB9ABC ».
+        Vérifier que le territoire de la fiche = « Switzerland ».
+        Vérifier que le continent de la fiche = « EU ».
+        Vérifier que la région CQ de la fiche = 14.
+        Vérifier que la région UIT de la fiche = 28.
+        Vérifier que le parallèle de la fiche = 46,2.
+        Vérifier que le méridien de la fiche = 6,14.
+    Vérifier que le portrait de « HB9ABC » = « HB9ABC : Switzerland (EU), zone CQ 14, zone UIT 28, 74 km, cap 244° ».
+    Remarque : rangée deux fois, une seule fiche.
+    Ranger « {"name":"Switzerland", "continent":"EU", "waz":"14", "itu":"28", "lat":"46.2", "lng":"6.14"} » et « HB9ABC ».
+    Vérifier que le nombre de fiches conservées = 1.
+    Remarque : à l'ouest, une longitude négative : le cap passe par le nord-ouest.
+    Ranger « {"name":"United States", "continent":"NA", "waz":"4", "itu":"7", "lat":"37.6", "lng":"-91.87"} » et « K1ABC ».
+    Vérifier que le portrait de « K1ABC » = « K1ABC : United States (NA), zone CQ 4, zone UIT 7, 7672 km, cap 303° ».
+    Remarque : sans coordonnées ni zones : le territoire seul ; un indicatif sans fiche n'est pas au portrait.
+    Ranger « {"name":"Japan"} » et « JA1ABC ».
+    Vérifier que le portrait de « JA1ABC F4XYZ HB9ABC » = « JA1ABC : Japan ; HB9ABC : Switzerland (EU), zone CQ 14, zone UIT 28, 74 km, cap 244° ».
+    Remarque : une réponse sans territoire : un refus, rien n'est rangé.
+    Essayer :
+        Ranger « {"callsign":"Q1AA", "name":""} » et « Q1AA ».
+        Vérifier que 1 = 2.
+    En cas d'échec :
+        Vérifier que le nombre de fiches conservées = 3.
+
+Scénario « sans locator dans les Réglages, la fiche ne dit pas de distance » :
+    Ranger « {"name":"Switzerland", "continent":"EU", "waz":"14", "itu":"28", "lat":"46.2", "lng":"6.14"} » et « HB9ABC ».
+    Vérifier que le portrait de « HB9ABC » = « HB9ABC : Switzerland (EU), zone CQ 14, zone UIT 28 ».
+    Vérifier que le portrait de « F4XYZ » = « ».

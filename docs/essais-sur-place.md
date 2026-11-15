@@ -112,6 +112,12 @@ Sur un poste branché en USB, en veille :
     distance en kilomètres et son cap en degrés ; en tête, « Le plus lointain aujourd'hui ». À comparer avec la distance
     que montre WSJT-X ou GridTracker pour la même station : quelques kilomètres d'écart sont normaux (milieu du carré). À
     rapporter : un écart de plus de 100 km, avec les deux locators.
+15. **Fiches** : ouvrir un passage qui a des indicatifs, bouton « Fiches ». Attendu : une ligne par indicatif, « HB9ABC :
+    Switzerland (EU), zone CQ 14, zone UIT 28, 74 km, cap 244° » (la distance et le cap seulement avec un locator dans les
+    Réglages ; ils visent un point du territoire, pas la station). Une seconde ouverture ne relit pas HamQTH. À essayer
+    avec un indicatif américain : le cap doit partir vers l'ouest (entre 280 et 320°) ; s'il part vers l'est, le dire :
+    seule une réponse européenne a pu être relevée, le signe des longitudes de l'ouest reste à voir en vrai. À
+    rapporter aussi : « Fiche non lue » et son motif.
 
 ## Les deux applications : un plantage
 

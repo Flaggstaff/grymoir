@@ -82,6 +82,21 @@ Une prise, conservée, a :
     un dernier jour (date),
     un total (nombre entier).
 
+Remarque : la fiche d'un indicatif (15 novembre 2026) : ce que HamQTH.com dit de lui par sa recherche DXCC, gratuite et sans
+Remarque : compte (hamqth.com/developers.php) : le territoire (l'entité DXCC, « Guadeloupe » là où la série de l'UIT dit
+Remarque : « France »), le continent, les zones CQ et UIT, et un point du territoire, en degrés (le nord et l'est positifs :
+Remarque : HB9 rend 46.2 et 6.14). Lue une fois, à la demande, puis gardée : HamQTH n'est pas interrogé deux fois pour
+Remarque : le même indicatif.
+Une fiche, conservée, a :
+    un appel (texte), unique,
+    un territoire (texte),
+    un continent (texte), facultatif,
+    une région CQ (nombre entier), facultative,
+    une région UIT (nombre entier), facultative,
+    un parallèle (nombre), facultatif,
+    un méridien (nombre), facultatif,
+    un jour (date).
+
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
 Remarque : Les clés sont des secrets : elles ne se relisent jamais, elles partent seulement vers leur service.
@@ -859,6 +874,7 @@ L'écran du passage, « Passage », montre :
     un enregistrement (son), facultatif,
     côte à côte :
         un bouton « Garder le son », principal,
+        un bouton « Fiches », actif si le relevé d'indicatifs du passage ouvert est présent,
         un bouton « Remettre l'accord », à confirmer par « Remettre le poste sur la fréquence et le mode de ce passage ? », actif si la fréquence du passage ouvert est présente,
         un bouton « Fermer ».
 
@@ -939,27 +955,23 @@ La longitude d'un carré :
     Si la longueur du carré = 6, rendre le x + (la position de (le 5e caractère du carré) dans « ABCDEFGHIJKLMNOPQRSTUVWX » − 1) ÷ 12 + 1 ÷ 24.
     Rendre le x + 1.
 
-Remarque : le trajet entre deux carrés, en kilomètres, par le grand cercle (haversine) ; aux antipodes, la moitié du tour.
-Le trajet d'un lieu et d'un but :
-    La p vaut la latitude du lieu.
-    La q vaut la latitude du but.
-    L'écart vaut la longitude du but − la longitude du lieu.
-    Le a vaut le sinus de ((la q − la p) ÷ 2).
+Remarque : la portée entre deux points, en kilomètres, par le grand cercle (haversine) ; aux antipodes, la moitié du tour.
+La portée d'une latitude et d'une longitude et d'une latitude visée et d'une longitude visée :
+    L'écart vaut la longitude visée − la longitude.
+    Le a vaut le sinus de ((la latitude visée − la latitude) ÷ 2).
     Le b vaut le sinus de (l'écart ÷ 2).
-    Le h vaut le a × le a + le cosinus de la p × le cosinus de la q × le b × le b.
+    Le h vaut le a × le a + le cosinus de la latitude × le cosinus de la latitude visée × le b × le b.
     Si le h ≥ 1, rendre 20015.
     Si le h ≤ 0, rendre 0.
     Le r vaut la racine carrée du h ÷ la racine carrée de (1 − le h).
     Rendre l'arrondi de 2 × 6371 × l'arc tangente du r × 3,14159265358979323846 ÷ 180 à 1.
 
-Remarque : le cap au départ, en degrés depuis le nord, dans le sens des aiguilles : 90 plein est, 270 plein ouest.
-L'azimut d'un lieu et d'un but :
-    Si le lieu = le but, rendre 0.
-    La p vaut la latitude du lieu.
-    La q vaut la latitude du but.
-    L'écart vaut la longitude du but − la longitude du lieu.
-    Le y vaut le sinus de l'écart × le cosinus de la q.
-    Le x vaut le cosinus de la p × le sinus de la q − le sinus de la p × le cosinus de la q × le cosinus de l'écart.
+Remarque : la visée, le cap au départ, en degrés depuis le nord, dans le sens des aiguilles : 90 plein est, 270 plein ouest.
+La visée d'une latitude et d'une longitude et d'une latitude visée et d'une longitude visée :
+    Si la latitude = la latitude visée et la longitude = la longitude visée, rendre 0.
+    L'écart vaut la longitude visée − la longitude.
+    Le y vaut le sinus de l'écart × le cosinus de la latitude visée.
+    Le x vaut le cosinus de la latitude × le sinus de la latitude visée − le sinus de la latitude × le cosinus de la latitude visée × le cosinus de l'écart.
     Si le x = 0 et le y = 0, rendre 0.
     Si le x = 0 et le y > 0, rendre 90.
     Si le x = 0, rendre 270.
@@ -969,6 +981,89 @@ L'azimut d'un lieu et d'un but :
     Le cap rond vaut l'arrondi du tour à 1.
     Si le cap rond = 360, rendre 0.
     Rendre le cap rond.
+
+Remarque : entre deux carrés : du milieu de l'un au milieu de l'autre.
+Le trajet d'un lieu et d'un but :
+    La p vaut la latitude du lieu.
+    Le m vaut la longitude du lieu.
+    La q vaut la latitude du but.
+    Le n vaut la longitude du but.
+    Rendre la portée de la p et du m et de la q et du n.
+
+L'azimut d'un lieu et d'un but :
+    Si le lieu = le but, rendre 0.
+    La p vaut la latitude du lieu.
+    Le m vaut la longitude du lieu.
+    La q vaut la latitude du but.
+    Le n vaut la longitude du but.
+    Rendre la visée de la p et du m et de la q et du n.
+
+Remarque : un nombre écrit avec un point (« 46.2 », « -6.14 »), comme les services l'écrivent ; absent ou vide : absent.
+Le nombre lu d'un écrit :
+    Si l'écrit est absent, rendre absent.
+    Si l'écrit = « », rendre absent.
+    Rendre (l'écrit en remplaçant « . » par « , ») en nombre.
+
+Remarque : ranger la réponse de HamQTH (« {"callsign":"HB9ABC", "name":"Switzerland", "continent":"EU", "waz":"14",
+Remarque : "itu":"28", "lat":"46.2", "lng":"6.14", …} », relevée le 15 novembre 2026) dans la fiche de l'indicatif, créée au
+Remarque : besoin. Sans territoire dans la réponse : un refus, rien n'est rangé.
+Pour ranger une réponse et un signe :
+    Le pays lu vaut le champ « name » de la réponse.
+    Si le pays lu est absent, refuser "HamQTH ne dit rien de « " suivi du signe suivi de " ».".
+    Si le pays lu = « », refuser "HamQTH ne dit rien de « " suivi du signe suivi de " ».".
+    Si le nombre de fiches conservées dont l'appel est le signe = 0 :
+        La f vaut une nouvelle fiche :
+            L'appel vaut le signe.
+            Le territoire vaut le pays lu.
+            Le jour vaut aujourd'hui.
+        Conserver la f.
+    Pour chaque fiche conservée dont l'appel est le signe :
+        Le territoire de la fiche devient le pays lu.
+        Le continent de la fiche devient le champ « continent » de la réponse.
+        La région CQ de la fiche devient le nombre lu du champ « waz » de la réponse.
+        La région UIT de la fiche devient le nombre lu du champ « itu » de la réponse.
+        Le parallèle de la fiche devient le nombre lu du champ « lat » de la réponse.
+        Le méridien de la fiche devient le nombre lu du champ « lng » de la réponse.
+
+Remarque : ficher un indicatif : déjà fiché, rien ; sinon HamQTH est lu, une fois.
+Pour ficher un signe :
+    Si le nombre de fiches conservées dont l'appel est le signe = 0 :
+        La réponse vaut la lecture de « https://www.hamqth.com/dxcc_json.php » avec :
+            « callsign » : le signe.
+        Ranger la réponse et le signe.
+
+Remarque : le portrait des indicatifs d'un relevé, d'après leurs fiches : « HB9ABC : Switzerland (EU), zone CQ 14, zone UIT
+Remarque : 28, 74 km, cap 244° ». La distance et le cap partent du locator des Réglages et visent le point du territoire que
+Remarque : donne HamQTH, pas la station : un ordre de grandeur. Un indicatif sans fiche n'y est pas.
+Le portrait d'un relevé :
+    Si le relevé est absent, rendre « ».
+    Le repère vaut « ».
+    Pour chaque réglage conservé :
+        Si le locator du réglage est présent, le repère devient le carré du locator du réglage.
+    Le t vaut « ».
+    Pour chaque mot parmi les mots du relevé :
+        Pour chaque fiche conservée dont l'appel est le mot :
+            La notice vaut le mot suivi de " : " suivi du territoire de la fiche.
+            Si le continent de la fiche est présent, la notice devient la notice suivi de " (" suivi du continent de la fiche suivi de « ) ».
+            Si la région CQ de la fiche est présente, la notice devient la notice suivi de ", zone CQ " suivi de la région CQ de la fiche.
+            Si la région UIT de la fiche est présente, la notice devient la notice suivi de ", zone UIT " suivi de la région UIT de la fiche.
+            Si le repère ≠ « » :
+                Si le parallèle de la fiche est présent :
+                    Si le méridien de la fiche est présent :
+                        La p vaut la latitude du repère.
+                        Le m vaut la longitude du repère.
+                        La q vaut le parallèle de la fiche.
+                        Le n vaut le méridien de la fiche.
+                        La notice devient la notice suivi de ", " suivi de la portée de la p et du m et de la q et du n suivi de " km, cap " suivi de la visée de la p et du m et de la q et du n suivi de « ° ».
+            Si le t ≠ « », le t devient le t suivi de " ; ".
+            Le t devient le t suivi de la notice.
+    Rendre le t.
+
+L'écran des fiches, « Fiches », montre :
+    le texte le portrait du relevé d'indicatifs du passage ouvert, visible si le portrait du relevé d'indicatifs du passage ouvert ≠ « »,
+    le texte « Aucune fiche pour ce passage. », visible si le portrait du relevé d'indicatifs du passage ouvert = « »,
+    le texte « D'après HamQTH.com, recherche DXCC. La distance et le cap visent un point du territoire, pas la station. »,
+    un bouton « Fermer ».
 
 Remarque : situer un décodage : son locator, le dernier mot du message s'il en a la forme ; puis, depuis le repère (le
 Remarque : carré de Michel, ou « »), sa distance et son cap. « K1ABC HB9ABC R-12 », « … RR73 », « … 73 » : rien.
@@ -1472,6 +1567,21 @@ Quand on clique sur « Garder le son » dans l'écran du passage :
             Signaler « Son gardé dans » puis le nom suivi de « (2).wav ».
         En cas d'échec :
             Refuser le motif de l'échec.
+
+Remarque : les fiches des indicatifs du passage (15 novembre 2026) : celles qui manquent sont lues chez HamQTH, puis
+Remarque : toutes se montrent ; un indicatif inconnu ou internet coupé : l'écran le dit, les autres fiches restent.
+Quand on clique sur « Fiches » dans l'écran du passage :
+    Le manqué vaut « ».
+    Pour chaque i parmi les mots du relevé d'indicatifs du passage ouvert :
+        Essayer :
+            Ficher l'i.
+        En cas d'échec :
+            Le manqué devient le motif de l'échec.
+    Si le manqué ≠ « », signaler « Fiche non lue : » puis le manqué.
+    Ouvrir l'écran des fiches.
+
+Quand on clique sur « Fermer » dans l'écran des fiches :
+    Fermer l'écran.
 
 Quand on clique sur « Remettre l'accord » dans l'écran du passage :
     Remettre l'accord du passage ouvert.
