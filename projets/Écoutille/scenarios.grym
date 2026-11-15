@@ -507,3 +507,75 @@ Scénario « la météo du soleil se relit une fois par heure » :
     Vérifier que la météo due de 15.11.2026 et de 15:29 et de 15.11.2026 et de 14:30 est faux.
     Vérifier que la météo due de 15.11.2026 et de 15:30 et de 15.11.2026 et de 14:30.
     Vérifier que la météo due de 16.11.2026 et de 0:05 et de 15.11.2026 et de 23:50.
+
+Remarque : les annonces DX (15 novembre 2026). La première réponse est l'exemple de la page de HamQTH (API v2, « spots »),
+Remarque : relevé ce jour-là ; les autres sont fabriquées sur son modèle.
+Scénario « les annonces DX se rangent d'après la réponse de HamQTH » :
+    Ranger les annonces de « {"spots":[{"spotter":"W3LPL","dxcall":"A71EM","freq":28003.6,"band":"10M","mode":"CW","comment":"Heard in MD","time":"2026-10-03T07:58:00Z","dxcc":376,"country":"Qatar","continent":"AS","lotw":true,"eqsl":true}]} », qui donne le neuf.
+    Vérifier que le neuf = 1.
+    Pour chaque annonce conservée :
+        Vérifier que l'appel de l'annonce = « A71EM ».
+        Vérifier que la fréquence de l'annonce = 28003600.
+        Vérifier que l'accord de l'annonce = « 28,0036 MHz ».
+        Vérifier que la bande de l'annonce = « 10m ».
+        Vérifier que le repère de bande de l'annonce = " 10m ".
+        Vérifier que le mode de l'annonce = « CW ».
+        Vérifier que l'annonceur de l'annonce = « W3LPL ».
+        Vérifier que le commentaire de l'annonce = « Heard in MD ».
+        Vérifier que l'heure de l'annonce = « 07:58 UTC ».
+        Vérifier que le jour de l'annonce = 03.10.2026.
+        Vérifier que le territoire de l'annonce = « Qatar ».
+        Vérifier que le continent de l'annonce = « AS ».
+        Remarque : le Qatar sur 10 m n'est pas au tableau de chasse.
+        Vérifier que la marque de l'annonce = « inédit ».
+        Vérifier que le mode visé de l'annonce = « CW-U ».
+    Remarque : la même réponse relue : rien de nouveau.
+    Ranger les annonces de « {"spots":[{"spotter":"W3LPL","dxcall":"A71EM","freq":28003.6,"band":"10M","mode":"CW","comment":"Heard in MD","time":"2026-10-03T07:58:00Z","dxcc":376,"country":"Qatar","continent":"AS","lotw":true,"eqsl":true}]} », qui donne le neuf.
+    Vérifier que le neuf = 0.
+    Vérifier que le nombre d'annonces conservées = 1.
+    Remarque : sans annonce, ou une annonce sans fréquence : rien ne se range, rien ne casse.
+    Ranger les annonces de « {"spots":[]} », qui donne le neuf.
+    Vérifier que le neuf = 0.
+    Ranger les annonces de « {"spots":[{"spotter":"F4XYZ","dxcall":"JA1ABC","band":"20M","time":"2026-10-03T08:00:00Z"}]} », qui donne le neuf.
+    Vérifier que le neuf = 0.
+
+Scénario « une annonce est inédite tant que son pays manque au tableau de chasse sur sa bande » :
+    Poser « FT-991A », qui donne le k.
+    Capter le k et 15.11.2026, qui donne le p.
+    Le relevé d'indicatifs du p devient « JA1ABC ».
+    La bande du p devient « 20m ».
+    Chasser le p.
+    Ranger les annonces de « {"spots":[{"spotter":"F4XYZ","dxcall":"JA7XYZ","freq":14205,"band":"20M","mode":"SSB","time":"2026-11-15T08:00:00Z","country":"Japan","continent":"AS"},{"spotter":"F4XYZ","dxcall":"JA7XYZ","freq":7150,"band":"40M","mode":"SSB","time":"2026-11-15T08:01:00Z","country":"Japan","continent":"AS"},{"dxcall":"HB9ABC","freq":14074,"band":"20M","mode":"DIGI","time":"2026-11-15T08:02:00Z"}]} », qui donne le neuf.
+    Vérifier que le neuf = 3.
+    Remarque : le Japon est déjà pris sur 20 m, pas sur 40 m ; la Suisse manque partout.
+    Pour chaque annonce conservée dont l'appel est « JA7XYZ » et la bande est « 20m » :
+        Vérifier que la marque de l'annonce = « ».
+        Vérifier que le mode visé de l'annonce = « USB ».
+    Pour chaque annonce conservée dont l'appel est « JA7XYZ » et la bande est « 40m » :
+        Vérifier que la marque de l'annonce = « inédit ».
+        Vérifier que le mode visé de l'annonce = « LSB ».
+    Pour chaque annonce conservée dont l'appel est « HB9ABC » :
+        Vérifier que la marque de l'annonce = « inédit ».
+        Vérifier que l'annonceur de l'annonce est absent.
+        Vérifier que le mode visé de l'annonce = « DATA-USB ».
+    Vérifier que le nombre d'annonces conservées dont la marque est « inédit » = 2.
+
+Scénario « les annonces de plus de deux jours partent au ménage » :
+    On est le 15.11.2026.
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+        Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
+    Conserver le r.
+    Ranger les annonces de « {"spots":[{"dxcall":"A71EM","freq":28003.6,"band":"10M","time":"2026-11-13T07:58:00Z"},{"dxcall":"K1ABC","freq":14205,"band":"20M","time":"2026-11-14T07:58:00Z"},{"dxcall":"JA1ABC","freq":21205,"band":"15M","time":"2026-11-15T07:58:00Z"}]} », qui donne le neuf.
+    Vérifier que le neuf = 3.
+    Faire le ménage.
+    Vérifier que le nombre d'annonces conservées = 2.
+    Vérifier que le nombre d'annonces conservées dont l'appel est « A71EM » = 0.
+
+Scénario « l'écran des annonces choisit une bande et les inédites » :
+    Ranger les annonces de « {"spots":[{"dxcall":"A71EM","freq":28003.6,"band":"10M","time":"2026-11-15T07:58:00Z"}]} », qui donne le neuf.
+    On choisit « 10m » dans la seule bande de l'écran des annonces.
+    On clique sur « Fermer » dans l'écran des annonces.
+    Ouvrir l'écran des annonces.
+    Vérifier que le nombre d'annonces conservées = 1.

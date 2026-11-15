@@ -74,6 +74,24 @@ Essayer :
     Afficher « remis sans fréquence ».
 En cas d'échec :
     Afficher le motif de l'échec.
+Accorder le k et 14205000 et « USB ».
+Le t vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:34.
+    L'enregistrement vaut le fichier « a.wav ».
+Conserver le t.
+Lire l'accord du t.
+Afficher l'accord du t.
+Accorder le k et 7030000 et « ».
+Le u vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:35.
+    L'enregistrement vaut le fichier « a.wav ».
+Conserver le u.
+Lire l'accord du u.
+Afficher l'accord du u.
 Sonder le k.
 Afficher la crête du k.
 Relever la force du r.
@@ -100,11 +118,14 @@ verifier "$(echo "$sortie" | sed -n 5p)" "C4FM,Z" "la table des modes, un code i
 verifier "$(echo "$sortie" | sed -n 6p)" "7,074 MHz LSB" "l'accord remis sur le poste, puis relu (11 novembre 2026)"
 verifier "$(echo "$sortie" | sed -n 7p)" "Ce passage n'a pas de fréquence : rien à remettre." "sans fréquence, rien n'est envoyé"
 # le S-mètre (15 novembre 2026) : le faux poste répond « SM0150; »
-verifier "$(echo "$sortie" | sed -n 8p)" "150" "la crête lue sur le poste"
-verifier "$(echo "$sortie" | sed -n 9p)" "S9+10" "la force du passage, en points S"
-verifier "$(echo "$sortie" | sed -n 10p)" "crête rendue" "la crête repart de rien après le passage"
-verifier "$(echo "$sortie" | sed -n 11p)" "12" "un port qui ne s'ouvre pas : la sonde attend douze tours"
-verifier "$(echo "$sortie" | sed -n 12p)" "11" "un tour d'attente de moins, sans toucher au port"
-verifier "$(echo "$sortie" | sed -n 13p)" "sans crête" "pas de crête sans réponse"
+# accorder (15 novembre 2026) : une annonce DX pose la fréquence et le mode ; un mode « » laisse celui du poste
+verifier "$(echo "$sortie" | sed -n 8p)" "14,205 MHz USB" "le poste accordé sur une annonce, fréquence et mode"
+verifier "$(echo "$sortie" | sed -n 9p)" "7,03 MHz USB" "sans mode annoncé, la fréquence seule change"
+verifier "$(echo "$sortie" | sed -n 10p)" "150" "la crête lue sur le poste"
+verifier "$(echo "$sortie" | sed -n 11p)" "S9+10" "la force du passage, en points S"
+verifier "$(echo "$sortie" | sed -n 12p)" "crête rendue" "la crête repart de rien après le passage"
+verifier "$(echo "$sortie" | sed -n 13p)" "12" "un port qui ne s'ouvre pas : la sonde attend douze tours"
+verifier "$(echo "$sortie" | sed -n 14p)" "11" "un tour d'attente de moins, sans toucher au port"
+verifier "$(echo "$sortie" | sed -n 15p)" "sans crête" "pas de crête sans réponse"
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]

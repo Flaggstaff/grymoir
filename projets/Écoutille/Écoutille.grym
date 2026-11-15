@@ -97,6 +97,30 @@ Une fiche, conservée, a :
     un méridien (nombre), facultatif,
     un jour (date).
 
+Remarque : une annonce DX (15 novembre 2026) : ce qu'un autre radioamateur vient d'entendre et de signaler au réseau des
+Remarque : « DX clusters », lu chez HamQTH.com (hamqth.com/developers.php, API v2, « spots », sans compte) : l'indicatif
+Remarque : entendu, sa fréquence en hertz, sa bande, son mode (CW, SSB, DIGI, ou rien), qui l'annonce, son commentaire, le
+Remarque : moment en temps universel, le territoire et le continent. L'empreinte (indicatif, fréquence, moment, annonceur)
+Remarque : évite de ranger deux fois la même. La marque dit « inédit » quand le pays de l'indicatif (série de l'UIT) n'est
+Remarque : pas encore au tableau de chasse sur cette bande : une annonce à aller écouter. Le repère de bande, « ␣20m␣ »,
+Remarque : sert au choix d'une bande dans l'écran. Gardées deux jours.
+Une annonce, conservée, a :
+    une empreinte (texte), unique,
+    un appel (texte),
+    une fréquence (nombre entier),
+    un accord (texte),
+    une bande (texte),
+    un repère de bande (texte),
+    un mode (texte), facultatif,
+    un annonceur (texte), facultatif,
+    un commentaire (texte), facultatif,
+    un moment (texte),
+    un jour (date),
+    une heure (texte),
+    un territoire (texte), facultatif,
+    un continent (texte), facultatif,
+    une marque (texte).
+
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
 Remarque : Les clés sont des secrets : elles ne se relisent jamais, elles partent seulement vers leur service.
@@ -445,6 +469,21 @@ Pour remettre l'accord d'un passage :
     Si le mode du passage est présent, le code devient le code yaesu du mode du passage.
     Si le code ≠ « », le retour devient la réponse du port à (« MD0 » suivi du code suivi de « ; »), à la vitesse de pilotage du poste du passage bauds.
     Le retour devient la réponse du port à « FA; », à la vitesse de pilotage du poste du passage bauds.
+    Si le retour ≠ « FA » suivi du chiffré suivi de « ; », refuser "Le poste n'a pas pris la fréquence (il répond « " suivi du retour suivi de " ») : hors de ses bandes, ou tenu par un autre logiciel ?".
+
+Remarque : accorder un poste sur une fréquence en hertz et un mode (15 novembre 2026), pour aller écouter une annonce DX :
+Remarque : les mêmes commandes que « Remettre l'accord » (FA et MD, manuel CAT du FT-991A), relues de même ; un mode « » ne
+Remarque : change pas celui du poste. Rien n'émet.
+Pour accorder un poste et une cible et un réglage voulu :
+    Le port vaut le port de pilotage du poste.
+    Si le port est absent, refuser "Ce poste n'a pas de port de pilotage : pose-le dans sa fiche (bouton « Ports série » pour la liste).".
+    Le chiffré vaut la cible en format technique.
+    Si la longueur du chiffré > 9, refuser « Fréquence trop haute pour un Yaesu : » suivi du chiffré suivi de « Hz. ».
+    Tant que la longueur du chiffré < 9, le chiffré devient « 0 » suivi du chiffré.
+    Le retour vaut la réponse du port à (« FA » suivi du chiffré suivi de « ; »), à la vitesse de pilotage du poste bauds.
+    Le code vaut le code yaesu du réglage voulu.
+    Si le code ≠ « », le retour devient la réponse du port à (« MD0 » suivi du code suivi de « ; »), à la vitesse de pilotage du poste bauds.
+    Le retour devient la réponse du port à « FA; », à la vitesse de pilotage du poste bauds.
     Si le retour ≠ « FA » suivi du chiffré suivi de « ; », refuser "Le poste n'a pas pris la fréquence (il répond « " suivi du retour suivi de " ») : hors de ses bandes, ou tenu par un autre logiciel ?".
 
 Remarque : le S-mètre (15 novembre 2026) : « SM0; » rend « SM0130; », la force du signal de 0 à 255 (Hamlib,
@@ -925,6 +964,7 @@ L'écran de veille montre :
         un bouton « Carnet ADIF »,
         un bouton « Chasse »,
         un bouton « WSJT-X »,
+        un bouton « Annonces DX »,
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
 
@@ -1092,6 +1132,93 @@ Le portrait d'un relevé :
             Si le t ≠ « », le t devient le t suivi de " ; ".
             Le t devient le t suivi de la notice.
     Rendre le t.
+
+Remarque : le mode du poste pour une annonce : CW ; en phonie, la bande latérale d'usage (inférieure sous 10 MHz, supérieure
+Remarque : au-dessus et sur 5 MHz) ; DATA-USB pour les modes numériques ; sans mode annoncé, « » : celui du poste reste.
+Le mode visé d'une annonce :
+    Si le mode de l'annonce est absent, rendre « ».
+    Si le mode de l'annonce = « CW », rendre « CW-U ».
+    Si le mode de l'annonce = « DIGI », rendre « DATA-USB ».
+    Si le mode de l'annonce = « SSB » :
+        Si la fréquence de l'annonce ≥ 5000000 et la fréquence de l'annonce < 5500000, rendre « USB ».
+        Si la fréquence de l'annonce < 10000000, rendre « LSB ».
+        Rendre « USB ».
+    Rendre « ».
+
+Remarque : ranger les annonces d'une réponse de HamQTH (l'exemple de sa page, relevé le 15 novembre 2026) :
+Remarque : « {"spots":[{"spotter":"W3LPL","dxcall":"A71EM","freq":28003.6,"band":"10M","mode":"CW","comment":"Heard in
+Remarque : MD","time":"2026-10-03T07:58:00Z","dxcc":376,"country":"Qatar","continent":"AS","lotw":true,"eqsl":true}]} » ;
+Remarque : la fréquence est en kilohertz. Rend le nombre d'annonces nouvelles ; une annonce sans indicatif, sans fréquence
+Remarque : ou sans moment est laissée.
+Pour ranger les annonces d'une réponse :
+    Le compte vaut 0.
+    Pour chaque spot du champ « spots » de la réponse :
+        Le signe vaut le champ « dxcall » du spot.
+        Le lu vaut le nombre lu du champ « freq » du spot.
+        L'instant vaut le champ « time » du spot.
+        Si le signe est présent et le lu est présent et l'instant est présent :
+            La cible vaut l'arrondi du lu × 1000 à 1.
+            Le crieur vaut « ».
+            Si le champ « spotter » du spot est présent, le crieur devient le champ « spotter » du spot.
+            La clé vaut le signe suivi de « | » suivi de la cible en format technique suivi de « | » suivi de l'instant suivi de « | » suivi du crieur.
+            Si le nombre d'annonces conservées dont l'empreinte est la clé = 0 :
+                La gamme vaut « bande inconnue ».
+                Si le champ « band » du spot est présent, la gamme devient le champ « band » du spot en minuscules.
+                La terre vaut le pays du signe.
+                L'étiquette vaut « ».
+                Si la terre ≠ « » :
+                    Si le nombre de prises conservées dont la contrée est la terre et la bande est la gamme = 0, l'étiquette devient « inédit ».
+                La a vaut une nouvelle annonce :
+                    L'empreinte vaut la clé.
+                    L'appel vaut le signe.
+                    La fréquence vaut la cible.
+                    L'accord vaut (la cible ÷ 1000000) suivi de " MHz".
+                    La bande vaut la gamme.
+                    Le repère de bande vaut " " suivi de la gamme suivi de " ".
+                    Le moment vaut l'instant.
+                    Le jour vaut l'instant en date locale.
+                    L'heure vaut (les caractères 12 à 16 de l'instant) suivi de " UTC".
+                    La marque vaut l'étiquette.
+                Si le champ « mode » du spot est présent, le mode de la a devient le champ « mode » du spot.
+                Si le crieur ≠ « », l'annonceur de la a devient le crieur.
+                Si le champ « comment » du spot est présent, le commentaire de la a devient le champ « comment » du spot.
+                Si le champ « country » du spot est présent, le territoire de la a devient le champ « country » du spot.
+                Si le champ « continent » du spot est présent, le continent de la a devient le champ « continent » du spot.
+                Conserver la a.
+                Le compte devient le compte + 1.
+    Rendre le compte.
+
+Remarque : ce que l'écran des annonces dit de la dernière lecture, et ses deux choix : une bande (« » : toutes) et les
+Remarque : seules inédites (« inédit », ou « » : toutes).
+L'avis des annonces vaut « Aucune annonce lue pour l'instant. ».
+Le tamis vaut « ».
+Le crible vaut « ».
+
+Remarque : lire les annonces : les cent dernières, toutes bandes. HamQTH demande de ne pas l'interroger plus souvent que
+Remarque : toutes les 15 secondes : la minuterie de l'écran bat toutes les 30. Internet coupé, HamQTH muet : l'avis le dit.
+Pour lire les annonces :
+    Essayer :
+        La réponse vaut la lecture de « https://www.hamqth.com/api/v2/spots » avec :
+            « limit » : 100.
+        Ranger les annonces de la réponse, qui donne le neuf.
+        L'avis des annonces devient "Annonces lues à " suivi de (maintenant en format universel) suivi de " : " suivi du neuf suivi de " nouvelle(s). D'après HamQTH.com.".
+    En cas d'échec :
+        L'avis des annonces devient "Annonces non lues : " suivi du motif de l'échec.
+
+Remarque : les annonces DX (15 novembre 2026) : celles d'aujourd'hui et d'hier, les plus récentes en haut ; « inédit » marque
+Remarque : un pays qui manque au tableau de chasse sur cette bande. « Y aller » accorde un poste piloté sur l'annonce
+Remarque : choisie : le poste visé, ou le premier qui a un port de pilotage.
+L'écran des annonces, « Annonces DX », montre :
+    le texte l'avis des annonces,
+    côte à côte :
+        une seule bande (« Toutes », « 160m », « 80m », « 60m », « 40m », « 30m », « 20m », « 17m », « 15m », « 12m », « 10m », « 6m », « 2m » ou « 70cm »), « Toutes » au départ,
+        un filtre inédit (vrai ou faux), faux au départ, en interrupteur, avec l'indication « Seulement les pays qui manquent au tableau de chasse sur leur bande »,
+        un poste visé (poste), facultatif, avec l'indication « Le poste à accorder ; vide : le premier qui se pilote »,
+    la liste des annonces conservées dont le jour ≥ aujourd'hui − 1 et le repère de bande contient le tamis et la marque contient le crible, par moment décroissant, avec l'heure, l'appel, l'accord, le mode, le territoire, la marque, l'annonceur et le commentaire,
+    côte à côte :
+        un bouton « Relever », principal, au clavier « R »,
+        un bouton « Y aller », à confirmer par « Accorder le poste sur cette annonce ? Rien n'émet. », actif si l'annonce choisie de l'écran est présente,
+        un bouton « Fermer ».
 
 L'écran des fiches, « Fiches », montre :
     le texte le portrait du relevé d'indicatifs du passage ouvert, visible si le portrait du relevé d'indicatifs du passage ouvert ≠ « »,
@@ -1554,6 +1681,40 @@ Quand on change le mot cherché dans l'écran de veille :
 Remarque : le carnet ADIF (3 novembre 2026) : une ligne par indicatif entendu dans les passages montrés (la période et le poste
 Remarque : choisis), pour un logiciel de carnet ; dans Documents/Écoutille, « Carnet 2026-11-03T1430Z.adi ». En-tête : ADIF 3.1.6.
 Remarque : Les passages d'avant le carnet, sans moment universel, n'y sont pas.
+Quand on clique sur « Annonces DX » dans l'écran de veille :
+    Lire les annonces.
+    Ouvrir l'écran des annonces.
+
+Toutes les 30 secondes dans l'écran des annonces :
+    Lire les annonces.
+
+Quand on clique sur « Relever » dans l'écran des annonces :
+    Lire les annonces.
+
+Quand on change la seule bande dans l'écran des annonces :
+    Le tamis devient « ».
+    Si la seule bande de l'écran est présente :
+        Si la seule bande de l'écran ≠ « Toutes », le tamis devient " " suivi de la seule bande de l'écran suivi de " ".
+
+Quand on change le filtre inédit dans l'écran des annonces :
+    Le crible devient « ».
+    Si le filtre inédit de l'écran, le crible devient « inédit ».
+
+Quand on clique sur « Y aller » dans l'écran des annonces :
+    La a vaut l'annonce choisie de l'écran.
+    Le but vaut le poste visé de l'écran.
+    Si le but est absent :
+        Pour chaque poste conservé dont le port de pilotage est présent, par nom :
+            Si le but est absent, le but devient le poste.
+    Si le but est absent, refuser "Aucun poste ne se pilote : pose un port de pilotage dans la fiche d'un poste (« Postes »).".
+    La cible vaut la fréquence de la a.
+    Le genre vaut le mode visé de la a.
+    Accorder le but et la cible et le genre.
+    Signaler « Poste » puis le nom du but puis « accordé sur » suivi de " " suivi de l'accord de la a suivi de « . ».
+
+Quand on clique sur « Fermer » dans l'écran des annonces :
+    Fermer l'écran.
+
 Quand on clique sur « WSJT-X » dans l'écran de veille :
     Relever les décodages.
     Ouvrir l'écran des décodages.
@@ -1969,6 +2130,9 @@ Pour faire le ménage :
     Si le délai est présent et le délai < 30, le délai des décodages devient le délai.
     Pour chaque décodage conservé dont le jour < aujourd'hui − le délai des décodages :
         Supprimer le décodage définitivement.
+    Remarque : les annonces DX (15 novembre 2026) : deux jours.
+    Pour chaque annonce conservée dont le jour < aujourd'hui − 1 :
+        Supprimer l'annonce définitivement.
 
 Remarque : un seul réglage, créé au premier lancement ; puis le ménage.
 Si le nombre de réglages conservés = 0 :

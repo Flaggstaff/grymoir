@@ -126,6 +126,13 @@ Sur un poste branché en USB, en veille :
     dans le résumé du jour. À comparer avec spaceweatherlive.com. Internet coupé : la veille continue, les derniers
     chiffres restent. À rapporter : la ligne qui ne vient pas (la NOAA a pu changer ses adresses), ou des chiffres
     différents du site. « Réglages », « Soleil relevé » éteint : plus aucune lecture.
+17. **Annonces DX** : dans la veille, bouton « Annonces DX », internet branché. Attendu : une liste d'annonces récentes
+    (l'heure UTC, l'indicatif, la fréquence, le mode, le territoire, l'annonceur, le commentaire), relue seule toutes les
+    30 secondes ; « inédit » sur les pays qui manquent au tableau de chasse pour leur bande ; le choix d'une bande et
+    l'interrupteur des inédites filtrent la liste. Puis, WSJT-X fermé, choisir une annonce et « Y aller » : le Yaesu passe
+    sur sa fréquence, en CW, LSB ou USB selon l'annonce, sans émettre. Seul l'exemple de la page de HamQTH a été relevé,
+    pas une vraie réponse. À rapporter : « Annonces non lues » et son motif ; une liste vide alors que
+    hamqth.com/dxc.php en montre ; une fréquence fausse d'un facteur mille ; un poste qui ne bouge pas.
 
 ## Les deux applications : un plantage
 
