@@ -56,6 +56,11 @@ Ce que les essais automatiques ne mesurent pas : la qualité du texte (le modèl
 
 ## Écoutille chez Michel
 
+Éprouvé sans radio, le 15 novembre 2026, dans l'atelier sans écran (`tests/ecoutille-veille`, joué par `make test` quand
+l'atelier est construit) : la minuterie de la veille sonde un faux FT-991A et garde la crête du S-mètre ; « Remettre
+l'accord », confirmé, pose la fréquence et le mode ; le tableau de chasse s'ouvre. Restent à voir en vrai : le son, les
+vrais postes, et tout ce qui passe par internet (courriels, HamQTH, NOAA).
+
 Sur un poste branché en USB, en veille :
 
 1. **Dernière minute** : laisser tourner une minute, cliquer « Réécouter 1 min » (le haut-parleur rejoue), puis

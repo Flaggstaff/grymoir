@@ -1,0 +1,86 @@
+#!/bin/sh
+# Écoutille, la veille dans l'atelier (15 novembre 2026) : ce que les scénarios ne peuvent pas jouer, la veille ne s'ouvrant
+# que dans l'atelier. Un faux FT-991A (test_serie --faux-poste) sur un poste en veille : la minuterie de la veille le sonde
+# (« SM0; ») et le poste garde la crête ; « Remettre l'accord », confirmé, pose la fréquence et le mode d'un passage sur le
+# poste ; le tableau de chasse s'ouvre, onglets et graphiques compris. Rien ne part sur internet : « Soleil relevé » est
+# éteint. Sans atelier, ou sous Windows (pas de pseudo-terminal), l'essai se dit sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+atelier="$racine/construction/grym-atelier"
+[ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+if [ ! -x "$atelier" ]; then echo "ecoutille-veille : sauté (atelier absent)"; exit 0; fi
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "ecoutille-veille : sauté sous Windows"; exit 0;; esac
+[ -x "$racine/test_serie" ] || { echo "ecoutille-veille : test_serie absent"; exit 1; }
+d=$(mktemp -d)
+"$racine/test_serie" --faux-poste "$d/port.txt" &
+faux=$!
+trap 'kill $faux 2>/dev/null; wait $faux 2>/dev/null; rm -rf "$d"' EXIT
+n=0; while [ ! -s "$d/port.txt" ] && [ $n -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+port=$(cat "$d/port.txt")
+mkdir -p "$d/maison"
+cp "$racine/projets/Écoutille/Écoutille.grym" "$d/"
+printf 'RIFF$\000\000\000WAVEfmt ' > "$d/son.wav"
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+# l'atelier sans écran : $1 la capture, $2 les gestes
+lancer() {
+    (cd "$d" && HOME="$d/maison" QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+        "$atelier" --capture "$d/$1.png" --clics "$2" --taille 1170x900 Écoutille.grym > "$d/$1.txt" 2>&1 < /dev/null)
+}
+# un programme de console sur la base de l'application : ses entités, puis $1
+jouer() {
+    sed -n '/^Un modèle, conservé, a :/,/^Le début des passages vaut/p' "$d/Écoutille.grym" | sed '$d' > "$d/entites.txt"
+    { echo "La base est chiffrée."; cat "$d/entites.txt"; printf '%s\n' "$1"; } > "$d/j.grym"
+    cp "$d/Écoutille.grymd" "$d/j.grymd"
+    cp "$d/Écoutille.grymd.clés" "$d/j.grymd.clés"
+    (cd "$d" && GRYM_MOT_DE_PASSE_BASE=essai-essai "$racine/grym" lancer j.grym < /dev/null 2>&1)
+    cp "$d/j.grymd" "$d/Écoutille.grymd"
+    cp "$d/j.grymd.clés" "$d/Écoutille.grymd.clés"
+}
+lancer premier ""
+verifier "$(grep -c 'erreur' "$d/premier.txt")" "0" "Écoutille se lance sans erreur"
+jouer "Le a vaut un nouveau poste :
+    Le nom vaut « FT-991A ».
+    La sorte vaut « émetteur-récepteur ».
+    La veille vaut vrai.
+    L'affichage vaut vrai.
+    La parole transcrite vaut vrai.
+    La traduction voulue vaut faux.
+    La vitesse de pilotage vaut 38400.
+Conserver a.
+Le port de pilotage de a devient « $port ».
+Le p vaut un nouveau passage :
+    Le poste vaut a.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 11:00.
+    L'enregistrement vaut le fichier « son.wav ».
+Conserver p.
+La fréquence de p devient 7030000.
+Le mode de p devient « LSB ».
+L'accord de p devient « 7,03 MHz LSB ».
+La b vaut une nouvelle prise :
+    La contrée vaut « Japon ».
+    La bande vaut « 40m ».
+    Le premier indicatif vaut « JA1ABC ».
+    Le jour vaut aujourd'hui.
+    Le dernier jour vaut aujourd'hui.
+    Le total vaut 1.
+Conserver la b.
+Pour chaque réglage conservé, le soleil relevé du réglage devient faux." > /dev/null
+# la veille ouverte une douzaine de secondes (dix gestes sans effet) : la minuterie bat deux fois
+lancer veille "rien;rien;rien;rien;rien;rien;rien;rien;rien;rien"
+verifier "$(grep -c 'erreur' "$d/veille.txt")" "0" "la veille tient douze secondes sans erreur"
+verifier "$([ -s "$d/veille.png" ] && echo oui)" "oui" "la veille se dessine"
+verifier "$(jouer 'Pour chaque poste conservé, afficher la crête du poste.')" "150" "la minuterie de la veille a sondé le poste : la crête du S-mètre"
+verifier "$(jouer 'Pour chaque réglage conservé :
+    Si le jour de météo du réglage est absent, afficher « rien lu ».')" "rien lu" "« Soleil relevé » éteint : la NOAA n'est pas lue"
+# « Remettre l'accord », à confirmer : le passage de 11:00, ouvert depuis la veille
+lancer accord "ligne:FT-991A;Remettre l'accord;confirmer;rien"
+verifier "$(grep -c 'erreur' "$d/accord.txt")" "0" "l'écran du passage sans erreur"
+verifier "$(jouer "Afficher la réponse de « $port » à « FA; », à 38400 bauds suivi de la réponse de « $port » à « MD0; », à 38400 bauds.")" \
+         "FA007030000;MD01;" "« Remettre l'accord », confirmé, a posé la fréquence et le mode sur le poste"
+# le tableau de chasse, ses onglets, ses graphiques
+lancer chasse "Chasse"
+verifier "$(grep -c 'erreur' "$d/chasse.txt")" "0" "le tableau de chasse sans erreur"
+verifier "$([ -s "$d/chasse.png" ] && echo oui)" "oui" "le tableau de chasse se dessine"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

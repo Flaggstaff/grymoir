@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
     // L'icône de l'atelier, pour la fenêtre et la barre des tâches (Linux, Windows) ; macOS prend celle du paquet.
     QApplication::setWindowIcon(QIcon(":/application/icone/grymoir-atelier.png"));
     // Capture d'un programme à écrans, pour comparer à une maquette sans écran physique (QT_QPA_PLATFORM=offscreen) :
-    //   grym-atelier --capture sortie.png [--clics "Clients;Nouveau client;ligne:Anne Rochat;calendrier"] [--taille 1280x860] programme.grym
+    //   grym-atelier --capture sortie.png [--clics "Clients;Nouveau client;ligne:Anne Rochat;calendrier;Supprimer;confirmer"] [--taille 1280x860] programme.grym
     // Les clics se font dans l'ordre, chacun sur le bouton visible qui porte ce libellé, quand l'écran attend.
     if (args.size() >= 4 && args.at(1) == "--capture") {
         QString sortie = args.at(2), programme = args.last();
@@ -357,6 +357,9 @@ int main(int argc, char **argv) {
                         QMouseEvent b(QEvent::MouseButtonRelease, p, ag->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                         QApplication::sendEvent(ag, &b);
                     }
+                } else if (l == QString::fromUtf8("confirmer")) {   // le bouton de la question ouverte par un bouton « à confirmer » (2.65)
+                    for (QPushButton *b : e->findChildren<QPushButton *>("confirmer"))
+                        if (b->isVisible() && b->isEnabled()) { b->click(); break; }
                 } else if (l.startsWith(QString::fromUtf8("ligne:"))) {   // « ligne:Anne Rochat » : choisir la ligne qui porte ce texte
                     const QString cherche = l.mid(6);
                     for (QTableWidget *t : e->findChildren<QTableWidget *>()) {

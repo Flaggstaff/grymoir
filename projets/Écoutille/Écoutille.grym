@@ -396,7 +396,7 @@ Remarque : période et pour un poste ou tous ; « Fermer » arrête la veille, a
 Remarque : une ligne de l'écran du passage, vide si la valeur manque (un passage de morse n'a pas de parole).
 La ligne d'un intitulé et d'une valeur :
     Si la valeur est absente, rendre « ».
-    Rendre l'intitulé suivi de la valeur.
+    Rendre l'intitulé suivi de " " suivi de la valeur.
 
 Remarque : le mode d'un Yaesu d'après la réponse à « MD0; » (3 novembre 2026) : la table du manuel CAT du FT-991A (commande MD),
 Remarque : et « F », DATA-FM-N, que le FT-710 ajoute d'après Hamlib (rigs/yaesu/newcat.c) ; un code inconnu reste tel quel.

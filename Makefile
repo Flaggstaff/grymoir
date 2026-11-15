@@ -137,6 +137,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/ecoutille-carnet
 	sh tests/ecoutille-scenarios
 	sh tests/ecoutille
+	sh tests/ecoutille-veille
 	sh tests/balayer
 
 clean:
