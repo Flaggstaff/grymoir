@@ -107,6 +107,11 @@ Sur un poste branché en USB, en veille :
     pays du jour et les prises nouvelles. Puis poser une heure du résumé deux minutes plus tard, enregistrer, laisser la
     veille ouverte : le courriel part seul à l'heure dite, une seule fois. À rapporter : « Résumé du jour non parti » et son
     motif, ou un courriel en double.
+14. **Distance et cap** : « Réglages », « Locator » : le carré de la station (JN36, ou JN36mo). Décoder quelques minutes de
+    FT8. Attendu : dans « WSJT-X », chaque décodage qui finit par un locator (« CQ JA1ABC PM95 ») porte ce locator, sa
+    distance en kilomètres et son cap en degrés ; en tête, « Le plus lointain aujourd'hui ». À comparer avec la distance
+    que montre WSJT-X ou GridTracker pour la même station : quelques kilomètres d'écart sont normaux (milieu du carré). À
+    rapporter : un écart de plus de 100 km, avec les deux locators.
 
 ## Les deux applications : un plantage
 

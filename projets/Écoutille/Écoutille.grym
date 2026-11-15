@@ -97,7 +97,10 @@ Un décodage, conservé, a :
     un décalage (nombre entier),
     un message (texte),
     un relevé d'indicatifs (texte), facultatif,
-    une bande (texte), facultative.
+    une bande (texte), facultative,
+    un locator (texte), facultatif,
+    une distance (nombre entier), facultative,
+    un cap (nombre entier), facultatif.
 
 Un réglage, conservé, a :
     une conservation (nombre entier), facultative,
@@ -116,7 +119,8 @@ Un réglage, conservé, a :
     une heure de dernière alerte (heure), facultative,
     un signal relevé (vrai ou faux), vrai au départ,
     une heure du résumé (heure), facultative,
-    un jour de dernier résumé (date), facultatif.
+    un jour de dernier résumé (date), facultatif,
+    un locator (texte), facultatif.
 
 Remarque : la parole minimale (11 novembre 2026) : le nombre de mots qu'une parole doit avoir pour être gardée ; vide, toute
 Remarque : parole est gardée. Sur du souffle, Whisper écrit volontiers un mot ou deux qu'on n'a pas dits.
@@ -874,14 +878,129 @@ L'écran de veille montre :
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
 
+Remarque : la distance et le cap (15 novembre 2026). Un message FT8 finit souvent par le locator de la station (« CQ HB9ABC
+Remarque : JN36 », le carré Maidenhead) ; avec celui de Michel (Réglages), chaque décodage dit à combien de kilomètres et dans
+Remarque : quelle direction. Tout se calcule ici, sans internet. Le langage n'a ni sinus ni arc tangente : ils sont écrits
+Remarque : en séries, les angles en degrés. Vérifié contre un calcul indépendant (Python, formule de haversine, rayon moyen
+Remarque : de 6371 km) sur neuf trajets, de 0 à 18 900 km : au kilomètre et au degré près.
+Le sinus d'un angle :
+    Le x vaut l'arrondi de l'angle × 3,14159265358979323846 ÷ 180 à 0,000000000000001.
+    Tant que le x > 3,14159265358979323846, le x devient le x − 6,28318530717958647692.
+    Tant que le x < 0 − 3,14159265358979323846, le x devient le x + 6,28318530717958647692.
+    Le terme vaut le x.
+    La série vaut le x.
+    Pour chaque k de 1 à 14 :
+        Le terme devient l'arrondi de (0 − le terme × le x × le x ÷ ((2 × k) × (2 × k + 1))) à 0,00000000000000000001.
+        La série devient la série + le terme.
+    Rendre la série.
+
+Le cosinus d'un angle :
+    Rendre le sinus de (l'angle + 90).
+
+Remarque : l'arc tangente, en degrés : la pente se divise trois fois (l'angle de moitié à chaque fois), puis la série.
+L'arc tangente d'une pente :
+    Le u vaut la pente.
+    Si le u < 0, le u devient 0 − le u.
+    Pour chaque k de 1 à 3 :
+        Le u devient l'arrondi de (le u ÷ (1 + la racine carrée de (1 + le u × le u))) à 0,00000000000000000001.
+    Le terme vaut le u.
+    La série vaut le u.
+    Pour chaque k de 1 à 14 :
+        Le terme devient l'arrondi de (0 − le terme × le u × le u) à 0,00000000000000000001.
+        La série devient la série + le terme ÷ (2 × k + 1).
+    Le résultat vaut la série × 8 × 180 ÷ 3,14159265358979323846.
+    Si la pente < 0, rendre 0 − le résultat.
+    Rendre le résultat.
+
+Remarque : un locator, à sa forme : deux lettres de A à R, deux chiffres, et parfois deux lettres de A à X (« JN36 »,
+Remarque : « JN36mo ») ; en majuscules, ou « ». « RR73 », qui en a la forme, est un au revoir de FT8, pas un locator.
+Le carré d'un mot :
+    Le m vaut le mot en majuscules.
+    Si la longueur du m ≠ 4 et la longueur du m ≠ 6, rendre « ».
+    Si le m = « RR73 », rendre « ».
+    Si la position de (le 1er caractère du m) dans « ABCDEFGHIJKLMNOPQR » = 0, rendre « ».
+    Si la position de (le 2e caractère du m) dans « ABCDEFGHIJKLMNOPQR » = 0, rendre « ».
+    Si la position de (le 3e caractère du m) dans « 0123456789 » = 0, rendre « ».
+    Si la position de (le 4e caractère du m) dans « 0123456789 » = 0, rendre « ».
+    Si la longueur du m = 6 :
+        Si la position de (le 5e caractère du m) dans « ABCDEFGHIJKLMNOPQRSTUVWX » = 0, rendre « ».
+        Si la position de (le 6e caractère du m) dans « ABCDEFGHIJKLMNOPQRSTUVWX » = 0, rendre « ».
+    Rendre le m.
+
+Remarque : le milieu d'un carré, en degrés : un grand carré fait 20° de longitude sur 10° de latitude, un carré 2° sur 1°,
+Remarque : un sous-carré 5 minutes sur 2,5 minutes.
+La latitude d'un carré :
+    Le y vaut (la position de (le 2e caractère du carré) dans « ABCDEFGHIJKLMNOPQR » − 1) × 10 − 90 + (le 4e caractère du carré) en nombre entier.
+    Si la longueur du carré = 6, rendre le y + (la position de (le 6e caractère du carré) dans « ABCDEFGHIJKLMNOPQRSTUVWX » − 1) ÷ 24 + 1 ÷ 48.
+    Rendre le y + 0,5.
+
+La longitude d'un carré :
+    Le x vaut (la position de (le 1er caractère du carré) dans « ABCDEFGHIJKLMNOPQR » − 1) × 20 − 180 + (le 3e caractère du carré) en nombre entier × 2.
+    Si la longueur du carré = 6, rendre le x + (la position de (le 5e caractère du carré) dans « ABCDEFGHIJKLMNOPQRSTUVWX » − 1) ÷ 12 + 1 ÷ 24.
+    Rendre le x + 1.
+
+Remarque : le trajet entre deux carrés, en kilomètres, par le grand cercle (haversine) ; aux antipodes, la moitié du tour.
+Le trajet d'un lieu et d'un but :
+    La p vaut la latitude du lieu.
+    La q vaut la latitude du but.
+    L'écart vaut la longitude du but − la longitude du lieu.
+    Le a vaut le sinus de ((la q − la p) ÷ 2).
+    Le b vaut le sinus de (l'écart ÷ 2).
+    Le h vaut le a × le a + le cosinus de la p × le cosinus de la q × le b × le b.
+    Si le h ≥ 1, rendre 20015.
+    Si le h ≤ 0, rendre 0.
+    Le r vaut la racine carrée du h ÷ la racine carrée de (1 − le h).
+    Rendre l'arrondi de 2 × 6371 × l'arc tangente du r × 3,14159265358979323846 ÷ 180 à 1.
+
+Remarque : le cap au départ, en degrés depuis le nord, dans le sens des aiguilles : 90 plein est, 270 plein ouest.
+L'azimut d'un lieu et d'un but :
+    Si le lieu = le but, rendre 0.
+    La p vaut la latitude du lieu.
+    La q vaut la latitude du but.
+    L'écart vaut la longitude du but − la longitude du lieu.
+    Le y vaut le sinus de l'écart × le cosinus de la q.
+    Le x vaut le cosinus de la p × le sinus de la q − le sinus de la p × le cosinus de la q × le cosinus de l'écart.
+    Si le x = 0 et le y = 0, rendre 0.
+    Si le x = 0 et le y > 0, rendre 90.
+    Si le x = 0, rendre 270.
+    Le tour vaut l'arc tangente de (le y ÷ le x).
+    Si le x < 0, le tour devient le tour + 180.
+    Si le tour < 0, le tour devient le tour + 360.
+    Le cap rond vaut l'arrondi du tour à 1.
+    Si le cap rond = 360, rendre 0.
+    Rendre le cap rond.
+
+Remarque : situer un décodage : son locator, le dernier mot du message s'il en a la forme ; puis, depuis le repère (le
+Remarque : carré de Michel, ou « »), sa distance et son cap. « K1ABC HB9ABC R-12 », « … RR73 », « … 73 » : rien.
+Pour situer un décodage et un repère :
+    Le dernier vaut « ».
+    Pour chaque mot parmi les mots du message du décodage, le dernier devient le mot.
+    Le coin vaut le carré du dernier.
+    Si le coin ≠ « » :
+        Le locator du décodage devient le coin.
+        Si le repère ≠ « » :
+            La distance du décodage devient le trajet du repère et du coin.
+            Le cap du décodage devient l'azimut du repère et du coin.
+
+Remarque : le décodage le plus lointain d'un jour : son message, sa distance et son cap ; « » sans locator ce jour-là.
+Le lointain d'une journée :
+    Le record vaut 0.
+    Le t vaut « ».
+    Pour chaque décodage conservé dont le jour = la journée et la distance est présente :
+        Si la distance du décodage > le record :
+            Le record devient la distance du décodage.
+            Le t devient le message du décodage suivi de ", " suivi de la distance du décodage suivi de " km, cap " suivi du cap du décodage suivi de « ° ».
+    Rendre le t.
+
 Remarque : les décodages de WSJT-X (6 novembre 2026), relevés à l'ouverture de la veille, à chaque passage capté et par
 Remarque : « Relever » ; les plus récents d'abord. Un mot cherché, comme dans la veille.
 L'écran des décodages, « WSJT-X », montre :
     le texte l'avis WSJT,
+    le texte "Le plus lointain aujourd'hui : " suivi du lointain d'aujourd'hui, visible si le lointain d'aujourd'hui ≠ « »,
     côte à côte :
         un bouton « Relever », principal, au clavier « R »,
         un mot cherché (texte), facultatif, avec l'indication « Un indicatif, un mot du message ; vide : tout »,
-    la liste des décodages conservés dont le jour ≥ le début des passages et le message contient le mot des décodages, par jour décroissant puis heure décroissant, avec l'heure, le mode, la bande, le rapport, le décalage, le message et le jour,
+    la liste des décodages conservés dont le jour ≥ le début des passages et le message contient le mot des décodages, par jour décroissant puis heure décroissant, avec l'heure, le mode, la bande, le rapport, le décalage, le message, le locator, la distance, le cap et le jour,
     un bouton « Fermer ».
 
 L'écran des postes montre :
@@ -936,6 +1055,8 @@ L'écran des réglages, « Réglages », montre :
         une clé de courriel (secret), facultative, avec l'indication « Le mot de passe de la messagerie ; vide : celui enregistré reste »,
     le texte « Résumé du jour », en petites capitales,
     une heure du résumé (heure), facultative, avec l'indication « Chaque jour à cette heure, un courriel au destinataire de l'alerte : passages, indicatifs, bandes, pays ; vide : pas de résumé »,
+    le texte « Distances », en petites capitales,
+    un locator (texte), facultatif, avec l'indication « Ton carré Maidenhead, JN36 ou JN36mo : la distance et le cap de chaque décodage WSJT-X en viennent ; vide : pas de distance »,
     le texte « Pilotage », en petites capitales,
     un signal relevé (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : le S-mètre des postes pilotés est lu toutes les 5 secondes ; éteins-le si un autre logiciel se plaint du port »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
@@ -1062,6 +1183,7 @@ Le résumé d'une journée :
         Indicatifs, en parole et en morse : {le carnet de la journée}.
         Bandes : {le rempli du détail des bandes de la journée}.
         Décodages WSJT-X : {le décodé}.
+        Le plus lointain : {le rempli du lointain de la journée}.
         Pays entendus : {le compte des contrées de la journée} ({le rempli de l'inventaire de la journée}).
         Nouveaux au tableau de chasse : {le rempli de la nouveauté de la journée}.
 
@@ -1093,6 +1215,9 @@ Remarque : rien d'autre ne s'arrête. Le jour est celui de cet ordinateur ; l'he
 Pour relever les décodages :
     Le compte vaut 0.
     Le butin vaut 0.
+    Le repère vaut « ».
+    Pour chaque réglage conservé :
+        Si le locator du réglage est présent, le repère devient le carré du locator du réglage.
     Essayer :
         Pour chaque d parmi les décodages WSJT :
             Le x vaut un nouveau décodage :
@@ -1107,6 +1232,8 @@ Pour relever les décodages :
                 Si la bande ADIF de la fréquence du x ≠ « », la bande du x devient la bande ADIF de la fréquence du x.
             Le relevé vaut le repérage du message du x.
             Si le relevé ≠ « », le relevé d'indicatifs du x devient le relevé.
+            Remarque : le locator, dernier mot du message (15 novembre 2026), puis la distance et le cap depuis celui de Michel.
+            Situer le x et le repère.
             Conserver le x.
             Le compte devient le compte + 1.
             Remarque : la chasse (15 novembre 2026) : comptée, pas signalée ; FT8 ouvre vite des dizaines de prises.
@@ -1283,11 +1410,15 @@ Quand on ouvre l'écran des réglages :
         Le serveur de courriel de l'écran devient le serveur de courriel du réglage.
         Le compte de courriel de l'écran devient le compte de courriel du réglage.
         L'heure du résumé de l'écran devient l'heure du résumé du réglage.
+        Le locator de l'écran devient le locator du réglage.
         Le signal relevé de l'écran devient le signal relevé du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
+    Si le locator de l'écran est présent :
+        Si le carré du locator de l'écran = « », refuser « Ce locator n'a pas la forme attendue : deux lettres de A à R, deux chiffres, et au besoin deux lettres de A à X (JN36, JN36mo). ».
     Pour chaque réglage conservé :
+        Le locator du réglage devient le locator de l'écran.
         La conservation du réglage devient la conservation de l'écran.
         Le vocabulaire personnel du réglage devient le vocabulaire personnel de l'écran.
         L'alerte du réglage devient l'alerte de l'écran.

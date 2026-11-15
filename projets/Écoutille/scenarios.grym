@@ -338,3 +338,83 @@ Scénario « le tableau de chasse s'ouvre et dit son bilan » :
     On clique sur « Fermer » dans l'écran de chasse.
     Ouvrir l'écran de chasse.
     Vérifier que le bilan de chasse de 15.11.2026 = « 1 pays entendu(s) en tout, 1 aujourd'hui ; 1 prise(s) nouvelle(s) aujourd'hui. ».
+
+Remarque : la distance et le cap (15 novembre 2026) : comparés à un calcul indépendant (Python, haversine, rayon de 6371 km).
+Scénario « un locator se reconnaît à sa forme » :
+    Vérifier que le carré de « jn36 » = « JN36 ».
+    Vérifier que le carré de « JN36mo » = « JN36MO ».
+    Remarque : l'au revoir de FT8, un indicatif, un report : pas des locators.
+    Vérifier que le carré de « RR73 » = « ».
+    Vérifier que le carré de « HB9A » = « ».
+    Vérifier que le carré de « R-12 » = « ».
+    Vérifier que le carré de « SN36 » = « ».
+    Vérifier que le carré de « JN36zz » = « ».
+    Vérifier que la latitude de « JN36 » = 46,5.
+    Vérifier que la longitude de « JN36 » = 7.
+    Vérifier que la longitude de « FN31 » = 0 − 73.
+
+Scénario « la distance et le cap entre deux locators » :
+    Vérifier que le trajet de « JN36 » et de « PM95 » = 9713.
+    Vérifier que l'azimut de « JN36 » et de « PM95 » = 37.
+    Vérifier que le trajet de « JN36 » et de « FN31 » = 6142.
+    Vérifier que l'azimut de « JN36 » et de « FN31 » = 296.
+    Vérifier que le trajet de « JN36 » et de « QF56 » = 16663.
+    Vérifier que l'azimut de « JN36 » et de « QF56 » = 77.
+    Vérifier que le trajet de « JN36 » et de « GG66 » = 9486.
+    Vérifier que l'azimut de « JN36 » et de « GG66 » = 228.
+    Vérifier que le trajet de « JN36 » et de « RE78 » = 18908.
+    Vérifier que l'azimut de « JN36 » et de « RE78 » = 64.
+    Remarque : un sous-carré : de Bulle (JN36MO) à Berlin (JO62), puis au milieu de son propre carré.
+    Vérifier que le trajet de « JN36MO » et de « JO62 » = 783.
+    Vérifier que l'azimut de « JN36MO » et de « JO62 » = 31.
+    Vérifier que le trajet de « JN36MO » et de « JN36 » = 12.
+    Vérifier que l'azimut de « JN36MO » et de « JN36 » = 195.
+    Vérifier que le trajet de « JN36 » et de « JN36 » = 0.
+    Vérifier que l'azimut de « JN36 » et de « JN36 » = 0.
+
+Remarque : un décodage comme « Relever » le fait, sans WSJT-X.
+Pour décoder un message :
+    Le x vaut un nouveau décodage :
+        Le jour vaut aujourd'hui.
+        L'heure vaut « 143000 ».
+        Le mode vaut « FT8 ».
+        Le rapport vaut 0 − 12.
+        Le décalage vaut 1200.
+        Le message vaut message.
+    Conserver le x.
+    Rendre le x.
+
+Scénario « un décodage dit son locator, sa distance et son cap » :
+    On est le 15.11.2026.
+    Décoder « CQ JA1ABC PM95 », qui donne le loin.
+    Situer le loin et « JN36 ».
+    Vérifier que le locator du loin = « PM95 ».
+    Vérifier que la distance du loin = 9713.
+    Vérifier que le cap du loin = 37.
+    Décoder « CQ DL1ABC JO62 », qui donne le près.
+    Situer le près et « JN36MO ».
+    Vérifier que la distance du près = 783.
+    Remarque : un report, un au revoir : pas de locator.
+    Décoder « K1ABC HB9ABC R-12 », qui donne le report.
+    Situer le report et « JN36 ».
+    Vérifier que le locator du report est absent.
+    Décoder « K1ABC HB9ABC RR73 », qui donne l'adieu.
+    Situer l'adieu et « JN36 ».
+    Vérifier que le locator de l'adieu est absent.
+    Remarque : sans locator dans les Réglages : le carré du décodage, pas de distance.
+    Décoder « CQ K1ABC FN31 », qui donne le seul.
+    Situer le seul et « ».
+    Vérifier que le locator du seul = « FN31 ».
+    Vérifier que la distance du seul est absente.
+    Vérifier que le lointain d'aujourd'hui = « CQ JA1ABC PM95, 9713 km, cap 37° ».
+    Vérifier que le résumé d'aujourd'hui contient « Le plus lointain : CQ JA1ABC PM95, 9713 km, cap 37°. ».
+
+Scénario « le locator des Réglages se vérifie à l'enregistrement » :
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+        Le signal relevé vaut vrai.
+    Conserver le r.
+    On écrit « JN36mo » dans le locator de l'écran des réglages.
+    On clique sur « Enregistrer » dans l'écran des réglages.
+    Ouvrir l'écran des réglages.
+    Vérifier que le locator du r = « JN36mo ».
