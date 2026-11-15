@@ -135,8 +135,8 @@ Sur un poste branché en USB, en veille :
     (l'heure UTC, l'indicatif, la fréquence, le mode, le territoire, l'annonceur, le commentaire), relue seule toutes les
     30 secondes ; « inédit » sur les pays qui manquent au tableau de chasse pour leur bande ; le choix d'une bande et
     l'interrupteur des inédites filtrent la liste. Puis, WSJT-X fermé, choisir une annonce et « Y aller » : le Yaesu passe
-    sur sa fréquence, en CW, LSB ou USB selon l'annonce, sans émettre. Seul l'exemple de la page de HamQTH a été relevé,
-    pas une vraie réponse. À rapporter : « Annonces non lues » et son motif ; une liste vide alors que
+    sur sa fréquence, en CW, LSB ou USB selon l'annonce, sans émettre. Une vraie réponse de HamQTH, relevée le 15 novembre
+    2026, se range comme prévu (scénario « une vraie réponse de HamQTH se range ») ; la lecture elle-même reste à voir. À rapporter : « Annonces non lues » et son motif ; une liste vide alors que
     hamqth.com/dxc.php en montre ; une fréquence fausse d'un facteur mille ; un poste qui ne bouge pas.
 
 ## Les deux applications : un plantage

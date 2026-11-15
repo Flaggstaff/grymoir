@@ -579,3 +579,26 @@ Scénario « l'écran des annonces choisit une bande et les inédites » :
     On clique sur « Fermer » dans l'écran des annonces.
     Ouvrir l'écran des annonces.
     Vérifier que le nombre d'annonces conservées = 1.
+
+Remarque : une vraie réponse de HamQTH, relevée le 15 novembre 2026 à 07:59 par Flaggstaff : trois annonces, un commentaire
+Remarque : vide, un indicatif de trois signes.
+Scénario « une vraie réponse de HamQTH se range » :
+    Ranger les annonces de « {"spots":[{"spotter":"JE1CKA","dxcall":"OK1UOZ","freq":21277.4,"band":"15M","mode":"SSB","comment":"","time":"2026-11-15T06:59:00Z","dxcc":503,"country":"Czech Republic","continent":"EU","lotw":false,"eqsl":false},{"spotter":"IT9ORA","dxcall":"JA6GCE","freq":28028.7,"band":"10M","mode":"CW","comment":"ok om test tnx qso","time":"2026-11-15T06:59:00Z","dxcc":339,"country":"Japan","continent":"AS","lotw":true,"eqsl":false},{"spotter":"JH1GEX","dxcall":"C8K","freq":21310.0,"band":"15M","mode":"SSB","comment":"QSX 21315 via LP","time":"2026-11-15T06:58:00Z","dxcc":181,"country":"Mozambique","continent":"AF","lotw":false,"eqsl":false}]} », qui donne le neuf.
+    Vérifier que le neuf = 3.
+    Pour chaque annonce conservée dont l'appel est « OK1UOZ » :
+        Vérifier que la fréquence de l'annonce = 21277400.
+        Vérifier que l'accord de l'annonce = « 21,2774 MHz ».
+        Vérifier que la bande de l'annonce = « 15m ».
+        Vérifier que l'heure de l'annonce = « 06:59 UTC ».
+        Vérifier que le territoire de l'annonce = « Czech Republic ».
+        Vérifier que l'annonceur de l'annonce = « JE1CKA ».
+        Vérifier que le mode visé de l'annonce = « USB ».
+        Vérifier que la marque de l'annonce = « inédit ».
+    Pour chaque annonce conservée dont l'appel est « JA6GCE » :
+        Vérifier que le commentaire de l'annonce = « ok om test tnx qso ».
+        Vérifier que le mode visé de l'annonce = « CW-U ».
+    Pour chaque annonce conservée dont l'appel est « C8K » :
+        Vérifier que la fréquence de l'annonce = 21310000.
+        Vérifier que l'accord de l'annonce = « 21,31 MHz ».
+        Vérifier que le territoire de l'annonce = « Mozambique ».
+        Vérifier que la marque de l'annonce = « inédit ».

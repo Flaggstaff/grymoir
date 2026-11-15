@@ -1145,7 +1145,8 @@ Le mode visé d'une annonce :
         Rendre « USB ».
     Rendre « ».
 
-Remarque : ranger les annonces d'une réponse de HamQTH (l'exemple de sa page, relevé le 15 novembre 2026) :
+Remarque : ranger les annonces d'une réponse de HamQTH (l'exemple de sa page ; une vraie réponse, relevée le 15 novembre
+Remarque : 2026, a la même forme, avec des commentaires parfois vides) :
 Remarque : « {"spots":[{"spotter":"W3LPL","dxcall":"A71EM","freq":28003.6,"band":"10M","mode":"CW","comment":"Heard in
 Remarque : MD","time":"2026-10-03T07:58:00Z","dxcc":376,"country":"Qatar","continent":"AS","lotw":true,"eqsl":true}]} » ;
 Remarque : la fréquence est en kilohertz. Rend le nombre d'annonces nouvelles ; une annonce sans indicatif, sans fréquence
