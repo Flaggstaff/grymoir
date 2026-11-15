@@ -145,6 +145,40 @@ Classer la f.
 FIN
 "$grym" compiler av6.grym > /dev/null 2> s6.txt
 verifier "$(grep -c avertissement s6.txt)" "0" "une formule à deux versions ne prend pas le type de ses appels"
+# 3.36 : un champ intégré lu sur une valeur qui ne l'a pas (la longueur d'un nombre, l'année d'un texte…) ; ceux qu'elle
+# a vraiment ne disent rien.
+cat > av7.grym <<'FIN'
+Une facture, conservée, a :
+    un numéro (texte),
+    un montant (nombre),
+    une échéance (date),
+    un payé (vrai ou faux),
+    une pièce (fichier), facultative.
+La f vaut la facture conservée dont le numéro est « F1 ».
+Afficher la longueur du montant de la f.
+Afficher l'année du numéro de la f.
+Afficher la longueur de l'échéance de la f.
+Afficher la taille du payé de la f.
+Afficher le mois de la pièce de la f.
+Afficher la longueur du numéro de la f.
+Afficher la valeur absolue du montant de la f.
+Afficher le jour de la semaine de l'échéance de la f.
+Afficher la taille de la pièce de la f.
+Afficher l'année de l'échéance de la f.
+Le a vaut l'année de 21.09.2026.
+Afficher le mois du a.
+Le h vaut 14:30.
+Afficher le jour du h.
+FIN
+"$grym" compiler av7.grym > /dev/null 2> s7.txt
+verifier "$(grep -c avertissement s7.txt)" "7" "sept champs intégrés mal placés"
+verifier "$(grep -c 'av7.grym:8:10 : avertissement : « longueur » se lit ici sur un nombre, qui n.a pas ce champ (seulement « valeur absolue » et « partie entière »)' s7.txt)" "1" "la longueur d'un nombre"
+verifier "$(grep -c 'av7.grym:9:10 : avertissement : « année » se lit ici sur un texte' s7.txt)" "1" "l'année d'un texte"
+verifier "$(grep -c 'av7.grym:10:10 : avertissement : « longueur » se lit ici sur une date' s7.txt)" "1" "la longueur d'une date"
+verifier "$(grep -c 'av7.grym:11:10 : avertissement : « taille » se lit ici sur vrai ou faux, qui n.a aucun champ' s7.txt)" "1" "la taille d'un vrai ou faux"
+verifier "$(grep -c 'av7.grym:12:10 : avertissement : « mois » se lit ici sur un fichier' s7.txt)" "1" "le mois d'un fichier"
+verifier "$(grep -c 'av7.grym:19:10 : avertissement : « mois » se lit ici sur une année, qui n.a aucun champ' s7.txt)" "1" "le mois d'une année"
+verifier "$(grep -c 'av7.grym:21:10 : avertissement : « jour » se lit ici sur une heure, qui n.a aucun champ' s7.txt)" "1" "le jour d'une heure"
 for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Praxis/Test de charge/charge.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
     dir="$racine/projets/$(dirname "$f")"; b=$(basename "$f")
     mkdir -p "$d/p" && cp -R "$dir/." "$d/p/" && (cd "$d/p" && "$grym" compiler "$b" > /dev/null 2> sortie.txt)

@@ -1634,7 +1634,20 @@ static const char *type_integre(const char *t, const char *champ) {
     if (strcmp(t, "date") == 0)
         return strcmp(champ, "année") == 0 ? "année" : strcmp(champ, "mois") == 0 || strcmp(champ, "jour") == 0 ? "nombre entier"
              : strcmp(champ, "jour de la semaine") == 0 ? "texte" : NULL;
+    if (type_fichier(t))   /* 3.36 */
+        return strcmp(champ, "taille") == 0 ? "nombre entier"
+             : strcmp(champ, "format") == 0 || strcmp(champ, "nom de fichier") == 0 || strcmp(champ, "morse") == 0
+               || strcmp(champ, "transcription") == 0 ? "texte" : NULL;
     return NULL;
+}
+
+/* 3.36 : les champs intégrés qu'une valeur de ce type a vraiment (vm.c, I_LIRE_CHAMP), pour le dire. */
+static const char *champs_integres_de(const char *t) {
+    if (type_textuel(t)) return "seulement « longueur »";
+    if (strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0) return "seulement « valeur absolue » et « partie entière »";
+    if (strcmp(t, "date") == 0) return "« année », « mois », « jour » ou « jour de la semaine »";
+    if (type_fichier(t)) return "« taille », « format », « nom de fichier », « morse » ou « transcription »";
+    return NULL;   /* vrai ou faux, heure, année : aucun */
 }
 
 /* Le type d'une expression tel que l'analyse peut le déduire : type_statique, plus les variables (par leur création ou
@@ -1736,7 +1749,19 @@ static void verifier_acces_champ(Analyse *a, const Noeud *n) {
     const char *ts = type_deduit(a, sujet);
     if (!ts) return;
     if (type_de_base(ts)) {
-        if (champ_integre(n->texte, NULL)) return;   /* l'année d'une date, la longueur d'un texte… */
+        if (champ_integre(n->texte, NULL)) {   /* l'année d'une date, la longueur d'un texte… */
+            if (!type_integre(ts, n->texte)) {   /* 3.36 : … mais pas la longueur d'un nombre */
+                char *qui = nommer_type(a->portee, ts);
+                const char *liste = champs_integres_de(ts);
+                avertir(a, n->ligne, n->colonne, liste
+                    ? grym_formater("« %s » se lit ici sur %s, qui n'a pas ce champ (%s) : à l'exécution, cette lecture "
+                                    "échouera.", n->texte, qui, liste)
+                    : grym_formater("« %s » se lit ici sur %s, qui n'a aucun champ : à l'exécution, cette lecture échouera.",
+                                    n->texte, qui));
+                free(qui);
+            }
+            return;
+        }
         avertir(a, n->ligne, n->colonne, grym_formater("« %s » se lit ici comme le champ d'une valeur (%s), qui n'a pas de champ : "
                                                        "à l'exécution, cette lecture échouera. Un calcul « %s » manque-t-il, "
                                                        "ou un autre objet était-il voulu ?", n->texte, ts, n->texte));
