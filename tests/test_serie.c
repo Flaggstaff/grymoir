@@ -54,6 +54,7 @@ static void faux_poste(int m) {
         if (!strcmp(cmd, "ID;")) rep = "ID0670;";
         else if (!strcmp(cmd, "FA;")) { snprintf(lu, sizeof lu, "FA%s;", frequence); rep = lu; }
         else if (!strcmp(cmd, "MD0;")) { snprintf(lu, sizeof lu, "MD0%c;", mode); rep = lu; }
+        else if (!strcmp(cmd, "SM0;")) rep = "SM0150;";   /* le S-mètre (15 novembre 2026) : 150, S9+10 */
         else if (!strcmp(cmd, "XX;")) rep = NULL;
         else if (strlen(cmd) == 12 && !strncmp(cmd, "FA", 2) && strspn(cmd + 2, "0123456789") == 9) {
             memcpy(frequence, cmd + 2, 9);

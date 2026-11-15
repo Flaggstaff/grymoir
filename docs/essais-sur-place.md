@@ -1,4 +1,4 @@
-# Essais sur place (6 novembre 2026)
+# Essais sur place (6 novembre 2026, complété le 15 novembre 2026)
 
 Ce que les essais automatiques ne peuvent pas vérifier : une vraie banque, de vraies radios. Chaque essai dit quoi faire, ce
 qu'on doit voir, et quoi rapporter s'il échoue.
@@ -90,6 +90,23 @@ Sur un poste branché en USB, en veille :
     messagerie, puis une alerte sur un mot entendu souvent (« CQ »). Attendu : un courriel au premier passage qui allume
     l'alerte, aucun autre dans les 10 minutes qui suivent, même si l'alerte s'allume encore à l'écran. À rapporter : le
     message « Courriel d'alerte non parti », ou un courriel en double dans les 10 minutes.
+11. **S-mètre** (15 novembre 2026) : un Yaesu en veille avec son port de pilotage, WSJT-X fermé. Écouter une station forte,
+    puis une faible. Attendu : chaque passage porte sa force (« S9+10 », « S5 ») dans la veille et dans sa fiche, proche de ce
+    que montrait l'aiguille du poste pendant l'émission. La veille lit le poste toutes les 5 secondes : c'est le premier
+    essai réel de cette minuterie avec un port série. À rapporter : une force très différente de l'aiguille (les deux
+    valeurs) ; l'écran qui hésite ou se fige toutes les 5 secondes ; WSJT-X ou un autre logiciel qui se plaint du port
+    (dans ce cas, « Réglages », éteindre « Signal relevé », et le dire). Poste éteint : la veille doit rester fluide, la
+    sonde ne réessaie qu'une fois par minute.
+12. **Tableau de chasse** : après quelques passages avec des indicatifs, bouton « Chasse ». Attendu : une ligne par pays et
+    par bande, avec le premier indicatif entendu, et un message « Nouveau pays (20m) : Japon, par JA1ABC. » au moment de la
+    première écoute. Après quelques minutes de FT8 (WSJT-X), le tableau se remplit sans message, l'avis de l'écran
+    « WSJT-X » compte les prises nouvelles. À rapporter : un pays faux avec son indicatif (un mot mal transcrit qui a la
+    forme d'un indicatif ouvre une fausse prise).
+13. **Résumé du jour** : la messagerie remplie (essai 10), « Réglages », « Envoyer le résumé ». Attendu : un courriel
+    « Écoutille : le résumé du … » avec les passages par poste, les indicatifs et leurs pays, les bandes, les décodages, les
+    pays du jour et les prises nouvelles. Puis poser une heure du résumé deux minutes plus tard, enregistrer, laisser la
+    veille ouverte : le courriel part seul à l'heure dite, une seule fois. À rapporter : « Résumé du jour non parti » et son
+    motif, ou un courriel en double.
 
 ## Les deux applications : un plantage
 

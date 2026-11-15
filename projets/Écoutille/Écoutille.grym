@@ -38,7 +38,9 @@ Un poste, conservé, a :
     une parole transcrite (vrai ou faux), vrai au départ,
     une traduction voulue (vrai ou faux), faux au départ,
     un port de pilotage (texte), facultatif,
-    une vitesse de pilotage (nombre entier), 4800 au départ.
+    une vitesse de pilotage (nombre entier), 4800 au départ,
+    une crête (nombre entier), facultative,
+    une pause de sonde (nombre entier), facultative.
 
 Remarque : le pilotage (3 novembre 2026) : un poste qui se pilote par un port série (CAT des Yaesu) dit sa fréquence et son mode
 Remarque : à la fin de chaque passage. Le port est celui de cet ordinateur : la base ne voyage pas d'un ordinateur à l'autre.
@@ -59,12 +61,26 @@ Un passage, conservé, a :
     un accord (texte), facultatif,
     un moment universel (texte), facultatif,
     un relevé d'indicatifs (texte), facultatif,
-    une bande (texte), facultative.
+    une bande (texte), facultative,
+    une force (texte), facultative.
 
 Remarque : la fréquence d'un passage en hertz, son mode (« USB », « FM »…), et l'accord, les deux écrits pour la veille :
 Remarque : « 14,074 MHz DATA-USB ». Lus à la fin du passage : un bouton tourné pendant l'émission donne la fréquence de la fin.
 Remarque : le carnet (3 novembre 2026) : le moment du passage en temps universel (« 2026-11-03T14:30:00Z »), comme le veut un
 Remarque : carnet de trafic ; les indicatifs reconnus dans le morse et la parole, séparés par une espace ; la bande de la fréquence.
+
+Remarque : le tableau de chasse (15 novembre 2026) : une prise par pays entendu et par bande, avec l'indicatif qui l'a
+Remarque : ouverte, le jour de la première écoute, celui de la dernière, et le nombre de fois. Le pays est celui de la série
+Remarque : de l'UIT (« Le pays d'un indicatif »), pas l'entité DXCC ; la bande, celle du passage ou du décodage, « bande
+Remarque : inconnue » pour un poste sans pilotage. Un indicatif mal entendu ouvre une fausse prise : elle se lit, avec son
+Remarque : indicatif, dans le tableau.
+Une prise, conservée, a :
+    une contrée (texte),
+    une bande (texte),
+    un premier indicatif (texte),
+    un jour (date),
+    un dernier jour (date),
+    un total (nombre entier).
 
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
@@ -97,7 +113,10 @@ Un réglage, conservé, a :
     un compte de courriel (texte), facultatif,
     une clé de courriel (secret), facultative,
     un jour de dernière alerte (date), facultatif,
-    une heure de dernière alerte (heure), facultative.
+    une heure de dernière alerte (heure), facultative,
+    un signal relevé (vrai ou faux), vrai au départ,
+    une heure du résumé (heure), facultative,
+    un jour de dernier résumé (date), facultatif.
 
 Remarque : la parole minimale (11 novembre 2026) : le nombre de mots qu'une parole doit avoir pour être gardée ; vide, toute
 Remarque : parole est gardée. Sur du souffle, Whisper écrit volontiers un mot ou deux qu'on n'a pas dits.
@@ -402,6 +421,61 @@ Pour remettre l'accord d'un passage :
     Si le code ≠ « », le retour devient la réponse du port à (« MD0 » suivi du code suivi de « ; »), à la vitesse de pilotage du poste du passage bauds.
     Le retour devient la réponse du port à « FA; », à la vitesse de pilotage du poste du passage bauds.
     Si le retour ≠ « FA » suivi du chiffré suivi de « ; », refuser "Le poste n'a pas pris la fréquence (il répond « " suivi du retour suivi de " ») : hors de ses bandes, ou tenu par un autre logiciel ?".
+
+Remarque : le S-mètre (15 novembre 2026) : « SM0; » rend « SM0130; », la force du signal de 0 à 255 (Hamlib,
+Remarque : rigs/yaesu/newcat.c, niveaux STRENGTH et RAWSTR) ; l'échelle est celle de Hamlib pour le FT-991 et le FT-710, la
+Remarque : même (FT991_STR_CAL, FT710_STR_CAL, lues le 15 novembre 2026) : 130 pour S9, 6 dB par point en dessous, 10 dB par
+Remarque : palier au-dessus. Le palier atteint, sans arrondi vers le haut : 129 reste S8.
+La force dite d'un niveau :
+    Si le niveau ≥ 255, rendre « S9+60 ».
+    Si le niveau ≥ 240, rendre « S9+50 ».
+    Si le niveau ≥ 220, rendre « S9+40 ».
+    Si le niveau ≥ 190, rendre « S9+30 ».
+    Si le niveau ≥ 172, rendre « S9+20 ».
+    Si le niveau ≥ 150, rendre « S9+10 ».
+    Si le niveau ≥ 130, rendre « S9 ».
+    Si le niveau ≥ 112, rendre « S8 ».
+    Si le niveau ≥ 95, rendre « S7 ».
+    Si le niveau ≥ 80, rendre « S6 ».
+    Si le niveau ≥ 65, rendre « S5 ».
+    Si le niveau ≥ 55, rendre « S4 ».
+    Si le niveau ≥ 40, rendre « S3 ».
+    Si le niveau ≥ 27, rendre « S2 ».
+    Si le niveau ≥ 12, rendre « S1 ».
+    Rendre « S0 ».
+
+Remarque : sonder un poste : à la fin d'un passage, le signal s'est tu, le S-mètre ne dirait que le souffle. La veille sonde
+Remarque : donc chaque poste piloté toutes les 5 secondes et garde la crête, le plus fort niveau lu depuis son dernier passage ;
+Remarque : le passage la prend, puis elle repart de rien. Un parasite plus fort que le signal, entre deux passages, la fausse.
+Remarque : Un poste éteint, muet ou tenu par un autre logiciel : la sonde attend douze tours (une minute) avant de réessayer,
+Remarque : pour ne pas faire patienter l'écran une seconde à chaque tour.
+Pour sonder un poste :
+    Le port vaut le port de pilotage du poste.
+    Si le port est présent :
+        L'attente vaut 0.
+        Si la pause de sonde du poste est présente, l'attente devient la pause de sonde du poste.
+        Si l'attente > 0 :
+            La pause de sonde du poste devient l'attente − 1.
+        Sinon :
+            Le lu vaut faux.
+            Essayer :
+                Le retour vaut la réponse du port à « SM0; », à la vitesse de pilotage du poste bauds.
+                Si le retour sur 3 = « SM0 » :
+                    Le niveau vaut (le retour sans « SM0 » sans « ; ») en nombre entier.
+                    Si la crête du poste est absente, la crête du poste devient le niveau.
+                    Si le niveau > la crête du poste, la crête du poste devient le niveau.
+                    Le lu devient vrai.
+            En cas d'échec :
+                Le lu devient faux.
+            Si le lu est faux, la pause de sonde du poste devient 12.
+
+Remarque : la force d'un passage : la crête de son poste, dite en points S ; sans crête (poste sans pilotage, sonde arrêtée),
+Remarque : le passage reste sans force.
+Pour relever la force d'un passage :
+    Le k vaut le poste du passage.
+    Si la crête du k est présente :
+        La force du passage devient la force dite de la crête du k.
+        La crête du k devient absente.
 
 Remarque : ce qu'un passage a fait entendre, les indicatifs, le morse et la parole, en un texte ; vide s'il n'y a rien.
 Le texte entendu d'un passage :
@@ -774,6 +848,7 @@ L'écran du passage, « Passage », montre :
     le texte la ligne de « Indicatifs : » et du relevé d'indicatifs du passage ouvert, visible si la ligne de « Indicatifs : » et du relevé d'indicatifs du passage ouvert ≠ « »,
     le texte la ligne de « Pays : » et de la provenance du relevé d'indicatifs du passage ouvert, visible si la ligne de « Pays : » et de la provenance du relevé d'indicatifs du passage ouvert ≠ « »,
     le texte la ligne de « Accord : » et de l'accord du passage ouvert, visible si la ligne de « Accord : » et de l'accord du passage ouvert ≠ « »,
+    le texte la ligne de « Signal : » et de la force du passage ouvert, visible si la ligne de « Signal : » et de la force du passage ouvert ≠ « »,
     le texte la ligne de « Morse : » et du morse du passage ouvert, visible si la ligne de « Morse : » et du morse du passage ouvert ≠ « »,
     le texte la ligne de « Parole : » et de la transcription du passage ouvert, visible si la ligne de « Parole : » et de la transcription du passage ouvert ≠ « »,
     le texte la ligne de « Traduction : » et de la traduction du passage ouvert, visible si la ligne de « Traduction : » et de la traduction du passage ouvert ≠ « »,
@@ -790,10 +865,11 @@ L'écran de veille montre :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
         un mot cherché (texte), facultatif, avec l'indication « Un poste, ou un mot du morse, de la parole, de la traduction ; vide : tout »,
-    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le relevé d'indicatifs contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le relevé d'indicatifs, l'accord, le morse, la transcription, la traduction, le jour et la durée, en cartes,
+    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le relevé d'indicatifs contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le relevé d'indicatifs, l'accord, la force, le morse, la transcription, la traduction, le jour et la durée, en cartes,
     côte à côte :
         un bouton « Postes », au clavier « P »,
         un bouton « Carnet ADIF »,
+        un bouton « Chasse »,
         un bouton « WSJT-X »,
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
@@ -858,16 +934,165 @@ L'écran des réglages, « Réglages », montre :
     côte à côte :
         un compte de courriel (texte), facultatif, avec l'indication « L'identifiant, souvent l'adresse »,
         une clé de courriel (secret), facultative, avec l'indication « Le mot de passe de la messagerie ; vide : celui enregistré reste »,
+    le texte « Résumé du jour », en petites capitales,
+    une heure du résumé (heure), facultative, avec l'indication « Chaque jour à cette heure, un courriel au destinataire de l'alerte : passages, indicatifs, bandes, pays ; vide : pas de résumé »,
+    le texte « Pilotage », en petites capitales,
+    un signal relevé (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : le S-mètre des postes pilotés est lu toutes les 5 secondes ; éteins-le si un autre logiciel se plaint du port »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Envoyer le résumé »,
         un bouton « Quota DeepL »,
         un bouton « Fermer ».
+
+Remarque : inscrire un indicatif au tableau de chasse (15 novembre 2026) : une prise nouvelle rend vrai ; une prise déjà là
+Remarque : compte une écoute de plus. Un indicatif sans pays connu n'inscrit rien.
+Pour inscrire un indicatif et une gamme et un moment :
+    La terre vaut le pays de l'indicatif.
+    Si la terre = « », rendre faux.
+    Si le nombre de prises conservées dont la contrée est la terre et la bande est la gamme = 0 :
+        La p vaut une nouvelle prise :
+            La contrée vaut la terre.
+            La bande vaut la gamme.
+            Le premier indicatif vaut l'indicatif.
+            Le jour vaut le moment.
+            Le dernier jour vaut le moment.
+            Le total vaut 1.
+        Conserver la p.
+        Rendre vrai.
+    Pour chaque prise conservée dont la contrée est la terre et la bande est la gamme :
+        Le total de la prise devient le total de la prise + 1.
+        Le dernier jour de la prise devient le moment.
+    Rendre faux.
+
+Remarque : la chasse d'un passage : chacun de ses indicatifs s'inscrit ; un pays nouveau sur cette bande est signalé.
+Pour chasser un passage :
+    Si le relevé d'indicatifs du passage est présent :
+        La gamme vaut « bande inconnue ».
+        Si la bande du passage est présente, la gamme devient la bande du passage.
+        Pour chaque i parmi les mots du relevé d'indicatifs du passage :
+            Inscrire l'i et la gamme et le jour du passage, qui donne le neuf.
+            Si le neuf, signaler « Nouveau pays ( » suivi de la gamme suivi de ") : " suivi du pays de l'i suivi de ", par " suivi de l'i suivi de « . ».
+
+Remarque : une suite écrite, « a, b, c ».
+L'énumération d'un début et d'un ajout :
+    Si le début = « », rendre l'ajout.
+    Rendre le début suivi de ", " suivi de l'ajout.
+
+Remarque : les pays entendus depuis un jour, chacun une fois, quelle que soit la bande ; puis ceux d'un jour, et leurs noms.
+Le cumul des contrées d'un seuil :
+    Le n vaut 0.
+    Le vu vaut « ».
+    Pour chaque prise conservée dont le dernier jour ≥ le seuil, par contrée :
+        Si la contrée de la prise ≠ le vu :
+            Le n devient le n + 1.
+            Le vu devient la contrée de la prise.
+    Rendre le n.
+
+Le compte des contrées d'une journée :
+    Le n vaut 0.
+    Le vu vaut « ».
+    Pour chaque prise conservée dont le dernier jour = la journée, par contrée :
+        Si la contrée de la prise ≠ le vu :
+            Le n devient le n + 1.
+            Le vu devient la contrée de la prise.
+    Rendre le n.
+
+L'inventaire d'une journée :
+    Le t vaut « ».
+    Le vu vaut « ».
+    Pour chaque prise conservée dont le dernier jour = la journée, par contrée :
+        Si la contrée de la prise ≠ le vu :
+            Le t devient l'énumération du t et de la contrée de la prise.
+            Le vu devient la contrée de la prise.
+    Rendre le t.
+
+Remarque : les prises ouvertes ce jour-là : « Japon, 20m (JA1ABC) ; Brésil, 15m (PY2AB) ».
+La nouveauté d'une journée :
+    Le t vaut « ».
+    Pour chaque prise conservée dont le jour = la journée, par contrée :
+        Si le t ≠ « », le t devient le t suivi de " ; ".
+        Le t devient le t suivi de la contrée de la prise suivi de ", " suivi de la bande de la prise suivi de " (" suivi du premier indicatif de la prise suivi de « ) ».
+    Rendre le t.
+
+Remarque : ce que le tableau de chasse dit en tête.
+Le bilan de chasse d'une journée :
+    Rendre (le cumul des contrées de (la journée − 36500)) suivi de " pays entendu(s) en tout, " suivi du compte des contrées de la journée suivi de " aujourd'hui ; " suivi de (le nombre de prises conservées dont le jour = la journée) suivi de " prise(s) nouvelle(s) aujourd'hui.".
+
+L'écran de chasse, « Tableau de chasse », montre :
+    le texte le bilan de chasse d'aujourd'hui,
+    la liste des prises conservées, par contrée puis bande, avec la contrée, la bande, le premier indicatif, le jour, le dernier jour et le total,
+    un bouton « Fermer ».
+
+Remarque : le résumé du jour (15 novembre 2026) : ce que la veille a donné ce jour-là, en un texte, pour un courriel. Les
+Remarque : passages par poste ; les indicatifs de la parole et du morse, avec leur pays (ceux de WSJT-X, trop nombreux, ne
+Remarque : sont que comptés) ; les bandes ; les pays du jour et les prises nouvelles du tableau de chasse.
+Le rempli d'un contenu :
+    Si le contenu = « », rendre « rien ».
+    Rendre le contenu.
+
+Le détail des postes d'une journée :
+    Le t vaut « ».
+    Pour chaque poste conservé, par nom :
+        Le k vaut le poste.
+        Le n vaut le nombre de passages conservés dont le poste = le k et le jour = la journée.
+        Si le n > 0, le t devient l'énumération du t et de (le nom du k suivi de " " suivi du n).
+    Rendre le t.
+
+Le détail des bandes d'une journée :
+    Le t vaut « ».
+    Pour chaque b parmi les mots de « 2190m 630m 160m 80m 60m 40m 30m 20m 17m 15m 12m CB 10m 6m 4m 2m 70cm 23cm » :
+        Le n vaut le nombre de passages conservés dont le jour = la journée et la bande est b.
+        Si le n > 0, le t devient l'énumération du t et de (b suivi de " " suivi du n).
+    Rendre le t.
+
+Le carnet d'une journée :
+    Le t vaut « ».
+    Pour chaque passage conservé dont le jour = la journée, par heure :
+        Si le relevé d'indicatifs du passage est présent, le t devient le t suivi de " " suivi du relevé d'indicatifs du passage.
+    Rendre le rempli de la provenance du repérage du t.
+
+Le résumé d'une journée :
+    Le capté vaut le nombre de passages conservés dont le jour = la journée.
+    Le décodé vaut le nombre de décodages conservés dont le jour = la journée.
+    Rendre le texte suivant :
+        Écoutille, le {la journée}.
+
+        Passages : {le capté} ({le rempli du détail des postes de la journée}).
+        Indicatifs, en parole et en morse : {le carnet de la journée}.
+        Bandes : {le rempli du détail des bandes de la journée}.
+        Décodages WSJT-X : {le décodé}.
+        Pays entendus : {le compte des contrées de la journée} ({le rempli de l'inventaire de la journée}).
+        Nouveaux au tableau de chasse : {le rempli de la nouveauté de la journée}.
+
+Remarque : le résumé est-il dû : oui à partir de l'heure des Réglages, une fois par jour ; sans heure, jamais. Écoutille
+Remarque : fermée à cette heure : il part à la prochaine veille du même jour, pas le lendemain.
+Le résumé dû d'une heure et d'une heure voulue et d'un jour et d'un jour passé :
+    Si l'heure voulue est absente, rendre faux.
+    Si l'heure < l'heure voulue, rendre faux.
+    Si le jour passé est absent, rendre vrai.
+    Si le jour = le jour passé, rendre faux.
+    Rendre vrai.
+
+Remarque : le courriel du résumé, au destinataire de l'alerte, par la messagerie des Réglages ; sans eux, rien ; refusé ou
+Remarque : serveur muet, l'écran le dit et la veille continue.
+Pour résumer un réglage :
+    Le complet vaut le destinataire d'alerte du réglage est présent et le serveur de courriel du réglage est présent et l'adresse de courriel du réglage est présente et le compte de courriel du réglage est présent et la clé de courriel du réglage est présente.
+    Si le complet :
+        Le message vaut le résumé d'aujourd'hui.
+        L'adresse visée vaut le destinataire d'alerte du réglage.
+        Le jour vaut aujourd'hui.
+        L'objet visé vaut "Écoutille : le résumé du " suivi du jour.
+        Essayer :
+            Envoyer un courriel à l'adresse visée, avec l'objet l'objet visé, depuis le réglage, et le texte le message.
+        En cas d'échec :
+            Signaler « Résumé du jour non parti : » puis le motif de l'échec.
 
 Remarque : relever les décodages arrivés depuis la dernière fois (6 novembre 2026) ; WSJT-X absent ou le port pris : l'avis le dit,
 Remarque : rien d'autre ne s'arrête. Le jour est celui de cet ordinateur ; l'heure, celle de WSJT-X, en temps universel.
 Pour relever les décodages :
     Le compte vaut 0.
+    Le butin vaut 0.
     Essayer :
         Pour chaque d parmi les décodages WSJT :
             Le x vaut un nouveau décodage :
@@ -884,7 +1109,14 @@ Pour relever les décodages :
             Si le relevé ≠ « », le relevé d'indicatifs du x devient le relevé.
             Conserver le x.
             Le compte devient le compte + 1.
+            Remarque : la chasse (15 novembre 2026) : comptée, pas signalée ; FT8 ouvre vite des dizaines de prises.
+            La gamme vaut « bande inconnue ».
+            Si la bande du x est présente, la gamme devient la bande du x.
+            Pour chaque i parmi les mots du relevé :
+                Inscrire l'i et la gamme et aujourd'hui, qui donne le neuf.
+                Si le neuf, le butin devient le butin + 1.
         Si le compte > 0, l'avis WSJT devient le compte suivi de " décodage(s) relevé(s) à " suivi de (maintenant en format universel) suivi de « . ».
+        Si le butin > 0, l'avis WSJT devient l'avis WSJT suivi de " Prises nouvelles au tableau de chasse : " suivi du butin suivi de « . ».
     En cas d'échec :
         L'avis WSJT devient le motif de l'échec.
 
@@ -943,6 +1175,9 @@ Quand un poste capte un son dans l'écran de veille :
     Remarque : la fréquence et le mode, si le poste se pilote (3 novembre 2026).
     Lire l'accord du p.
     Si la bande ADIF de la fréquence du p ≠ « », la bande du p devient la bande ADIF de la fréquence du p.
+    Remarque : la force du signal et le tableau de chasse (15 novembre 2026).
+    Relever la force du p.
+    Chasser le p.
     Relever les décodages.
     Remarque : l'alerte (3 novembre 2026).
     Pour chaque réglage conservé :
@@ -963,6 +1198,26 @@ Quand on ouvre l'écran de veille :
     Relever les décodages.
     Pour chaque poste conservé :
         L'affichage du poste devient vrai.
+        La crête du poste devient absente.
+        La pause de sonde du poste devient absente.
+
+Remarque : la minuterie de la veille (15 novembre 2026) : toutes les 5 secondes, le S-mètre des postes pilotés en veille, si
+Remarque : les Réglages le veulent ; puis le résumé du jour, s'il est dû. Le jour du résumé se pose avant l'envoi : un
+Remarque : courriel refusé ne se retente pas toutes les 5 secondes, « Envoyer le résumé » (Réglages) le refait.
+Toutes les 5 secondes dans l'écran de veille :
+    Pour chaque réglage conservé :
+        Si le signal relevé du réglage :
+            Pour chaque poste conservé dont la veille est vraie :
+                Sonder le poste.
+        Si le résumé dû de maintenant et de l'heure du résumé du réglage et d'aujourd'hui et du jour de dernier résumé du réglage :
+            Le jour de dernier résumé du réglage devient aujourd'hui.
+            Résumer le réglage.
+
+Quand on clique sur « Chasse » dans l'écran de veille :
+    Ouvrir l'écran de chasse.
+
+Quand on clique sur « Fermer » dans l'écran de chasse :
+    Fermer l'écran.
 
 Quand on change la période dans l'écran de veille :
     Si la période de l'écran est présente, délimiter la période de l'écran.
@@ -1027,6 +1282,8 @@ Quand on ouvre l'écran des réglages :
         L'adresse de courriel de l'écran devient l'adresse de courriel du réglage.
         Le serveur de courriel de l'écran devient le serveur de courriel du réglage.
         Le compte de courriel de l'écran devient le compte de courriel du réglage.
+        L'heure du résumé de l'écran devient l'heure du résumé du réglage.
+        Le signal relevé de l'écran devient le signal relevé du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
@@ -1039,6 +1296,8 @@ Quand on clique sur « Enregistrer » dans l'écran des réglages :
         L'adresse de courriel du réglage devient l'adresse de courriel de l'écran.
         Le serveur de courriel du réglage devient le serveur de courriel de l'écran.
         Le compte de courriel du réglage devient le compte de courriel de l'écran.
+        L'heure du résumé du réglage devient l'heure du résumé de l'écran.
+        Le signal relevé du réglage devient le signal relevé de l'écran.
         Si la clé de courriel de l'écran est présente, la clé de courriel du réglage devient la clé de courriel de l'écran.
         Le compte gratuit du réglage devient le compte gratuit de l'écran.
         Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
@@ -1046,6 +1305,13 @@ Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Si la conservation de l'écran est présente, signaler « Les passages de plus de » puis la conservation de l'écran puis « jours s'effaceront au prochain lancement. ».
     Sinon, signaler « Tous les passages sont gardés. ».
     Fermer l'écran.
+
+Remarque : le résumé du jour, tout de suite, avec ce qui est enregistré : de quoi l'essayer sans attendre l'heure.
+Quand on clique sur « Envoyer le résumé » dans l'écran des réglages :
+    Pour chaque réglage conservé :
+        Si le destinataire d'alerte du réglage est absent ou le serveur de courriel du réglage est absent ou l'adresse de courriel du réglage est absente ou le compte de courriel du réglage est absent ou la clé de courriel du réglage est absente, refuser "Pour envoyer le résumé, remplis le destinataire de l'alerte et la messagerie, puis « Enregistrer ».".
+        Résumer le réglage.
+        Signaler « Résumé du jour envoyé à » puis le destinataire d'alerte du réglage suivi de « . ».
 
 Quand on clique sur « Quota DeepL » dans l'écran des réglages :
     Lire le quota, qui donne l'état du quota.
@@ -1368,6 +1634,7 @@ Remarque : un seul réglage, créé au premier lancement ; puis le ménage.
 Si le nombre de réglages conservés = 0 :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
+        Le signal relevé vaut vrai.
     Conserver le r.
 Faire le ménage.
 
