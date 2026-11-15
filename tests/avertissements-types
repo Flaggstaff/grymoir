@@ -179,6 +179,47 @@ verifier "$(grep -c 'av7.grym:11:10 : avertissement : « taille » se lit ici su
 verifier "$(grep -c 'av7.grym:12:10 : avertissement : « mois » se lit ici sur un fichier' s7.txt)" "1" "le mois d'un fichier"
 verifier "$(grep -c 'av7.grym:19:10 : avertissement : « mois » se lit ici sur une année, qui n.a aucun champ' s7.txt)" "1" "le mois d'une année"
 verifier "$(grep -c 'av7.grym:21:10 : avertissement : « jour » se lit ici sur une heure, qui n.a aucun champ' s7.txt)" "1" "le jour d'une heure"
+# 3.37 : une valeur au type déduit rangée dans un champ qui la refuserait toujours ; ce qui dépend de la valeur (un nombre
+# dans un nombre entier, un texte dans un courriel, une personne dans un lien vers un membre) se tait.
+cat > av8.grym <<'FIN'
+Une personne, conservée, a :
+    un nom (texte),
+    un courriel (courriel), facultatif.
+Un membre, conservé, est une personne.
+Un membre a :
+    une cotisation (nombre).
+Une facture, conservée, a :
+    un numéro (texte),
+    un montant (nombre),
+    un rang (nombre entier),
+    une échéance (date), facultative,
+    un patient (personne), facultatif,
+    un payeur (membre), facultatif.
+Le t vaut « abc ».
+Le p vaut la personne conservée dont le nom est « Ana ».
+Le m vaut le membre conservé dont le nom est « Bob ».
+La f vaut une nouvelle facture :
+    Le numéro vaut « F1 ».
+    Le montant vaut le t.
+    Le rang vaut 2.
+Le montant de la f devient le t.
+L'échéance de la f devient le p.
+Le numéro de la f devient le p.
+Le patient de la f devient le t.
+Le rang de la f devient le montant de la f × 1,5.
+Le courriel du p devient le t.
+Le patient de la f devient le m.
+Le payeur de la f devient le p.
+Le numéro de la f devient le nom du p.
+Le montant de la f devient le rang de la f + 1.
+FIN
+"$grym" compiler av8.grym > /dev/null 2> s8.txt
+verifier "$(grep -c avertissement s8.txt)" "5" "cinq écritures impossibles"
+verifier "$(grep -c 'av8.grym:19:21 : avertissement : Ici, le champ « montant » reçoit un texte, alors qu.il attend un nombre' s8.txt)" "1" "dans le bloc d'un nouvel objet"
+verifier "$(grep -c 'av8.grym:21:28 : avertissement : Ici, le champ « montant » reçoit un texte' s8.txt)" "1" "par « devient »"
+verifier "$(grep -c 'av8.grym:22:28 : avertissement : Ici, le champ « échéance » reçoit une personne, alors qu.il attend une date' s8.txt)" "1" "un objet dans une date"
+verifier "$(grep -c 'av8.grym:23:27 : avertissement : Ici, le champ « numéro » reçoit une personne' s8.txt)" "1" "un objet dans un texte"
+verifier "$(grep -c 'av8.grym:24:28 : avertissement : Ici, le champ « patient » reçoit un texte, alors qu.il attend une personne' s8.txt)" "1" "un texte dans un lien"
 for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Praxis/Test de charge/charge.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
     dir="$racine/projets/$(dirname "$f")"; b=$(basename "$f")
     mkdir -p "$d/p" && cp -R "$dir/." "$d/p/" && (cd "$d/p" && "$grym" compiler "$b" > /dev/null 2> sortie.txt)

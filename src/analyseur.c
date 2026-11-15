@@ -1775,6 +1775,38 @@ static void verifier_acces_champ(Analyse *a, const Noeud *n) {
                                                        c->genre == GENRE_FEMININ ? "de la" : "du", c->nom));
 }
 
+/* 3.37 : une valeur au type déduit, rangée dans un champ, que l'exécution refuserait toujours (« Le champ « montant »
+ * attend un nombre, pas un texte. ») ; une constante, verifier_type la refuse déjà. Ce qui pourrait passer se tait : un
+ * nombre dans un nombre entier, un texte dans un courriel, une entité parente dans une héritière, une année. */
+static void verifier_ecriture(Analyse *a, const char *champ, const char *attendu, const Noeud *v) {
+    if (a->echec || !attendu || !v || type_statique(v) || v->type == N_ABSENT) return;
+    const char *vu = type_deduit(a, v);
+    if (!vu || strcmp(attendu, vu) == 0) return;
+    const int na = strcmp(attendu, "nombre") == 0 || strcmp(attendu, "nombre entier") == 0 || strcmp(attendu, "année") == 0;
+    const int nv = strcmp(vu, "nombre") == 0 || strcmp(vu, "nombre entier") == 0 || strcmp(vu, "année") == 0;
+    if (na && nv) return;
+    if (type_textuel(attendu) && type_textuel(vu)) return;
+    if (type_fichier(attendu) && type_fichier(vu)) return;
+    const int ba = type_de_base(attendu), bv = type_de_base(vu);
+    if (!ba && !bv) {
+        const Classe *ca = classe_de(a->portee, attendu), *cv = classe_de(a->portee, vu);
+        if (!ca || !cv || ca->aptitude || cv->aptitude || strncmp(cv->nom, "écran ", 7) == 0) return;
+        if (ancetre_commun(a->portee, attendu, vu) && (strcmp(ancetre_commun(a->portee, attendu, vu), attendu) == 0
+                                                      || strcmp(ancetre_commun(a->portee, attendu, vu), vu) == 0)) return;
+    } else if (!ba) {   /* un lien qui reçoit une valeur */
+        const Classe *ca = classe_de(a->portee, attendu);
+        if (!ca || ca->aptitude) return;
+    } else if (!bv) {   /* un champ de base qui reçoit un objet */
+        const Classe *cv = classe_de(a->portee, vu);
+        if (!cv || cv->aptitude || strncmp(cv->nom, "écran ", 7) == 0) return;
+    }
+    char *x = nommer_type(a->portee, attendu), *y = nommer_type(a->portee, vu);
+    avertir(a, v->ligne, v->colonne, grym_formater("Ici, le champ « %s » reçoit %s, alors qu'il attend %s : à l'exécution, "
+                                                   "cette écriture échouera.", champ, y, x));
+    free(x);
+    free(y);
+}
+
 static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, Article art,
                           const Jeton *premier, size_t k) {
     if (strcmp(champ, "jour") == 0 && k + 3 < a->n && est_mot(&a->j[k], "de") && est_mot(&a->j[k + 1], "la")
@@ -5421,6 +5453,12 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
                 noeud_liberer(v);
                 return NULL;
             }
+            {   /* 3.37 : le champ de l'objet dont le type se déduit */
+                const char *ts = cible->nb_enfants ? type_deduit(a, cible->enfants[0]) : NULL;
+                const Classe *cc = ts && !type_de_base(ts) ? classe_de(a->portee, ts) : NULL;
+                if (cc && !cc->aptitude && strncmp(cc->nom, "écran ", 7) != 0)
+                    verifier_ecriture(a, cible->texte, type_du_champ(a->portee, cc, cible->texte), v);
+            }
             if (v->type == N_NOUVEAU && cour(a)->type == J_DEUX_POINTS) {
                 if (!bloc_initialisation(a, v, tart)) { noeud_liberer(cible); noeud_liberer(v); return NULL; }
             } else if (!fin_phrase(a, 0)) {
@@ -8489,6 +8527,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
         if (!v) { free(champ); return 0; }
         if (!verifier_type(a, champ, type_du_champ(a->portee, cl, champ), v) || !accorder_absent(a, v, gchamp)
             || !fin_phrase(a, 0)) { free(champ); noeud_liberer(v); return 0; }
+        if (!cl->aptitude && strncmp(cl->nom, "écran ", 7) != 0) verifier_ecriture(a, champ, type_du_champ(a->portee, cl, champ), v);   /* 3.37 */
         Noeud *init = noeud_creer(N_INIT, u->ligne, u->colonne, u->debut);
         init->texte = champ;
         init->article = art == ART_IMPLICITE ? ART_AUCUN : art;
