@@ -121,6 +121,11 @@ Sur un poste branché en USB, en veille :
     avec un indicatif américain : le cap doit partir vers l'ouest (entre 280 et 320°) ; s'il part vers l'est, le dire :
     seule une réponse européenne a pu être relevée, le signe des longitudes de l'ouest reste à voir en vrai. À
     rapporter aussi : « Fiche non lue » et son motif.
+16. **Soleil** : ouvrir la veille, internet branché. Attendu : dans la minute, une ligne « Soleil : flux solaire 124 ;
+    Kp 2,00 (calme), relevé du 2026-11-15 00:00 UTC » sous « Captés aujourd'hui », relue une fois par heure ; la même ligne
+    dans le résumé du jour. À comparer avec spaceweatherlive.com. Internet coupé : la veille continue, les derniers
+    chiffres restent. À rapporter : la ligne qui ne vient pas (la NOAA a pu changer ses adresses), ou des chiffres
+    différents du site. « Réglages », « Soleil relevé » éteint : plus aucune lecture.
 
 ## Les deux applications : un plantage
 

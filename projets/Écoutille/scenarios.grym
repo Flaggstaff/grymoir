@@ -145,6 +145,7 @@ Scénario « une parole trop courte n'est pas gardée » :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
     Vérifier que la parole retenue de « Merci. » et de la parole minimale du r = « Merci. ».
 
@@ -152,6 +153,7 @@ Scénario « les réglages s'enregistrent par leur écran » :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
     On écrit 30 dans la conservation de l'écran des réglages.
     On écrit « CQ HB9XYZ » dans l'alerte de l'écran des réglages.
@@ -167,6 +169,7 @@ Scénario « sans conservation, le ménage garde tout » :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
     Poser « Stryker », qui donne le k.
     Capter le k et 11.11.2020, qui donne le vieux.
@@ -178,6 +181,7 @@ Scénario « le ménage efface les passages plus vieux que la conservation » :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
         La conservation vaut 30.
     Conserver le r.
     Poser « Stryker », qui donne le k.
@@ -203,6 +207,7 @@ Scénario « la messagerie de l'alerte s'enregistre, sa clé ne se relit pas » 
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
     On écrit « michel@exemple.ch » dans le destinataire d'alerte de l'écran des réglages.
     On écrit « veille@exemple.ch » dans l'adresse de courriel de l'écran des réglages.
@@ -321,6 +326,7 @@ Scénario « l'heure du résumé et le S-mètre s'enregistrent par les Réglages
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
     Vérifier que le signal relevé du r.
     On écrit 22:00 dans l'heure du résumé de l'écran des réglages.
@@ -413,6 +419,7 @@ Scénario « le locator des Réglages se vérifie à l'enregistrement » :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
     On écrit « JN36mo » dans le locator de l'écran des réglages.
     On clique sur « Enregistrer » dans l'écran des réglages.
@@ -425,6 +432,7 @@ Scénario « la fiche d'un indicatif se range d'après la réponse de HamQTH » 
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
         Le locator vaut « JN36 ».
     Conserver le r.
     Ranger « {"callsign":"HB9ABC", "name":"Switzerland", "details":"Switzerland, Full License", "continent":"EU", "utc":"-1", "waz":"14", "itu":"28", "lat":"46.2", "lng":"6.14", "adif":"287"} » et « HB9ABC ».
@@ -458,3 +466,44 @@ Scénario « sans locator dans les Réglages, la fiche ne dit pas de distance »
     Ranger « {"name":"Switzerland", "continent":"EU", "waz":"14", "itu":"28", "lat":"46.2", "lng":"6.14"} » et « HB9ABC ».
     Vérifier que le portrait de « HB9ABC » = « HB9ABC : Switzerland (EU), zone CQ 14, zone UIT 28 ».
     Vérifier que le portrait de « F4XYZ » = « ».
+
+Remarque : la météo du soleil (15 novembre 2026) : les réponses sont celles de la NOAA relevées ce jour-là (la liste du Kp
+Remarque : réduite à ses trois derniers relevés).
+Scénario « le soleil se note d'après les réponses de la NOAA » :
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
+        Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
+    Conserver le r.
+    Vérifier que la météo radio du r = « ».
+    Noter le soleil du r et « [{"time_tag":"2026-11-14T18:00:00","Kp":1.00,"a_running":4,"station_count":8},{"time_tag":"2026-11-14T21:00:00","Kp":1.33,"a_running":5,"station_count":8},{"time_tag":"2026-11-15T00:00:00","Kp":2.00,"a_running":7,"station_count":8}] » et « [{"flux":124,"time_tag":"2026-11-14T20:00:00"}] ».
+    Remarque : le dernier relevé de la liste, pas le premier.
+    Vérifier que l'indice kp du r = 2.
+    Vérifier que le flux solaire du r = 124.
+    Vérifier que le moment du kp du r = « 2026-11-15T00:00:00 ».
+    Vérifier que la météo radio du r = « flux solaire 124 ; Kp 2,00 (calme), relevé du 2026-11-15 00:00 UTC ».
+    Vérifier que le résumé d'aujourd'hui contient « Soleil : flux solaire 124 ; Kp 2,00 (calme), relevé du 2026-11-15 00:00 UTC. ».
+    Remarque : des listes vides, une NOAA qui n'a rien : les derniers chiffres restent.
+    Noter le soleil du r et « [] » et « [] ».
+    Vérifier que l'indice kp du r = 2.
+    Vérifier que le flux solaire du r = 124.
+    Remarque : un Kp à virgule, un orage.
+    Noter le soleil du r et « [{"time_tag":"2026-11-08T00:00:00","Kp":5.00,"a_running":48,"station_count":8}] » et « [] ».
+    Vérifier que la météo radio du r = « flux solaire 124 ; Kp 5,00 (orage mineur, G1), relevé du 2026-11-08 00:00 UTC ».
+
+Scénario « le Kp se dit avec les mots de l'échelle de la NOAA » :
+    Vérifier que l'humeur de 0,33 = « calme ».
+    Vérifier que l'humeur de 2,67 = « calme ».
+    Vérifier que l'humeur de 3 = « agité ».
+    Vérifier que l'humeur de 4,67 = « actif ».
+    Vérifier que l'humeur de 5 = « orage mineur, G1 ».
+    Vérifier que l'humeur de 6,33 = « orage modéré, G2 ».
+    Vérifier que l'humeur de 7 = « orage fort, G3 ».
+    Vérifier que l'humeur de 8 = « orage sévère, G4 ».
+    Vérifier que l'humeur de 9 = « orage extrême, G5 ».
+
+Scénario « la météo du soleil se relit une fois par heure » :
+    Vérifier que la météo due de 15.11.2026 et de 14:30 et d'absent et d'absent.
+    Vérifier que la météo due de 15.11.2026 et de 15:29 et de 15.11.2026 et de 14:30 est faux.
+    Vérifier que la météo due de 15.11.2026 et de 15:30 et de 15.11.2026 et de 14:30.
+    Vérifier que la météo due de 16.11.2026 et de 0:05 et de 15.11.2026 et de 23:50.

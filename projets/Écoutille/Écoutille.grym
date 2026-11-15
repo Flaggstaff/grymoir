@@ -135,7 +135,13 @@ Un réglage, conservé, a :
     un signal relevé (vrai ou faux), vrai au départ,
     une heure du résumé (heure), facultative,
     un jour de dernier résumé (date), facultatif,
-    un locator (texte), facultatif.
+    un locator (texte), facultatif,
+    un soleil relevé (vrai ou faux), vrai au départ,
+    un indice kp (nombre), facultatif,
+    un flux solaire (nombre entier), facultatif,
+    un moment du kp (texte), facultatif,
+    un jour de météo (date), facultatif,
+    une heure de météo (heure), facultative.
 
 Remarque : la parole minimale (11 novembre 2026) : le nombre de mots qu'une parole doit avoir pour être gardée ; vide, toute
 Remarque : parole est gardée. Sur du souffle, Whisper écrit volontiers un mot ou deux qu'on n'a pas dits.
@@ -878,9 +884,37 @@ L'écran du passage, « Passage », montre :
         un bouton « Remettre l'accord », à confirmer par « Remettre le poste sur la fréquence et le mode de ce passage ? », actif si la fréquence du passage ouvert est présente,
         un bouton « Fermer ».
 
+Remarque : la météo du soleil (15 novembre 2026), ce qui fait ou défait la propagation : l'indice Kp, de 0 à 9, l'agitation
+Remarque : du champ magnétique sur trois heures, et le flux solaire à 10,7 cm. Les deux viennent du centre de prévision de
+Remarque : la NOAA (services.swpc.noaa.gov), lus une fois par heure tant que la veille est ouverte. Les mots du Kp sont ceux
+Remarque : de l'échelle G de la NOAA, d'après spaceweatherlive.com (« The Kp-index », lu le 15 novembre 2026) : calme
+Remarque : jusqu'à 2, agité à 3, actif à 4, puis un orage magnétique, de G1 (Kp 5) à G5 (Kp 9). Le flux se montre tel
+Remarque : quel : Écoutille ne prétend pas dire quelle bande est ouverte.
+L'humeur d'un indice :
+    Si l'indice < 3, rendre « calme ».
+    Si l'indice < 4, rendre « agité ».
+    Si l'indice < 5, rendre « actif ».
+    Si l'indice < 6, rendre « orage mineur, G1 ».
+    Si l'indice < 7, rendre « orage modéré, G2 ».
+    Si l'indice < 8, rendre « orage fort, G3 ».
+    Si l'indice < 9, rendre « orage sévère, G4 ».
+    Rendre « orage extrême, G5 ».
+
+Remarque : ce que la veille et le résumé en disent : « flux solaire 124 ; Kp 2,00 (calme), relevé du 2026-11-15 00:00 UTC » ;
+Remarque : « » tant que rien n'a été lu.
+La météo radio d'un réglage :
+    Le t vaut « ».
+    Si le flux solaire du réglage est présent, le t devient "flux solaire " suivi du flux solaire du réglage.
+    Si l'indice kp du réglage est présent :
+        Si le t ≠ « », le t devient le t suivi de " ; ".
+        Le t devient le t suivi de "Kp " suivi de l'indice kp du réglage suivi de " (" suivi de l'humeur de l'indice kp du réglage suivi de « ) ».
+        Si le moment du kp du réglage est présent, le t devient le t suivi de ", relevé du " suivi de (le moment du kp du réglage en remplaçant « T » par " " sans « :00 ») suivi de « :00 UTC ».
+    Rendre le t.
+
 L'écran de veille montre :
     les écoutes des postes conservés dont la veille est vraie, par nom, coupées après 3 secondes de silence,
     le texte "Captés aujourd'hui : " suivi du nombre de passages conservés dont le jour = aujourd'hui, en petites capitales,
+    le texte "Soleil : " suivi de la météo radio du réglage conservé, visible si la météo radio du réglage conservé ≠ « »,
     côte à côte :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
@@ -1153,6 +1187,7 @@ L'écran des réglages, « Réglages », montre :
     le texte « Distances », en petites capitales,
     un locator (texte), facultatif, avec l'indication « Ton carré Maidenhead, JN36 ou JN36mo : la distance et le cap de chaque décodage WSJT-X en viennent ; vide : pas de distance »,
     le texte « Pilotage », en petites capitales,
+    un soleil relevé (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : le flux solaire et l'indice Kp de la NOAA sont lus une fois par heure et montrés dans la veille »,
     un signal relevé (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : le S-mètre des postes pilotés est lu toutes les 5 secondes ; éteins-le si un autre logiciel se plaint du port »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
     côte à côte :
@@ -1284,6 +1319,8 @@ Le carnet d'une journée :
     Rendre le rempli de la provenance du repérage du t.
 
 Le résumé d'une journée :
+    Le ciel vaut « ».
+    Pour chaque réglage conservé, le ciel devient la météo radio du réglage.
     Le capté vaut le nombre de passages conservés dont le jour = la journée.
     Le décodé vaut le nombre de décodages conservés dont le jour = la journée.
     Rendre le texte suivant :
@@ -1296,6 +1333,7 @@ Le résumé d'une journée :
         Le plus lointain : {le rempli du lointain de la journée}.
         Pays entendus : {le compte des contrées de la journée} ({le rempli de l'inventaire de la journée}).
         Nouveaux au tableau de chasse : {le rempli de la nouveauté de la journée}.
+        Soleil : {le rempli du ciel}.
 
 Remarque : le résumé est-il dû : oui à partir de l'heure des Réglages, une fois par jour ; sans heure, jamais. Écoutille
 Remarque : fermée à cette heure : il part à la prochaine veille du même jour, pas le lendemain.
@@ -1438,6 +1476,39 @@ Quand on ouvre l'écran de veille :
         La crête du poste devient absente.
         La pause de sonde du poste devient absente.
 
+Remarque : noter le soleil d'après les deux réponses de la NOAA, relevées le 15 novembre 2026 : une liste de relevés du Kp,
+Remarque : « [{"time_tag":"2026-11-15T00:00:00","Kp":2.00,"a_running":7,"station_count":8}, …] », le dernier étant le plus
+Remarque : récent, en temps universel ; et « [{"flux":124,"time_tag":"2026-11-14T20:00:00"}] ». Une liste vide ne change rien.
+Pour noter le soleil d'un réglage et une série et un flot :
+    Le dernier vaut « ».
+    Pour chaque relevé du champ « » de la série, le dernier devient le relevé.
+    Si le dernier ≠ « » :
+        Le lu vaut le nombre lu du champ « Kp » du dernier.
+        Si le lu est présent :
+            L'indice kp du réglage devient le lu.
+            Le moment du kp du réglage devient le champ « time_tag » du dernier.
+    Le coulé vaut le nombre lu du champ « 0.flux » du flot.
+    Si le coulé est présent, le flux solaire du réglage devient le coulé.
+
+Remarque : la météo est-elle à relire : oui sans lecture encore, oui un autre jour, oui une heure et plus après la dernière.
+La météo due d'un jour et d'une heure et d'un jour passé et d'une heure passée :
+    Si le jour passé est absent ou l'heure passée est absente, rendre vrai.
+    Si le jour ≠ le jour passé, rendre vrai.
+    Si l'heure − l'heure passée ≥ 60, rendre vrai.
+    Rendre faux.
+
+Remarque : lire le soleil : le jour et l'heure se posent d'abord, pour qu'une NOAA muette ou un internet coupé ne soient pas
+Remarque : redemandés toutes les 5 secondes ; en cas d'échec, rien ne se dit et les derniers chiffres restent.
+Pour lire le soleil d'un réglage :
+    Le jour de météo du réglage devient aujourd'hui.
+    L'heure de météo du réglage devient maintenant.
+    Essayer :
+        La série vaut la lecture de « https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json ».
+        Le flot vaut la lecture de « https://services.swpc.noaa.gov/products/summary/10cm-flux.json ».
+        Noter le soleil du réglage et la série et le flot.
+    En cas d'échec :
+        Remarque : rien : la veille continue avec les derniers chiffres.
+
 Remarque : la minuterie de la veille (15 novembre 2026) : toutes les 5 secondes, le S-mètre des postes pilotés en veille, si
 Remarque : les Réglages le veulent ; puis le résumé du jour, s'il est dû. Le jour du résumé se pose avant l'envoi : un
 Remarque : courriel refusé ne se retente pas toutes les 5 secondes, « Envoyer le résumé » (Réglages) le refait.
@@ -1446,6 +1517,8 @@ Toutes les 5 secondes dans l'écran de veille :
         Si le signal relevé du réglage :
             Pour chaque poste conservé dont la veille est vraie :
                 Sonder le poste.
+        Si le soleil relevé du réglage :
+            Si la météo due d'aujourd'hui et de maintenant et du jour de météo du réglage et de l'heure de météo du réglage, lire le soleil du réglage.
         Si le résumé dû de maintenant et de l'heure du résumé du réglage et d'aujourd'hui et du jour de dernier résumé du réglage :
             Le jour de dernier résumé du réglage devient aujourd'hui.
             Résumer le réglage.
@@ -1531,6 +1604,7 @@ Quand on ouvre l'écran des réglages :
         L'heure du résumé de l'écran devient l'heure du résumé du réglage.
         Le locator de l'écran devient le locator du réglage.
         Le signal relevé de l'écran devient le signal relevé du réglage.
+        Le soleil relevé de l'écran devient le soleil relevé du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
@@ -1548,6 +1622,7 @@ Quand on clique sur « Enregistrer » dans l'écran des réglages :
         Le compte de courriel du réglage devient le compte de courriel de l'écran.
         L'heure du résumé du réglage devient l'heure du résumé de l'écran.
         Le signal relevé du réglage devient le signal relevé de l'écran.
+        Le soleil relevé du réglage devient le soleil relevé de l'écran.
         Si la clé de courriel de l'écran est présente, la clé de courriel du réglage devient la clé de courriel de l'écran.
         Le compte gratuit du réglage devient le compte gratuit de l'écran.
         Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
@@ -1900,6 +1975,7 @@ Si le nombre de réglages conservés = 0 :
     Le r vaut un nouveau réglage :
         Le compte gratuit vaut vrai.
         Le signal relevé vaut vrai.
+        Le soleil relevé vaut vrai.
     Conserver le r.
 Faire le ménage.
 
