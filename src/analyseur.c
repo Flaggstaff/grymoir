@@ -1557,6 +1557,7 @@ static const char *ancetre_commun(Portee *p, const char *t1, const char *t2) {
 static const char *type_deduit(Analyse *a, const Noeud *n);
 
 static void noter_indice(Analyse *a, char *cle, const Noeud *v) {
+    while (v && v->type == N_GROUPE && v->nb_enfants) v = v->enfants[0];   /* 3.38 : « (absent) » est absent */
     if (!relever || !v || v->type == N_ABSENT) { free(cle); return; }
     const char *t = type_deduit(a, v);
     Indice *x = indice_de(&releves, cle);
@@ -1574,12 +1575,12 @@ static void noter_indice(Analyse *a, char *cle, const Noeud *v) {
     }
     free(cle);
     if (x->conflit) return;
-    if (!t) { x->conflit = 1; return; }
+    if (!t) { x->conflit = 1; return; }   /* le type connu jusque-là reste dans x->type */
     if (strcmp(x->type, t) == 0) return;
     const int n1 = strcmp(x->type, "nombre") == 0 || strcmp(x->type, "nombre entier") == 0;
     const int n2 = strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0;
     const char *c = n1 && n2 ? "nombre" : ancetre_commun(a->portee, x->type, t);
-    if (!c) { x->conflit = 1; return; }
+    if (!c) { x->conflit = 2; return; }   /* 3.38 : deux types connus qui se contredisent */
     char *nc = grym_dupliquer(c);
     free(x->type);
     x->type = nc;
@@ -1604,7 +1605,7 @@ static size_t indices_utiles(Indices *t, const Portee *p) {
             for (size_t q = 0; q < p->n; q++)
                 versions += (p->s[q].sorte == S_CALCUL || p->s[q].sorte == S_ACTION) && strlen(p->s[q].nom) == l
                             && strncmp(p->s[q].nom, nom, l) == 0;
-            if (versions != 1) { x->conflit = 1; continue; }
+            if (versions != 1) { x->conflit = 3; continue; }   /* 3 : plusieurs versions, le nom de chacune garde son type */
         }
         utiles++;
     }
@@ -6037,8 +6038,20 @@ static Contexte entrer_formule(Analyse *a, int sorte, Noeud *params) {
         if (a->nom_formule && appliquer) {   /* 3.35 : le type de tous les arguments de ses appels */
             char *cle = grym_formater("P\x1f%s\x1f%zu", a->nom_formule, k);
             const char *ti = indice(cle);
+            const Indice *brut = indice_de(&appliques, cle);
             free(cle);
             if (ti) { free(sp->type_deduit); sp->type_deduit = grym_dupliquer(ti); }
+            else if (brut && sp->type_deduit && brut->conflit != 3) {
+                /* 3.38 : des appels qui contredisent le nom du paramètre (« une prise », un texte quand une entité
+                 * « prise » existe) : le nom ne dit plus son type */
+                const int nb = strcmp(brut->type ? brut->type : "", "nombre") == 0 || strcmp(brut->type ? brut->type : "", "nombre entier") == 0;
+                const int ns = strcmp(sp->type_deduit, "nombre") == 0 || strcmp(sp->type_deduit, "nombre entier") == 0;
+                if (brut->conflit == 2 || (brut->type && strcmp(brut->type, sp->type_deduit) != 0 && !(nb && ns)
+                                           && !ancetre_commun(a->portee, brut->type, sp->type_deduit))) {
+                    free(sp->type_deduit);
+                    sp->type_deduit = NULL;
+                }
+            }
         }
         if (p->texte3 && p->type == N_NOM && p->entier != 1 && p->texte3[0] == '\x1c') {   /* 3.35 : « d'un seuil (nombre) » */
             const char *f = strchr(p->texte3 + 1, '\x1c');

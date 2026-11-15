@@ -220,6 +220,31 @@ verifier "$(grep -c 'av8.grym:21:28 : avertissement : Ici, le champ « montant �
 verifier "$(grep -c 'av8.grym:22:28 : avertissement : Ici, le champ « échéance » reçoit une personne, alors qu.il attend une date' s8.txt)" "1" "un objet dans une date"
 verifier "$(grep -c 'av8.grym:23:27 : avertissement : Ici, le champ « numéro » reçoit une personne' s8.txt)" "1" "un objet dans un texte"
 verifier "$(grep -c 'av8.grym:24:28 : avertissement : Ici, le champ « patient » reçoit un texte, alors qu.il attend une personne' s8.txt)" "1" "un texte dans un lien"
+# 3.38 : un paramètre nommé comme une entité (« une prise », la prise d'un poste, quand une entité « prise » existe) : ses
+# appels disent son type ; des textes, ou un texte et une valeur inconnue, contredisent le nom, qui se tait.
+cat > av9.grym <<'FIN'
+Une prise, conservée, a :
+    une contrée (texte).
+Un modèle, conservé, a :
+    une connectique (texte), facultative,
+    un socle (prise), facultatif.
+Le m vaut le modèle conservé dont la connectique est « x ».
+Pour cataloguer une prise :
+    La connectique du m devient la prise.
+Pour brancher une prise :
+    La connectique du m devient la prise.
+Pour raccorder une prise :
+    Le socle du m devient la prise.
+    La connectique du m devient la prise.
+Cataloguer « jack ».
+Cataloguer (absent).
+Brancher « jack ».
+Brancher le champ « a » de (la lecture de « http://exemple.ch »).
+Raccorder la prise conservée dont la contrée est « Suisse ».
+FIN
+"$grym" compiler av9.grym > /dev/null 2> s9.txt
+verifier "$(grep -c avertissement s9.txt)" "1" "seul l'appel avec une vraie prise avertit"
+verifier "$(grep -c 'av9.grym:13:33 : avertissement : Ici, le champ « connectique » reçoit une prise' s9.txt)" "1" "le nom confirmé par l'appel"
 for f in "Praxis/Nicolas/Praxis.grym" "Praxis/Nicolas/actions.grym" "Praxis/Test de charge/charge.grym" "Écoutille/Écoutille.grym" "Gestion de projet/Gestion de projet.grym"; do
     dir="$racine/projets/$(dirname "$f")"; b=$(basename "$f")
     mkdir -p "$d/p" && cp -R "$dir/." "$d/p/" && (cd "$d/p" && "$grym" compiler "$b" > /dev/null 2> sortie.txt)
