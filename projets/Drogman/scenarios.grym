@@ -1,0 +1,165 @@
+Remarque : les scénarios de Drogman (17 novembre 2026), joués par « grym scenarios scenarios.grym » ; chacun sur une base neuve.
+Remarque : Whisper ne tourne pas hors de l'application : les segments sont écrits ici à la main, dans la forme que
+Remarque : « les segments de » rend (grammaire 3.39), et versés comme « Transcrire » les verse.
+Ces scénarios éprouvent « Drogman ».
+
+Remarque : un entretien, comme l'écran l'enregistre.
+Pour poser un code :
+    Le e vaut un nouvel entretien :
+        Le code vaut code.
+        Le jour vaut 06.03.2013.
+        La présence vaut "Ayşe Yılmaz, la mère (MA), Mehmet Yılmaz, le père (PA)".
+        L'interprète vaut « Elif Demir ».
+        L'intervieweur vaut « Dilan ».
+        Le lieu vaut « domicile des parents ».
+        La durée vaut « 00h45 ».
+    Conserver le e.
+    Rendre le e.
+
+Remarque : trois segments : une question en français, la réponse du père en turc (avec une pause d'une seconde entre deux
+Remarque : mots), la traduction de l'interprète.
+Pour transcrire un entretien :
+    Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":2.1,"douteux":false},{"mot":"comment","début":2.2,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien et 1.
+    Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien et 2.
+    Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien et 3.
+
+Scénario « un segment devient un tour, avec sa langue, ses heures et sa version COREL » :
+    Poser « EensA1_20130306_Ens_01 », qui donne le e.
+    Transcrire le e.
+    Vérifier que le nombre de tours conservés = 3.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que la langue du tour = « tr ».
+        Vérifier que le début du tour = 4.
+        Vérifier que la fin du tour = 7,5.
+        Vérifier que le sigle du tour = « ? ».
+        Vérifier que la base du tour = « İyiyim, teşekkür ederim. ».
+        Remarque : 1,1 seconde de silence entre « İyiyim, » et « teşekkür » : une petite pause.
+        Vérifier que la version corel du tour = « İyiyim, (.) teşekkür ederim. ».
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que la version corel du tour = « Bonjour, comment allez-vous ? ».
+    Remarque : un segment sans mots garde son texte.
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la version corel du tour = « Il dit : ça va bien. ».
+
+Scénario « l'horodatage s'écrit comme NVivo le lit » :
+    Vérifier que l'horodatage de 0 = « 00:00:00 ».
+    Vérifier que l'horodatage de 4 = « 00:00:04 ».
+    Vérifier que l'horodatage de 3725,5 = « 01:02:05 ».
+
+Scénario « un sigle se pose sur une plage de tours, depuis l'écran » :
+    Poser « EensA1_20130306_Ens_02 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    On écrit « pa » dans le sigle à poser de l'écran de l'entretien.
+    On écrit « 2 » dans le premier rang de l'écran de l'entretien.
+    On clique sur « Poser le sigle » dans l'écran de l'entretien.
+    On écrit « int » dans le sigle à poser de l'écran de l'entretien.
+    On écrit « 1 » dans le premier rang de l'écran de l'entretien.
+    On écrit « 1 » dans le dernier rang de l'écran de l'entretien.
+    On clique sur « Poser le sigle » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que le sigle du tour = « INT ».
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le sigle du tour = « PA ».
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que le sigle du tour = « PA ».
+
+Scénario « un tour se corrige dans son écran » :
+    Poser « EensA1_20130306_Ens_03 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On écrit « INT » dans le sigle de l'écran du tour.
+    On écrit « Bonjour, comment allez-VOUS ? » dans la version corel de l'écran du tour.
+    On clique sur « Enregistrer » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que le sigle du tour = « INT ».
+        Vérifier que la version corel du tour = « Bonjour, comment allez-VOUS ? ».
+        Vérifier que la base du tour = « Bonjour, comment allez-vous ? ».
+
+Scénario « traduire sans clé Google : un refus qui le dit » :
+    Poser « EensA1_20130306_Ens_04 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    On clique sur « Traduire » dans l'écran de l'entretien.
+    On voit l'erreur « Aucune clé Google » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés dont la traduction est présente = 0.
+
+Scénario « le document COREL : l'en-tête, le sigle, la tabulation, le turc en RTF, la traduction entre crochets » :
+    Poser « EensA1_20130306_Ens_05 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « Je vais bien, merci. ».
+    Le d vaut le document COREL du e.
+    Vérifier que le d commence par "{\rtf1\ansi".
+    Vérifier que le d contient "\f0\fs20".
+    Vérifier que le d contient "\chpgn".
+    Vérifier que le d contient "Nom du fichier : EensA1_20130306_Ens_05".
+    Vérifier que le d contient "Entretien du 06.03.2013".
+    Vérifier que le d contient "(Interpr\u232?te (INPRET) : Elif Demir)".
+    Vérifier que le d contient "R\u233?alis\u233? par Dilan (INT), domicile des parents".
+    Vérifier que le d contient "Dur\u233?e : 00h45".
+    Vérifier que le d contient "PA\tab \u304?yiyim, (.) te\u351?ekk\u252?r ederim.\par".
+    Vérifier que le d contient "\tab [Je vais bien, merci.]\par".
+    Vérifier que le d contient "?\tab Bonjour, comment allez-vous ?\par".
+    Vérifier que le d finit par « } ».
+    Remarque : les lettres de la table ne restent pas telles quelles (« contient » ne regarde ni accents ni casse : des mots entiers).
+    Vérifier que le d ne contient pas « Réalisé ».
+    Vérifier que le d ne contient pas « teşekkür ».
+
+Scénario « le texte pour NVivo : une ligne par tour, l'heure, le sigle, deux-points » :
+    Poser « EensA1_20130306_Ens_06 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « Je vais bien, merci. ».
+    Le t vaut le texte NVivo du e.
+    Les lignes valent les lignes de le t.
+    Vérifier que le nombre de lignes = 3.
+    Vérifier que le 1er élément des lignes = « 00:00:01 ?: Bonjour, comment allez-vous ? ».
+    Vérifier que le 2e élément des lignes = « 00:00:04 PA: İyiyim, teşekkür ederim. [Je vais bien, merci.] ».
+    Remarque : les deux-points du texte tombent : NVivo prendrait « Il dit » pour un intervenant.
+    Vérifier que le 3e élément des lignes = « 01:02:05 ?: Il dit - ça va bien. ».
+
+Scénario « l'état d'un entretien compte les tours sans sigle et ceux d'une autre langue » :
+    Poser « EensA1_20130306_Ens_07 », qui donne le e.
+    Vérifier que l'état du e = "Pas encore transcrit : « Transcrire ».".
+    Transcrire le e.
+    Vérifier que l'état du e = "3 tours de parole ; 3 sans sigle ; 1 dans une autre langue que le français.".
+
+Scénario « un nouvel entretien s'enregistre par l'écran » :
+    On clique sur « Nouvel entretien » dans l'écran des entretiens.
+    On écrit « EensA1_20261118_Ens_01 » dans le code de l'écran de l'entretien.
+    On écrit « 18.11.2026 » dans le jour de l'écran de l'entretien.
+    On écrit « à l'école » dans le lieu de l'écran de l'entretien.
+    On clique sur « Enregistrer » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre d'entretiens conservés = 1.
+    Pour chaque entretien conservé :
+        Vérifier que le lieu de l'entretien = « à l'école ».
+
+Scénario « Transcrire sans enregistrement : un refus » :
+    Poser « EensA1_20130306_Ens_08 », qui donne le e.
+    On choisit le e dans l'écran des entretiens.
+    On clique sur « Transcrire » dans l'écran de l'entretien.
+    On confirme.
+    On voit l'erreur « Choisis d'abord l'enregistrement » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés = 0.

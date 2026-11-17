@@ -1,0 +1,85 @@
+#!/bin/sh
+# Drogman (17 novembre 2026) : l'application lancée par l'atelier sans écran. La liste des entretiens ; un entretien et ses
+# tours, posés par un programme de console sur la base de l'application ; l'écran de l'entretien, celui d'un tour ; les
+# exports COREL et NVivo écrits dans Documents/Drogman ; « Transcrire » avec le modèle d'essai de whisper.cpp, qui ne
+# reconnaît rien : le refus annule, les tours d'avant restent. Sans atelier, l'essai se dit sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+atelier="$racine/construction/grym-atelier"
+[ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+if [ ! -x "$atelier" ]; then echo "drogman : sauté (atelier absent)"; exit 0; fi
+case "$(uname)" in MINGW*|MSYS*|CYGWIN*) echo "drogman : sauté (Windows)"; exit 0;; esac
+modele=$(sed -n 's/^MODELE_ESSAI:[A-Z]*=//p' "$racine/construction/CMakeCache.txt" 2>/dev/null)
+[ -n "$modele" ] || modele=$(ls "$racine"/construction/_deps/whisper-src/models/for-tests-ggml-tiny.bin 2>/dev/null)
+[ -n "$modele" ] || modele=$(sed -n 's/^FETCHCONTENT_SOURCE_DIR_WHISPER:[A-Z]*=//p' "$racine/construction/CMakeCache.txt")/models/for-tests-ggml-tiny.bin
+d=$(mktemp -d)
+trap '[ -n "$GARDER" ] || rm -rf "$d"' EXIT
+cp "$racine/projets/Drogman/Drogman.grym" "$d/"
+mkdir -p "$d/maison"
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+lancer() {
+    (cd "$d" && HOME="$d/maison" QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+        GRYMOIR_MODELE_TRANSCRIPTION="$modele" \
+        "$atelier" --capture "$d/$1.png" --clics "$2" --taille 1170x900 Drogman.grym > "$d/$1.txt" 2>&1 < /dev/null)
+}
+jouer() {
+    sed -n '/^Un entretien, conservé, a :/,/^Le dossier ouvert vaut/p' "$d/Drogman.grym" | sed '$d' > "$d/entites.txt"
+    { echo "La base est chiffrée."; cat "$d/entites.txt"; printf '%s\n' "$1"; } > "$d/j.grym"
+    cp "$d/Drogman.grymd" "$d/j.grymd"
+    cp "$d/Drogman.grymd.clés" "$d/j.grymd.clés"
+    (cd "$d" && GRYM_MOT_DE_PASSE_BASE=essai-essai "$racine/grym" lancer j.grym < /dev/null 2>&1)
+    cp "$d/j.grymd" "$d/Drogman.grymd"
+    cp "$d/j.grymd.clés" "$d/Drogman.grymd.clés"
+}
+lancer premier ""
+verifier "$(grep -c 'erreur' "$d/premier.txt")" "0" "Drogman se lance sans erreur"
+verifier "$([ -s "$d/premier.png" ] && echo oui)" "oui" "la liste des entretiens se dessine"
+verifier "$(jouer 'Afficher le nombre de réglages conservés.')" "1" "un réglage, créé au premier lancement"
+# un entretien, deux tours, et un son : un tiers de seconde de silence en WAV 16 kHz mono
+python3 -c "
+import struct,sys
+n=16000*2
+d=b'\0\0'*n
+sys.stdout.buffer.write(b'RIFF'+struct.pack('<I',36+len(d))+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,16000,32000,2,16)+b'data'+struct.pack('<I',len(d))+d)" > "$d/son.wav"
+jouer 'Le e vaut un nouvel entretien :
+    Le code vaut « EensA1_20130306_Ens_01 ».
+    Le jour vaut 06.03.2013.
+    Le lieu vaut « domicile des parents ».
+    L'"'"'intervieweur vaut « Dilan ».
+    L'"'"'enregistrement vaut le fichier « son.wav ».
+Conserver le e.
+Le t vaut un nouveau tour :
+    L'"'"'entretien vaut le e.
+    Le rang vaut 1.
+    Le début vaut 1,5.
+    La fin vaut 3,2.
+    Le sigle vaut « INT ».
+    La langue vaut « fr ».
+    La base vaut « Bonjour, comment allez-vous ? ».
+    La version corel vaut « Bonjour, comment allez-vous ? ».
+Conserver le t.
+Le u vaut un nouveau tour :
+    L'"'"'entretien vaut le e.
+    Le rang vaut 2.
+    Le début vaut 4.
+    La fin vaut 7,5.
+    Le sigle vaut « PA ».
+    La langue vaut « tr ».
+    La base vaut « İyiyim, teşekkür ederim. ».
+    La traduction vaut « Je vais bien, merci. ».
+    La version corel vaut « İyiyim, (.) teşekkür ederim. ».
+Conserver le u.' > /dev/null
+lancer entretien "ligne:EensA1_20130306_Ens_01"
+verifier "$(grep -c 'erreur' "$d/entretien.txt")" "0" "l'écran de l'entretien s'ouvre sans erreur"
+lancer tour "ligne:EensA1_20130306_Ens_01;ligne:PA"
+verifier "$(grep -c 'erreur' "$d/tour.txt")" "0" "l'écran d'un tour s'ouvre sans erreur"
+lancer exports "ligne:EensA1_20130306_Ens_01;Exporter COREL;Exporter NVivo"
+verifier "$([ -s "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf" ] && echo oui)" "oui" "le RTF COREL est écrit"
+verifier "$(grep -c 'PA\\tab \\u304?yiyim, (.) te\\u351?ekk\\u252?r ederim.\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "le tour turc, en RTF"
+verifier "$(sed -n 2p "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01 NVivo.txt")" "00:00:04 PA: İyiyim, teşekkür ederim. [Je vais bien, merci.]" "la ligne NVivo du tour turc"
+lancer transcrire "ligne:EensA1_20130306_Ens_01;Transcrire;confirmer"
+verifier "$(grep -c 'erreur' "$d/transcrire.txt")" "0" "Transcrire tourne jusqu'au bout"
+# un son muet ne donne aucun segment : le refus (« Rien n'a été transcrit ») annule tout, les tours d'avant restent
+verifier "$(jouer 'Afficher le nombre de tours conservés.')" "2" "un refus n'efface pas les tours d'avant"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

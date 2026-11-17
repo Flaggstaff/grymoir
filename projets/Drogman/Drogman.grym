@@ -1,0 +1,357 @@
+Remarque : Drogman 0.1 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
+Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
+Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
+Remarque : était l'interprète officiel auprès de la Porte ottomane.
+Remarque : la transcription se fait sur l'ordinateur (Whisper, grammaire § 15.8, « les segments de », 3.39) : le son ne part
+Remarque : nulle part. Seule la traduction part chez Google (Cloud Translation), et seulement le texte des tours non français.
+
+Remarque : la base est chiffrée (grammaire § 16.18) : elle garde des entretiens de recherche et la clé de Google ; Drogman
+Remarque : demande son mot de passe à chaque lancement, et le fait choisir au premier.
+La base est chiffrée.
+
+Remarque : un entretien, et son en-tête COREL : le code (le nom du fichier, « EensA1_20130306_Ens_01 »), le jour, l'heure,
+Remarque : la durée, le lieu, les présents (« prénom, nom du père (PA), prénom, nom de la mère (MA) », anonymisés comme le veut le
+Remarque : modèle), l'interprète et l'intervieweur.
+Un entretien, conservé, a :
+    un code (texte), unique,
+    un jour (date),
+    une heure (heure), facultative,
+    une durée (texte), facultative,
+    un lieu (texte), facultatif,
+    une présence (texte), facultative,
+    un interprète (texte), facultatif,
+    un intervieweur (texte), facultatif,
+    un enregistrement (son), facultatif.
+
+Remarque : un tour de parole : un segment de la transcription, à sa place (le rang), avec son début et sa fin en secondes depuis
+Remarque : le début de l'enregistrement, la langue reconnue (« tr », « fr »), et ses trois versions. Le sigle dit qui parle
+Remarque : (INT, PA, MA, FRE, SOE, ENS, INPRET, ou un autre annoncé dans l'en-tête) ; « ? » tant que Dilan ne l'a pas posé.
+Un tour, conservé, a :
+    un entretien (entretien),
+    un rang (nombre entier),
+    un début (nombre),
+    une fin (nombre),
+    un sigle (texte), « ? » au départ,
+    une langue (texte), facultative,
+    une base (texte), facultative,
+    une traduction (texte), facultative,
+    une version corel (texte), facultative.
+
+Remarque : les réglages : la clé de Google (un secret : elle ne se relit jamais, elle part seulement vers Google) ; le
+Remarque : vocabulaire donné à Whisper (noms propres, lieux, termes de l'école) pour qu'il les écrive juste.
+Un réglage, conservé, a :
+    une clé google (secret), facultative,
+    un vocabulaire (texte), facultatif.
+
+Remarque : l'entretien montré, pour la liste de ses tours ; le premier tour de la plage de « Poser le sigle ».
+Le dossier ouvert vaut absent.
+Le code ouvert vaut « ».
+
+Remarque : un nombre écrit avec un point (« 3.75 »), comme les segments l'écrivent ; absent ou vide : absent.
+Le nombre lu d'un écrit :
+    Si l'écrit est absent, rendre absent.
+    Si l'écrit = « », rendre absent.
+    Rendre (l'écrit en remplaçant « . » par « , ») en nombre.
+
+Remarque : un nombre sur deux chiffres : « 07 ».
+La paire de chiffres d'un nombre :
+    Si le nombre < 10, rendre « 0 » suivi du nombre.
+    Rendre « » suivi du nombre.
+
+Remarque : un moment en secondes, écrit « 01:02:03 » : la forme d'horodatage que NVivo lit (hh:mm:ss).
+L'horodatage d'une seconde :
+    Le total vaut la partie entière de la seconde.
+    Le h vaut la partie entière de (le total ÷ 3600).
+    Le m vaut la partie entière de ((le total − le h × 3600) ÷ 60).
+    Le s vaut le total − le h × 3600 − le m × 60.
+    Rendre la paire de chiffres du h suivi de « : » suivi de la paire de chiffres du m suivi de « : » suivi de la paire de chiffres du s.
+
+Remarque : la version COREL proposée d'un segment : ses mots, et « (.) » là où la parole s'arrête une demi-seconde au moins
+Remarque : entre deux mots (la petite pause du modèle). Le reste du modèle (allongements, chuchotements, rires, mots plus
+Remarque : forts, inaudibles, fautes de français corrigées) demande l'oreille de Dilan.
+La mise en forme d'un segment :
+    Le r vaut « ».
+    La fin d'avant vaut -1.
+    Pour chaque mot du champ « mots » du segment :
+        Le d vaut le nombre lu du champ « début » du mot.
+        Si le r ≠ « » et le d est présent et la fin d'avant ≥ 0 et le d − la fin d'avant ≥ 0,5, le r devient le r suivi de " (.)".
+        Si le r ≠ « », le r devient le r suivi de " ".
+        Le r devient le r suivi du champ « mot » du mot.
+        Le f vaut le nombre lu du champ « fin » du mot.
+        Si le f est présent, la fin d'avant devient le f.
+    Si le r = « », rendre le champ « texte » du segment.
+    Rendre le r.
+
+Remarque : un segment de la transcription devient un tour de l'entretien, au rang donné. Séparé de « Transcrire » : les
+Remarque : scénarios lui donnent des segments écrits à la main, Whisper ne tournant pas hors de l'application.
+Pour verser un segment et un entretien et un rang :
+    Le t vaut un nouveau tour :
+        L'entretien vaut entretien.
+        Le rang vaut rang.
+        Le début vaut le nombre lu du champ « début » du segment.
+        La fin vaut le nombre lu du champ « fin » du segment.
+        Le sigle vaut « ? ».
+        La langue vaut le champ « langue » du segment.
+        La base vaut le champ « texte » du segment.
+        La version corel vaut la mise en forme du segment.
+    Conserver le t.
+
+Remarque : un texte en français, par Google Cloud Translation (version simple, la clé dans l'adresse ; le turc reconnu par
+Remarque : Google, « source » laissée vide) ; sans clé : un refus qui le dit ; Google muet ou qui refuse la clé : un refus aussi.
+Pour traduire un texte :
+    Si le nombre de réglages conservés = 0, refuser "Aucune clé Google : Réglages, « Clé Google ».".
+    Le rg vaut le réglage conservé.
+    Si la clé google du rg est absente, refuser "Aucune clé Google : Réglages, « Clé Google ».".
+    Essayer :
+        La r vaut l'envoi à « https://translation.googleapis.com/language/translate/v2 » avec :
+            « key » : la clé google du rg,
+        et de :
+            « q » : texte,
+            « target » : « fr »,
+            « format » : « text ».
+        Rendre le champ « data.translations.0.translatedText » de la r.
+    En cas d'échec :
+        Refuser "Google n'a pas traduit : " suivi du motif de l'échec.
+
+Remarque : le RTF : un texte qui s'ouvre dans Word et que NVivo importe. Les caractères hors ASCII s'écrivent « \uN? » (leur
+Remarque : numéro Unicode) : ceux du français et du turc, les guillemets et les tirets. Une lettre absente de la table
+Remarque : passerait telle quelle, en UTF-8, et Word la montrerait mal : la table se complète ici.
+Le RTF d'un texte :
+    Le r vaut le texte en remplaçant "\" par "\\" en remplaçant « { » par "\{" en remplaçant « } » par "\}".
+    Les codes valent la table où « à » vaut 224, « â » vaut 226, « ä » vaut 228, « ç » vaut 231, « è » vaut 232, « é » vaut 233, « ê » vaut 234, « ë » vaut 235, « î » vaut 238, « ï » vaut 239, « ô » vaut 244, « ö » vaut 246, « ù » vaut 249, « û » vaut 251, « ü » vaut 252, « ÿ » vaut 255, « À » vaut 192, « Â » vaut 194, « Ç » vaut 199, « È » vaut 200, « É » vaut 201, « Ê » vaut 202, « Î » vaut 206, « Ô » vaut 212, « Ö » vaut 214, « Ù » vaut 217, « Û » vaut 219, « Ü » vaut 220, « œ » vaut 339, « Œ » vaut 338, « ğ » vaut 287, « Ğ » vaut 286, « ı » vaut 305, « İ » vaut 304, « ş » vaut 351, « Ş » vaut 350, "«" vaut 171, "»" vaut 187, « ’ » vaut 8217, « … » vaut 8230, « ° » vaut 176, « – » vaut 8211.
+    Pour chaque c parmi les clés des codes :
+        Le r devient le r en remplaçant (c) par ("\u" suivi de la valeur de c dans les codes suivi de « ? »).
+    Rendre le r.
+
+Remarque : un paragraphe du RTF, avec la tabulation après le sigle.
+Le paragraphe RTF d'un texte :
+    Rendre "\pard\tx1134\sb0\sa120 " suivi du RTF du texte suivi de "\par" suivi d'un saut de ligne.
+
+Remarque : la transcription COREL d'un entretien, en RTF, selon le modèle : Arial 10, aligné à gauche, une tabulation à 2 cm
+Remarque : après chaque sigle, paragraphes 0 avant et 6 points après, le numéro de page en bas à droite ; l'en-tête, puis
+Remarque : chaque tour, « SIGLE<tab>version COREL ». La traduction d'un tour non français suit sur sa propre ligne, entre
+Remarque : crochets, après la tabulation (choix du 17 novembre 2026, à confirmer avec Dilan).
+Le document COREL d'un e :
+    Le r vaut "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417" suivi d'un saut de ligne.
+    Le r devient le r suivi de "{\footer\pard\qr\f0\fs20\chpgn\par}" suivi de "\f0\fs20" suivi d'un saut de ligne.
+    Le r devient le r suivi du paragraphe RTF de ("Nom du fichier : " suivi du code du e).
+    Le r devient le r suivi du paragraphe RTF de ("Entretien du " suivi du jour du e).
+    Si la présence du e est présente, le r devient le r suivi du paragraphe RTF de ("Avec " suivi de la présence du e).
+    Si l'interprète du e est présent, le r devient le r suivi du paragraphe RTF de ("(Interprète (INPRET) : " suivi de l'interprète du e suivi de « ) »).
+    Le réalisé vaut « ».
+    Si l'intervieweur du e est présent, le réalisé devient "Réalisé par " suivi de l'intervieweur du e suivi de " (INT)".
+    Si le lieu du e est présent :
+        Si le réalisé ≠ « », le réalisé devient le réalisé suivi de ", ".
+        Le réalisé devient le réalisé suivi du lieu du e.
+    Si le réalisé ≠ « », le r devient le r suivi du paragraphe RTF du réalisé.
+    Si la durée du e est présente, le r devient le r suivi du paragraphe RTF de ("Durée : " suivi de la durée du e).
+    Le r devient le r suivi du paragraphe RTF de « ».
+    Pour chaque tour conservé dont l'entretien = le e, par rang :
+        Le dit vaut la base du tour.
+        Si la version corel du tour est présente, le dit devient la version corel du tour.
+        Si le dit est absent, le dit devient « ».
+        Le r devient le r suivi de "\pard\tx1134\sb0\sa120 " suivi du RTF du sigle du tour suivi de "\tab " suivi du RTF du dit suivi de "\par" suivi d'un saut de ligne.
+        Si la traduction du tour est présente, le r devient le r suivi de "\pard\tx1134\sb0\sa120 \tab [" suivi du RTF de la traduction du tour suivi de "]\par" suivi d'un saut de ligne.
+    Rendre le r suivi de « } ».
+
+Remarque : la transcription pour NVivo, en texte (UTF-8) : une ligne par tour, « 00:01:22 INT: texte », l'horodatage en tête de
+Remarque : paragraphe, puis le nom de l'intervenant suivi de deux-points et d'une espace (aide de NVivo 14, « Import
+Remarque : transcripts », relevée le 17 novembre 2026 ; la mise en page exacte n'y est montrée qu'en images : à éprouver dans
+Remarque : NVivo). La traduction suit la version de base, entre crochets ; les deux-points du texte deviennent des tirets, NVivo
+Remarque : prenant tout ce qui précède « : » pour un nom d'intervenant.
+Le texte NVivo d'un e :
+    Le r vaut « ».
+    Pour chaque tour conservé dont l'entretien = le e, par rang :
+        Le dit vaut la base du tour.
+        Si le dit est absent, le dit devient « ».
+        Si la traduction du tour est présente, le dit devient le dit suivi de " [" suivi de la traduction du tour suivi de « ] ».
+        Le r devient le r suivi de l'horodatage du début du tour suivi de " " suivi du sigle du tour suivi de ": " suivi de (le dit en remplaçant « : » par « - ») suivi d'un saut de ligne.
+    Rendre le r.
+
+Remarque : un fichier écrit dans Documents/Drogman, jamais par-dessus un autre : le second prend « (2) », le troisième « (3) ».
+Pour déposer un fichier et un nom et une extension :
+    Essayer :
+        Enregistrer le fichier dans ("~/Documents/Drogman/" suivi du nom suivi de extension).
+        Rendre "~/Documents/Drogman/" suivi du nom suivi de extension.
+    En cas d'échec :
+        Essayer :
+            Enregistrer le fichier dans ("~/Documents/Drogman/" suivi du nom suivi de " (2)" suivi de extension).
+            Rendre "~/Documents/Drogman/" suivi du nom suivi de " (2)" suivi de extension.
+        En cas d'échec :
+            Enregistrer le fichier dans ("~/Documents/Drogman/" suivi du nom suivi de " (3)" suivi de extension).
+            Rendre "~/Documents/Drogman/" suivi du nom suivi de " (3)" suivi de extension.
+
+Remarque : le nombre de tours d'un entretien, et ceux qui attendent encore leur sigle, pour l'écran.
+L'état d'un e :
+    Si le e est absent, rendre "Nouvel entretien : remplis l'en-tête, choisis l'enregistrement, puis « Enregistrer ».".
+    Le n vaut le nombre de tours conservés dont l'entretien = le e.
+    Si le n = 0, rendre "Pas encore transcrit : « Transcrire ».".
+    Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
+    L'étranger vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr ».
+    Rendre le n suivi de " tours de parole ; " suivi du sans suivi de " sans sigle ; " suivi de l'étranger suivi de " dans une autre langue que le français.".
+
+Remarque : ce que l'écran des réglages dit de la clé, sans jamais la montrer.
+Le témoin d'un réglage :
+    Si le réglage est présent et la clé google du réglage est présente, rendre « Une clé Google est enregistrée. ».
+    Rendre « Aucune clé Google : la traduction ne marchera pas. ».
+
+L'écran des entretiens, « Drogman », montre :
+    le texte « Entretiens », en petites capitales,
+    la liste des entretiens conservés, par jour décroissant, avec le code, le jour, le lieu et l'intervieweur,
+    côte à côte :
+        un bouton « Nouvel entretien », principal,
+        un bouton « Réglages »,
+        un bouton « Fermer », qui ferme l'écran.
+
+L'écran de l'entretien, « Entretien », pour un entretien, montre :
+    côte à côte :
+        un code (texte), avec l'indication « Le nom du fichier : EensA1_20130306_Ens_01 »,
+        un jour (date),
+        une heure (heure), facultative,
+        une durée (texte), facultative, avec l'indication « 01h05 »,
+    côte à côte :
+        un lieu (texte), facultatif, avec l'indication « Domicile des parents, à l'école »,
+        un intervieweur (texte), facultatif, avec l'indication « Prénom, nom de l'intervieweur-euse (INT) »,
+        un interprète (texte), facultatif, avec l'indication « Prénom, nom (INPRET) »,
+    une présence (texte), facultative, avec l'indication « Avec prénom, nom du père (PA), prénom, nom de la mère (MA), autre (abrév.) »,
+    un enregistrement (son), facultatif,
+    le texte l'état de l'entretien de l'écran,
+    la liste des tours conservés dont le code de l'entretien = le code ouvert, par rang, avec le rang, le sigle, la langue, la version corel et la traduction,
+    côte à côte :
+        un sigle à poser (texte), facultatif, avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
+        un premier rang (nombre entier), facultatif,
+        un dernier rang (nombre entier), facultatif,
+        un bouton « Poser le sigle », actif si l'entretien de l'écran est présent,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Transcrire », à confirmer par « Transcrire l'enregistrement ? Les tours déjà là sont remplacés. Comptez quelques minutes pour une heure d'entretien. », actif si l'entretien de l'écran est présent,
+        un bouton « Traduire », actif si l'entretien de l'écran est présent,
+    côte à côte :
+        un bouton « Exporter COREL », actif si l'entretien de l'écran est présent,
+        un bouton « Exporter NVivo », actif si l'entretien de l'écran est présent,
+        un bouton « Fermer », qui ferme l'écran.
+
+L'écran du tour, « Tour de parole », pour un tour, montre :
+    le texte "Tour " suivi du rang du tour de l'écran suivi de ", de " suivi de l'horodatage du début du tour de l'écran suivi de " à " suivi de l'horodatage de la fin du tour de l'écran suivi de ", langue : " suivi de la langue du tour de l'écran,
+    un sigle (texte), avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
+    une base (texte), facultative, sur plusieurs lignes, avec l'indication « La parole transcrite, dans sa langue »,
+    une traduction (texte), facultative, sur plusieurs lignes, avec l'indication « En français ; vide pour un tour français »,
+    une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)) »,
+    côte à côte :
+        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran,
+        un bouton « Traduire ce tour »,
+        un bouton « Fermer », qui ferme l'écran.
+
+L'écran des réglages, « Réglages », montre :
+    une clé google (secret), facultative, avec l'indication « Google Cloud, Cloud Translation API, clé d'API ; vide : celle enregistrée reste »,
+    le texte le témoin du réglage conservé,
+    un vocabulaire (texte), facultatif, sur plusieurs lignes, avec l'indication « Noms propres, lieux, mots de l'école, séparés par des virgules : la transcription les écrit juste »,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer », qui ferme l'écran.
+
+Quand on clique sur « Nouvel entretien » dans l'écran des entretiens :
+    Le dossier ouvert devient absent.
+    Le code ouvert devient « ».
+    Ouvrir l'écran de l'entretien.
+
+Quand on choisit un entretien dans l'écran des entretiens :
+    Le dossier ouvert devient l'entretien.
+    Le code ouvert devient le code de l'entretien.
+    Ouvrir l'écran de l'entretien pour l'entretien.
+
+Quand on clique sur « Réglages » dans l'écran des entretiens :
+    Ouvrir l'écran des réglages.
+
+Quand on clique sur « Enregistrer » dans l'écran de l'entretien :
+    Enregistrer l'entretien de l'écran.
+    Le dossier ouvert devient l'entretien de l'écran.
+    Le code ouvert devient le code de l'entretien de l'écran.
+    Signaler « Entretien enregistré. ».
+
+Quand on choisit un tour dans l'écran de l'entretien :
+    Ouvrir l'écran du tour pour le tour.
+
+Remarque : transcrire (17 novembre 2026) : les tours d'avant s'effacent, puis chaque segment de l'enregistrement devient un
+Remarque : tour, chacun dans sa langue (« en toute langue »), avec le vocabulaire des réglages.
+Quand on clique sur « Transcrire » dans l'écran de l'entretien :
+    Enregistrer l'entretien de l'écran.
+    Le e vaut l'entretien de l'écran.
+    Le dossier ouvert devient le e.
+    Le code ouvert devient le code du e.
+    Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien. ».
+    Pour chaque tour conservé dont l'entretien = le e :
+        Supprimer le tour.
+    Le mots vaut « ».
+    Pour chaque réglage conservé :
+        Si le vocabulaire du réglage est présent, le mots devient le vocabulaire du réglage.
+    Amorcer la transcription avec le mots, en toute langue.
+    Le n vaut 0.
+    Pour chaque s parmi les segments de l'enregistrement du e :
+        Le n devient le n + 1.
+        Verser le s et le e et le n.
+    Si le n = 0, refuser « Rien n'a été transcrit : le modèle de transcription manque, ou l'enregistrement est muet. ».
+    Signaler le n puis « tours de parole transcrits. ».
+
+Remarque : traduire : chaque tour qui n'est pas en français et n'a pas encore de traduction ; une traduction corrigée à la
+Remarque : main n'est jamais remplacée.
+Quand on clique sur « Traduire » dans l'écran de l'entretien :
+    Le e vaut l'entretien de l'écran.
+    Le n vaut 0.
+    Pour chaque tour conservé dont l'entretien = le e, par rang :
+        Si la langue du tour ≠ « fr » et la traduction du tour est absente et la base du tour est présente :
+            Traduire la base du tour, qui donne le texte traduit.
+            La traduction du tour devient le texte traduit.
+            Le n devient le n + 1.
+    Signaler le n puis « tours traduits. ».
+
+Remarque : poser un sigle sur une plage de tours (du premier au dernier rang ; sans dernier, jusqu'au bout ; sans premier,
+Remarque : depuis le début) : la façon rapide de dire qui parle.
+Quand on clique sur « Poser le sigle » dans l'écran de l'entretien :
+    Si le sigle à poser de l'écran est absent, refuser « Écris le sigle à poser : INT, PA, MA… ».
+    Le e vaut l'entretien de l'écran.
+    Le de vaut 1.
+    Si le premier rang de l'écran est présent, le de devient le premier rang de l'écran.
+    Le à vaut 1000000.
+    Si le dernier rang de l'écran est présent, le à devient le dernier rang de l'écran.
+    Le n vaut 0.
+    Pour chaque tour conservé dont l'entretien = le e :
+        Si le rang du tour ≥ le de et le rang du tour ≤ le à :
+            Le sigle du tour devient le sigle à poser de l'écran en majuscules.
+            Le n devient le n + 1.
+    Signaler « Sigle posé sur » puis le n puis « tours. ».
+
+Quand on clique sur « Exporter COREL » dans l'écran de l'entretien :
+    Le e vaut l'entretien de l'écran.
+    Déposer ((le document COREL du e) en fichier) et le code du e et « .rtf », qui donne le chemin.
+    Signaler « Transcription COREL écrite dans » puis le chemin.
+
+Quand on clique sur « Exporter NVivo » dans l'écran de l'entretien :
+    Le e vaut l'entretien de l'écran.
+    Déposer ((le texte NVivo du e) en fichier) et (le code du e suivi de " NVivo") et « .txt », qui donne le chemin.
+    Signaler « Transcription pour NVivo écrite dans » puis le chemin.
+
+Quand on clique sur « Traduire ce tour » dans l'écran du tour :
+    Le t vaut le tour de l'écran.
+    Si la base de l'écran est absente, refuser « Ce tour n'a pas de texte à traduire. ».
+    Traduire la base de l'écran, qui donne le texte traduit.
+    La traduction de l'écran devient le texte traduit.
+
+Quand on clique sur « Enregistrer » dans l'écran des réglages :
+    Pour chaque réglage conservé :
+        Le vocabulaire du réglage devient le vocabulaire de l'écran.
+        Si la clé google de l'écran est présente, la clé google du réglage devient la clé google de l'écran.
+    Signaler « Réglages enregistrés. ».
+    Fermer l'écran.
+
+Quand on ouvre l'écran des réglages :
+    Pour chaque réglage conservé :
+        Le vocabulaire de l'écran devient le vocabulaire du réglage.
+
+Remarque : un seul réglage, créé au premier lancement.
+Si le nombre de réglages conservés = 0 :
+    Le r vaut un nouveau réglage.
+    Conserver le r.
+
+Ouvrir l'écran des entretiens.
