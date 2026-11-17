@@ -2125,6 +2125,15 @@ static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin);
 static Noeud *expression_avant(Analyse *a, const char *m1, const char *m2);
 static Noeud *nom_ensemble(Analyse *a);
 static Noeud *mots_de(Analyse *a);
+/* « (n) voix de » à partir de la parenthèse ouvrante k (3.40) : la parenthèse fermante est suivie de « voix ». */
+static int voix_apres_parenthese(const Analyse *a, size_t k) {
+    int prof = 0;
+    for (; a->j[k].type != J_FIN; k++) {
+        if (a->j[k].type == J_PAR_OUV) prof++;
+        else if (a->j[k].type == J_PAR_FERM && --prof == 0) return est_mot(&a->j[k + 1], "voix") && !visible((Analyse *)a, "voix");
+    }
+    return 0;
+}
 static Symbole *table_en(Analyse *a, size_t k, size_t *fin);
 static int liste_de_table_en(Analyse *a, size_t k);
 static Noeud *phrase_dans(Analyse *a, const Jeton *t);
@@ -3779,11 +3788,43 @@ static Noeud *base(Analyse *a) {
             else if (m_les >= 0 && est_mot(voir(a, m_les), "segments") && !ensemble_en(a, a->i + (size_t)m_les, &fe0)
                      && !visible(a, "segments"))   /* « les segments de x » (3.39, § 15.8) : un son, transcrit par segments */
                 { sorte = 3; apres = voir(a, m_les + 1); }
+            else if (m_les >= 0 && est_mot(voir(a, m_les), "voix") && !ensemble_en(a, a->i + (size_t)m_les, &fe0)
+                     && !visible(a, "voix"))   /* « les voix de x » (3.40, § 15.8) : qui parle quand, dans un son */
+                { sorte = 4; apres = voir(a, m_les + 1); }
+            else if (m_les == 1 && !visible(a, "voix")) {
+                /* « les 3 voix de x », « les (n) voix de x » (3.40) : le nombre de personnes, connu */
+                int k = 1;
+                if (voir(a, 1)->type == J_NOMBRE) k = 2;
+                else if (voir(a, 1)->type == J_PAR_OUV) {
+                    int prof = 0;
+                    for (k = 1; voir(a, k)->type != J_FIN; k++) {
+                        if (voir(a, k)->type == J_PAR_OUV) prof++;
+                        else if (voir(a, k)->type == J_PAR_FERM && --prof == 0) { k++; break; }
+                    }
+                    if (prof) k = 1;
+                }
+                if (k > 1 && est_mot(voir(a, k), "voix") && (de_ou_d(voir(a, k + 1)) || est_mot(voir(a, k + 1), "du"))) {
+                    Noeud *n = noeud_creer(N_LIGNES, t->ligne, t->colonne, t->debut);
+                    n->forme = 2;
+                    a->article_force = ART_AUCUN;
+                    avancer(a);   /* « les » */
+                    Noeud *nb = base(a);   /* le nombre, ou l'expression entre parenthèses */
+                    if (!nb) { noeud_liberer(n); return NULL; }
+                    if (!est_mot(cour(a), "voix")) { noeud_liberer(nb); noeud_liberer(n); return erreur(a, cour(a), grym_dupliquer("« voix » attendu : « les 3 voix de l'enregistrement »."));}
+                    avancer(a);   /* « voix » ; « de » reste, comme « les lignes » le laisse à mots_de */
+                    Noeud *x = mots_de(a);
+                    if (!x) { noeud_liberer(nb); noeud_liberer(n); return NULL; }
+                    noeud_ajouter(n, x);
+                    noeud_ajouter(n, nb);
+                    n->fin = x->fin;
+                    return n;
+                }
+            }
             else if (m_le >= 0 && est_mot(voir(a, m_le), "json") && !visible(a, "json")) { sorte = 2; apres = voir(a, m_le + 1); }
             const int des = sorte && est_mot(apres, "des");   /* « le JSON des données » : une table, une liste */
             if (sorte && (de_ou_d(apres) || est_mot(apres, "du") || des)) {
                 Noeud *n = noeud_creer(sorte == 2 ? N_JSON_ECRIT : N_LIGNES, t->ligne, t->colonne, t->debut);
-                n->forme = sorte == 3;   /* N_LIGNES, forme 1 : « les segments de x » (3.39) */
+                n->forme = sorte == 3 ? 1 : sorte == 4 ? 2 : 0;   /* N_LIGNES, forme 1 : « les segments de x » (3.39) ; 2 : « les voix de x » (3.40) */
                 const int saut = sorte == 2 ? m_le + 1 : m_les + 1;
                 a->article_force = ART_AUCUN;
                 for (int q = 0; q < saut; q++) avancer(a);
@@ -7128,7 +7169,11 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
                 || (est_mot(&a->j[k2 + 2], "lignes") && !visible(a, "lignes")   /* « parmi les lignes de t » (§ 15.9) */
                     && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du") || est_mot(&a->j[k2 + 3], "des")))
                 || (est_mot(&a->j[k2 + 2], "segments") && !visible(a, "segments")   /* « parmi les segments de x » (3.39) */
-                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du"))))
+                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du")))
+                || (est_mot(&a->j[k2 + 2], "voix") && !visible(a, "voix")   /* « parmi les voix de x » (3.40) */
+                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du")))
+                || (a->j[k2 + 2].type == J_NOMBRE && est_mot(&a->j[k2 + 3], "voix") && !visible(a, "voix"))   /* « parmi les 3 voix » */
+                || (a->j[k2 + 2].type == J_PAR_OUV && voix_apres_parenthese(a, k2 + 2)))   /* « parmi les (n) voix » */
             && article_de(&a->j[d]) == ART_AUCUN) {
             /* « Pour chaque d parmi les décodages WSJT [du port p] : » (2.88) : lus une fois au début */
             char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);

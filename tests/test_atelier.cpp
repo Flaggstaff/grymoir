@@ -17,6 +17,7 @@
 #include <thread>
 #include <QThread>
 #include "transcription.h"
+#include "voix.h"
 #include <QFontMetrics>
 #include "relecture.h"
 #include "son.h"
@@ -638,6 +639,31 @@ int main(int argc, char **argv) {
             QString e3;
             VERIFIER(transcrire_segments_son(wav(16000, 1, 16, 1.0), QString(), &e3).isEmpty() && e3.contains("introuvable"));
             liberer_transcription();
+        }
+        // les voix (3.40) : sans modèles, l'échec le dit ; avec ceux que CMake a téléchargés, un son muet donne un tableau
+        // JSON (vide) ; DROGMAN_VOIX_ESSAI : un vrai son, dont les voix s'écrivent (essai à la main)
+        {
+            const QByteArray garde = qgetenv("GRYMOIR_VOIX");
+            qputenv("GRYMOIR_VOIX", "/nulle/part");
+            QString e;
+            VERIFIER(separer_voix_son(wav(16000, 1, 16, 1.0), 0, &e).isEmpty() && e.contains("introuvables"));
+            if (garde.isEmpty()) qunsetenv("GRYMOIR_VOIX"); else qputenv("GRYMOIR_VOIX", garde);
+            if (!dossier_des_voix().isEmpty()) {
+                QString e2;
+                const QString js = separer_voix_son(wav(16000, 1, 16, 3.0), 2, &e2);
+                VERIFIER(e2.isEmpty() && QJsonDocument::fromJson(js.toUtf8()).isArray());
+                if (!e2.isEmpty()) fprintf(stderr, "voix : %s\n", qPrintable(e2));
+                const QByteArray essai = qgetenv("DROGMAN_VOIX_ESSAI");
+                if (!essai.isEmpty()) {
+                    QFile f(QString::fromUtf8(essai));
+                    if (f.open(QIODevice::ReadOnly)) {
+                        const QByteArray o = f.readAll();
+                        QString e3;
+                        fprintf(stderr, "voix (auto) : %s %s\n", qPrintable(separer_voix_son(o, 0, &e3)), qPrintable(e3));
+                        fprintf(stderr, "voix (2) : %s %s\n", qPrintable(separer_voix_son(o, 2, &e3)), qPrintable(e3));
+                    }
+                }
+            } else fprintf(stderr, "voix : modèles absents, essai réduit\n");
         }
         // la relecture : des marques invisibles, des nombres et des doutes surlignés, un doute qui part à la correction
         {

@@ -74,6 +74,7 @@ static char *reponses(void *contexte, Chaine *sortie, const char *question) {
 
 static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
 static char *faux_segments(void *contexte, const unsigned char *octets, size_t taille, char **erreur);   /* 3.39 */
+static char *fausses_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur);   /* 3.40 */
 
 static void verifier_saisie(int l, const char *src, const char *const *lignes, size_t n, const char *attendu) {
     total++;
@@ -102,6 +103,7 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
     Machine *m = machine_creer();
     machine_transcripteur(m, faux_transcrire);   /* § 15.8 : un faux transcripteur, sans Whisper */
     machine_transcripteur_segments(m, faux_segments);   /* 3.39 */
+    machine_separateur_voix(m, fausses_voix);           /* 3.40 */
     char *r = executer_source(p, m, src, interactif);
     int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
     if (!ok) signaler(l, src, attendu, r);
@@ -220,6 +222,15 @@ static char *faux_segments(void *contexte, const unsigned char *octets, size_t t
                           "\"mots\":[{\"mot\":\"Bonjour.\",\"début\":3.75,\"fin\":5,\"douteux\":false}]}]");
 }
 
+/* Un faux séparateur de voix (3.40) : trois passages, deux voix ; le nombre demandé se lit dans le dernier ; 17 octets,
+ * un échec. */
+static char *fausses_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur) {
+    (void)contexte; (void)octets;
+    if (taille == 17) { *erreur = grym_dupliquer("les modèles des voix sont introuvables."); return NULL; }
+    return grym_formater("[{\"début\":0.5,\"fin\":3.25,\"voix\":1},{\"début\":3.5,\"fin\":8,\"voix\":2},"
+                         "{\"début\":8.25,\"fin\":9,\"voix\":%ld}]", nombre ? nombre : 1);
+}
+
 static int page_disponible(void *contexte) { (void)contexte; return 1; }
 
 static Issue page_formulaire(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret,
@@ -264,7 +275,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1361,7 +1372,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -3526,6 +3537,21 @@ int main(void) {
                  "Les rien valent les segments du mémo de w.\nAfficher le nombre de rien.",
                  "2 Bonjour.\n1,25\n0");
             PROG("Afficher les segments de « bonjour ».", "~« les segments de » se lisent dans un son, pas dans un texte.");
+            /* les voix (3.40) : qui parle quand ; le nombre de personnes, connu ou non ; un échec qui se dit et se rattrape */
+            PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\n"
+                 "Pour chaque p parmi les voix du mémo de v :\n"
+                 "    Afficher le champ « voix » de p puis le champ « début » de p puis le champ « fin » de p.\n"
+                 "Les tours valent les 3 voix du mémo de v.\nAfficher le champ « voix » du dernier élément des tours.\n"
+                 "Le n vaut 2.\nPour chaque p parmi les (n) voix du mémo de v :\n    Afficher le champ « voix » de p.",
+                 "1 0.5 3.25\n2 3.5 8\n1 8.25 9\n3\n1\n2\n2");
+            PROG("Une visite, conservée, a : un mémo (son).\nLe w vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son17.wav ».\n"
+                 "Essayer :\n    Les v valent les voix du mémo de w.\nEn cas d'échec :\n    Afficher le motif de l'échec.",
+                 "Les voix ne se séparent pas : les modèles des voix sont introuvables.");
+            PROG("Une visite, conservée, a : un mémo (son).\nLe w vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\nLes v valent les 0 voix du mémo de w.",
+                 "~Le nombre de voix est un nombre entier de 1 à 20.");
             remove("_essai_son17.wav");
             remove("_essai_son18.wav");
         }

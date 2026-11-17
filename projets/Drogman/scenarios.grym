@@ -19,9 +19,10 @@ Pour poser un code :
 Remarque : trois segments : une question en français, la réponse du père en turc (avec une pause d'une seconde entre deux
 Remarque : mots), la traduction de l'interprète.
 Pour transcrire un entretien :
-    Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":2.1,"douteux":false},{"mot":"comment","début":2.2,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien et 1.
-    Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien et 2.
-    Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien et 3.
+    Préparer l'écoute.
+    Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":2.1,"douteux":false},{"mot":"comment","début":2.2,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien.
+    Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien.
+    Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien.
 
 Scénario « un segment devient un tour, avec sa langue, ses heures et sa version COREL » :
     Poser « EensA1_20130306_Ens_01 », qui donne le e.
@@ -163,3 +164,53 @@ Scénario « Transcrire sans enregistrement : un refus » :
     On ferme l'écran des entretiens.
     Ouvrir l'écran des entretiens.
     Vérifier que le nombre de tours conservés = 0.
+
+Remarque : les voix (Drogman 0.2) : trois voix ; la réponse turque change de voix au milieu (« İyiyim, » puis l'interprète qui
+Remarque : enchaîne « teşekkür ederim. ») : le segment se coupe en deux tours.
+Pour transcrire à trois voix un entretien :
+    Préparer l'écoute.
+    Entendre « {"début":1.4,"fin":3.3,"voix":1} ».
+    Entendre « {"début":3.9,"fin":5.5,"voix":2} ».
+    Entendre « {"début":5.6,"fin":8,"voix":3} ».
+    Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":2.1,"douteux":false},{"mot":"comment","début":2.2,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien.
+    Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien.
+    Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien.
+
+Scénario « les voix coupent un segment en deux tours, et la correspondance pose les sigles » :
+    Poser « EensA1_20130306_Ens_09 », qui donne le e.
+    Transcrire à trois voix le e.
+    Vérifier que le nombre de tours conservés = 4.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que la voix du tour = 2.
+        Vérifier que la base du tour = « İyiyim, ».
+        Vérifier que le début du tour = 4.
+        Vérifier que la fin du tour = 4,8.
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la voix du tour = 3.
+        Vérifier que la version corel du tour = « teşekkür ederim. ».
+        Vérifier que le début du tour = 5,9.
+    Remarque : un segment hors de toute voix garde la dernière entendue.
+    Pour chaque tour conservé dont le rang = 4 :
+        Vérifier que la voix du tour = 3.
+    La correspondance du e devient « 1 INT, 2=pa ; 3:inpret ».
+    Nommer le e, qui donne le n.
+    Vérifier que le n = 4.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que le sigle du tour = « INT ».
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le sigle du tour = « PA ».
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que le sigle du tour = « INPRET ».
+
+Scénario « le bouton Nommer les voix, depuis l'écran » :
+    Poser « EensA1_20130306_Ens_10 », qui donne le e.
+    Transcrire à trois voix le e.
+    On choisit le e dans l'écran des entretiens.
+    On écrit « 1 INT, 2 MA, 3 INPRET » dans la correspondance de l'écran de l'entretien.
+    On clique sur « Nommer les voix » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que la correspondance du e = « 1 INT, 2 MA, 3 INPRET ».
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le sigle du tour = « MA ».

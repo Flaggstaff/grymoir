@@ -187,6 +187,11 @@ int main(void) {
          "Pour chaque s parmi les segments de x, afficher le champ « texte » de s.\n");
     COMP("Le x vaut le fichier « a.wav ».\nLes l valent les segments du x.\n",
          "_le x << _fichier « a.wav »\n_les l << _segments x\n");
+    /* les voix d'un son (3.40) */
+    FIXE("Le x vaut le fichier « a.wav ».\nLe n vaut 2.\nLes a valent les voix du x.\nLes b valent les 3 voix du x.\n"
+         "Les c valent les (n + 1) voix du x.\nPour chaque p parmi les voix de x, afficher le champ « voix » de p.\n");
+    COMP("Le x vaut le fichier « a.wav ».\nLes a valent les voix du x.\nLes b valent les 3 voix du x.\n",
+         "_le x << _fichier « a.wav »\n_les a << _voix x\n_les b << _n_voix(3) x\n");
     FIXE("Les arguments valent la liste « -n » et « a ».\nAfficher la sortie de la commande « echo » avec les arguments.\n"
          "Le x vaut la sortie de la commande « date ».\nLe p vaut « ls ».\nLe y vaut la sortie de la commande p.\n");
     COMP("Le x vaut la sortie de la commande « date ».\n", "_le x << _commande(« date »)\n");

@@ -993,7 +993,15 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     case N_LIGNES: case N_JSON_ECRIT:   /* « les lignes de x », « le JSON de x » ; « _lignes x », « _json(x) » (§ 15.9) */
         if (im->compact) {
-            if (n->type == N_LIGNES) { aj(im, n->forme == 1 ? "_segments " : "_lignes "); expression(im, n->enfants[0]); }
+            if (n->type == N_LIGNES && n->forme == 2 && n->nb_enfants > 1) {   /* _n_voix(3) x (3.40) */
+                const Noeud *k = n->enfants[1];
+                if (k->type == N_GROUPE && k->nb_enfants == 1) k = k->enfants[0];
+                aj(im, "_n_voix(");
+                expression(im, k);
+                aj(im, ") ");
+                expression(im, n->enfants[0]);
+            }
+            else if (n->type == N_LIGNES) { aj(im, n->forme == 1 ? "_segments " : n->forme == 2 ? "_voix " : "_lignes "); expression(im, n->enfants[0]); }
             else {   /* ses parenthèses suffisent : un groupe n'en ajoute pas d'autres */
                 const Noeud *x = n->enfants[0];
                 if (x->type == N_GROUPE && x->nb_enfants == 1) x = x->enfants[0];
@@ -1003,7 +1011,19 @@ static void expression(Impression *im, const Noeud *n) {
             }
             return;
         }
-        aj(im, n->type == N_JSON_ECRIT ? "le JSON " : n->forme == 1 ? "les segments " : "les lignes ");   /* segments : 3.39 */
+        if (n->type == N_LIGNES && n->forme == 2 && n->nb_enfants > 1) {   /* « les 3 voix de x », « les (n) voix de x » (3.40) */
+            aj(im, "les ");
+            const Noeud *k = n->enfants[1];
+            if (k->type == N_NOMBRE) expression(im, k);
+            else {
+                if (k->type == N_GROUPE && k->nb_enfants == 1) k = k->enfants[0];
+                aj(im, "(");
+                expression(im, k);
+                aj(im, ")");
+            }
+            aj(im, " voix ");
+        } else
+        aj(im, n->type == N_JSON_ECRIT ? "le JSON " : n->forme == 1 ? "les segments " : n->forme == 2 ? "les voix " : "les lignes ");   /* segments : 3.39 ; voix : 3.40 */
         if (argument_simple(n->enfants[0]) && n->enfants[0]->type != N_APPEL) preposition(im, "de", n->enfants[0]);
         else { aj(im, "de ("); expression(im, n->enfants[0]); aj(im, ")"); }
         return;

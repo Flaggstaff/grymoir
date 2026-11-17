@@ -47,6 +47,11 @@ if [ -z "${GRYM_SANS_MODELE:-}" ]; then
     mkdir -p "$appdir/usr/share/grymoir/modeles"
     cp "$(outils/modele-transcription)" "$appdir/usr/share/grymoir/modeles/"
 fi
+# la séparation des voix (grammaire 3.40) : sherpa-onnx et ses modèles, téléchargés par CMake dans construction/voix
+if [ -d construction/voix ]; then
+    mkdir -p "$appdir/usr/share/grymoir/voix"
+    cp construction/voix/* "$appdir/usr/share/grymoir/voix/"
+fi
 mkdir -p "$appdir/usr/share/doc/grymoir"
 cp LICENCE LICENCE-fr.md docs/notes-de-version.md "$appdir/usr/share/doc/grymoir/" 2>/dev/null || true
 printf '[Desktop Entry]\nType=Application\nName=GrymoiR\nComment=Le langage de programmation en français\nExec=grym-atelier\nIcon=grymoir\nCategories=Development;\n' \

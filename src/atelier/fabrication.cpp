@@ -2,6 +2,7 @@
 #include "fabrication.h"
 #include "projet.h"
 #include "transcription.h"
+#include "voix.h"
 #include <QDataStream>
 
 #include <QBuffer>
@@ -194,6 +195,10 @@ QString fabriquer_application(const QString &projet, const QString &principal, c
         QDir().mkpath(modeles);
         if (!QFile::copy(source, dest)) { *erreur = "Le modèle de transcription ne se copie pas dans l'application."; return QString(); }
     }
+    // la séparation des voix (3.40) : sherpa-onnx et ses modèles, s'ils sont là ; sans eux, « les voix de x » le dit
+    if (const QString voix = dossier_des_voix(); !voix.isEmpty() && !QFileInfo::exists(app + "/Contents/Resources/voix")
+        && !copier(voix, app + "/Contents/Resources/voix", erreur))
+        return QString();
     if (!preparer_programme(projet, principal, nom, app + "/Contents/Resources/Programme", erreur)) return QString();
     // L'icône du paquet : celle de l'application, à la place de celle de l'atelier (même nom de fichier,
     // CFBundleIconFile ne change pas).
@@ -254,6 +259,10 @@ QString fabriquer_application(const QString &projet, const QString &principal, c
         *erreur = "Le modèle de transcription ne se copie pas dans l'application.";
         return QString();
     }
+    // la séparation des voix (3.40) : sherpa-onnx et ses modèles, s'ils sont là
+    if (const QString voix = dossier_des_voix();
+        !voix.isEmpty() && !copier(voix, avec_qt ? dossier + "/usr/share/grymoir/voix" : dossier + "/voix", erreur))
+        return QString();
     if (!preparer_programme(projet, principal, nom, avec_qt ? dossier + "/usr/Programme" : dossier + "/Programme", erreur))
         return QString();
     QFile lanceur(dossier + "/" + nom);   // on double-clique ce script, qui démarre l'application

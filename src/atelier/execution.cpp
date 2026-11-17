@@ -7,6 +7,7 @@
 #include "ecoute.h"
 #include "rapport.h"
 #include "transcription.h"
+#include "voix.h"
 #include "theme.h"
 #include "vue_ecran.h"
 #include <QUrl>
@@ -452,6 +453,19 @@ static char *iface_transcrire_segments(void *contexte, const unsigned char *octe
     return grym_dupliquer(json.toUtf8().constData());
 }
 
+// « les voix de x » (3.40) : qui parle quand, dans le fil de la machine ; un tableau JSON.
+static char *iface_separer_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur) {
+    (void)contexte;
+    QString probleme;
+    const QString json = separer_voix_son(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille), (int)nombre,
+                                          &probleme);
+    if (!probleme.isEmpty()) {
+        *erreur = grym_dupliquer(probleme.toUtf8().constData());
+        return nullptr;
+    }
+    return grym_dupliquer(json.toUtf8().constData());
+}
+
 // « La base est chiffrée. » (2.37) : le mot de passe, demandé dans une fenêtre du fil de l'interface, qui attend ; la
 // première fois, choisi puis confirmé, au moins huit caractères. Rien n'est gardé ici : la machine le garde en mémoire.
 // Le 6 novembre 2026 : sous macOS, une saisie rapide pouvait refermer la fenêtre sans mot de passe, et l'application
@@ -745,7 +759,8 @@ void Travail::run() {
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
                    1,    // les écoutes captent le son (2.69)
                    iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel, iface_ecran_minuterie, iface_commande,
-                   iface_transcrire_segments};   // « les segments de x » (3.39)
+                   iface_transcrire_segments,   // « les segments de x » (3.39)
+                   iface_separer_voix};         // « les voix de x » (3.40)
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)

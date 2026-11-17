@@ -222,7 +222,8 @@ typedef enum {
     N_NATIF,         /* « la fonction C « signal_niveau » » (3.14, § 21.10), tout le corps d'un calcul de bibliothèque : texte : la
                         fonction ; texte2 : la bibliothèque ; enfants : les paramètres du calcul (N_NOM, leur case locale) */
     N_LIGNES,        /* « les lignes de x » (§ 15.9) : enfants[0] : un texte ou un fichier ; une liste ; forme 1 : « les segments
-                        de x » (3.39, § 15.8), x un son, la liste de ses segments transcrits, en textes JSON */
+                        de x » (3.39, § 15.8), x un son, la liste de ses segments transcrits, en textes JSON ; forme 2 : « les voix de x »,
+                        « les 3 voix de x » (3.40), enfants[1] : le nombre de voix, s'il est donné */
     N_JSON_ECRIT,    /* « le JSON de x » (§ 15.9) : enfants[0] : la valeur ; un texte */
     N_TRI,           /* « les notes triées [par ordre décroissant] », « les inscrits triés par nom [décroissant] » (§ 13.12) :
                         enfants[0] : la liste ; texte : le champ, ou NULL ; forme : 1 décroissant, 2 « triées », 4 « par

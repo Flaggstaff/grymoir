@@ -278,6 +278,11 @@ typedef struct {
      * "début", "fin", "douteux"}]}, ou NULL avec *erreur. NULL : l'interface ne sait pas transcrire (console, navigateur) ;
      * la liste est alors vide. */
     char *(*transcrire_segments)(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
+    /* « les voix de x » (3.40, § 15.8) : qui parle quand ; nombre : les personnes, ou 0 si inconnu. Un tableau JSON (malloc)
+     * d'objets {"début", "fin" (secondes), "voix" (1, 2… dans l'ordre où chacune parle la première fois)}, ou NULL avec
+     * *erreur (la séparation est un échec rattrapable). NULL : l'interface ne sépare pas les voix (console, navigateur) ;
+     * la liste est alors vide. */
+    char *(*separer_voix)(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

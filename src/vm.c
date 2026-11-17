@@ -507,6 +507,10 @@ void machine_transcripteur_segments(Machine *m, char *(*segments)(void *, const 
     m->iface.transcrire_segments = segments;   /* « les segments de x » (3.39) : sur l'interface en place */
 }
 
+void machine_separateur_voix(Machine *m, char *(*voix)(void *, const unsigned char *, size_t, long, char **)) {
+    m->iface.separer_voix = voix;   /* « les voix de x » (3.40) : sur l'interface en place */
+}
+
 void machine_dossier_ecriture(Machine *m, const char *dossier) {
     free(m->dossier_ecriture);
     m->dossier_ecriture = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
@@ -8092,19 +8096,31 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             m->minuterie = (long)op;
             break;
         case I_LIGNES: {   /* « les lignes de x » : d'un texte, ou d'un fichier en UTF-8 (§ 15.9) */
-            if (op == 1) {   /* « les segments de x » (3.39, § 15.8) : un son, transcrit par segments ; des textes JSON */
-                Valeur x = depiler(&pile);
+            if (op >= 1 && op <= 3) {   /* « les segments de x » (3.39), « les voix de x » (3.40) : un son ; des textes JSON */
+                long nombre = 0;
                 char *mp = NULL;
-                if (x.type == V_ABSENT) mp = message_absent(&x);
+                if (op == 3) {   /* « les 3 voix de x » : le nombre de personnes */
+                    Valeur k = depiler(&pile);
+                    if (k.type != V_NOMBRE || !dec_en_long_borne(&k.nombre, 1, 20, &nombre))
+                        mp = grym_echec(ABSENCE(k.type), "Le nombre de voix est un nombre entier de 1 à 20.");
+                    valeur_liberer(&k);
+                }
+                Valeur x = depiler(&pile);
+                const char *quoi = op == 1 ? "segments" : "voix";
+                if (mp) ;
+                else if (x.type == V_ABSENT) mp = message_absent(&x);
                 else if (x.type != V_FICHIER)
-                    mp = grym_echec(NULL, "« les segments de » se lisent dans un son, pas dans %s.", nom_type(x.type));
+                    mp = grym_echec(NULL, "« les %s de » se lisent dans un son, pas dans %s.", quoi, nom_type(x.type));
                 Valeur r = liste_vide();
-                if (!mp && m->iface.transcrire_segments) {
+                if (!mp && (op == 1 ? m->iface.transcrire_segments != NULL : m->iface.separer_voix != NULL)) {
                     if (!x.fichier->octets) { char *e = NULL; base_fichier_lire(x.fichier, &e); free(e); }
                     char *err = NULL;
-                    char *js = x.fichier->octets
-                        ? m->iface.transcrire_segments(m->iface.contexte, x.fichier->octets, x.fichier->taille, &err) : NULL;
-                    free(err);   /* comme « la transcription de x » : un son que l'interface ne transcrit pas, rien */
+                    char *js = !x.fichier->octets ? NULL
+                             : op == 1 ? m->iface.transcrire_segments(m->iface.contexte, x.fichier->octets, x.fichier->taille, &err)
+                             : m->iface.separer_voix(m->iface.contexte, x.fichier->octets, x.fichier->taille, nombre, &err);
+                    if (op != 1 && !js && err)   /* les voix : l'échec se dit, et se rattrape (3.40) */
+                        mp = grym_echec(NULL, "Les voix ne se séparent pas : %s", err);
+                    free(err);   /* les segments, comme « la transcription de x » : un son que l'interface ne transcrit pas, rien */
                     err = NULL;
                     Json *j = js ? json_lire(js, strlen(js), &err) : NULL;
                     free(err);

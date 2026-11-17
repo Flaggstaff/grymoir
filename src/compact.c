@@ -533,10 +533,22 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k = fin;
             continue;
         }
-        if (est_cle(t, "lignes") || est_cle(t, "segments")) {   /* _lignes x → les lignes de x (§ 15.9) ; _segments x → les
-                                                                   segments de x (3.39) ; après « _parmi », « parmi les » est écrit */
+        if (est_cle(t, "n_voix") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {   /* _n_voix(n) x → les (n) voix de x (3.40) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
             if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);
-            mot(r, est_cle(t, "lignes") ? "lignes" : "segments", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 1], 1);
+            expression(r, k + 2, fin);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
+            mot(r, "voix", t);
+            mot(r, "de", t);
+            k = fin;
+            continue;
+        }
+        if (est_cle(t, "lignes") || est_cle(t, "segments") || est_cle(t, "voix")) {   /* _lignes x → les lignes de x (§ 15.9) ;
+                                       _segments x (3.39), _voix x (3.40) ; après « _parmi », « parmi les » est écrit */
+            if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);
+            mot(r, est_cle(t, "lignes") ? "lignes" : est_cle(t, "segments") ? "segments" : "voix", t);
             mot(r, "de", t);
             continue;
         }

@@ -499,7 +499,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_MATH: besoin = (long)(op >> 3); effet = 1 - besoin; break;
             case I_TRIER: besoin = op & 6 ? 2 : 1; effet = 1 - besoin; break;
             case I_PERMIS: besoin = 1; effet = 0; break;
-            case I_LIGNES: case I_JSON: besoin = 1; effet = 0; break;
+            case I_LIGNES: case I_JSON: besoin = op == 3 ? 2 : 1; effet = op == 3 ? -1 : 0; break;   /* 3 : le nombre de voix (3.40) */
             case I_MINUTERIE: besoin = 0; effet = 0; break;
             case I_COMMANDE: besoin = op ? 2 : 1; effet = 1 - besoin; break;
             case I_VERIFIER: besoin = 1; effet = -1; break;

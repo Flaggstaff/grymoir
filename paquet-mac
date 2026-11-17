@@ -41,6 +41,11 @@ printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprog
 # application fabriquée le garde
 mkdir -p "$app/Contents/Resources/modeles"
 cp "$(outils/modele-transcription)" "$app/Contents/Resources/modeles/"
+# la séparation des voix (grammaire 3.40) : sherpa-onnx et ses modèles, téléchargés par CMake dans construction/voix
+if [ -d construction/voix ]; then
+    mkdir -p "$app/Contents/Resources/voix"
+    cp construction/voix/* "$app/Contents/Resources/voix/"
+fi
 
 echo "3. Bibliothèques Qt embarquées (macdeployqt)…"
 "$qt/bin/macdeployqt" "$app" -always-overwrite

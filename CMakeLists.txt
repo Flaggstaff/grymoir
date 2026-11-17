@@ -29,6 +29,55 @@ FetchContent_Declare(whisper
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)   # les fichiers extraits datés de l'extraction (politique CMP0135)
 FetchContent_MakeAvailable(whisper)
 
+# La séparation des voix (grammaire 3.40, « les voix de x ») : sherpa-onnx v2.0.1 (k2-fsa, Apache 2.0), sa bibliothèque
+# prête à l'emploi (avec onnxruntime) et deux modèles, téléchargés ici dans construction/voix, épinglés à leur empreinte.
+# L'atelier les charge à l'exécution (src/atelier/voix.cpp) : sans eux, il se construit et tourne, et « les voix de x »
+# échoue en le disant. macOS (universel) et Linux x86-64 ; Windows : pas encore (la publication de sherpa-onnx n'a pas
+# d'archive « win-x64-shared » sous ce nom, relevé le 17 novembre 2026). GRYMOIR_VOIX=OFF : rien n'est téléchargé.
+option(GRYMOIR_VOIX "Télécharger sherpa-onnx et les modèles des voix" ON)
+set(GRYM_VOIX_DOSSIER "${CMAKE_BINARY_DIR}/voix")
+if(GRYMOIR_VOIX AND (APPLE OR (UNIX AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")))
+    set(GRYM_SHERPA_DEPOT "https://github.com/k2-fsa/sherpa-onnx/releases/download")
+    if(APPLE)
+        set(GRYM_SHERPA_NOM "sherpa-onnx-v2.0.1-osx-universal2-shared")
+        set(GRYM_SHERPA_EMPREINTE "bf6718f708e15390f1da133dd888661a68df270791b178aaf765d4e3f0baa9fe")
+    else()
+        set(GRYM_SHERPA_NOM "sherpa-onnx-v2.0.1-linux-x64-shared")
+        set(GRYM_SHERPA_EMPREINTE "2e823376987c3b6960d50726b6560155e2ad92da0b8b3886325773225ec6bdec")
+    endif()
+    set(GRYM_VOIX_TELECHARGES "${CMAKE_BINARY_DIR}/voix-telecharges")
+    if(NOT EXISTS "${GRYM_VOIX_DOSSIER}/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx")
+        message(STATUS "Séparation des voix : téléchargement de sherpa-onnx et des modèles (environ 80 Mo)…")
+        file(MAKE_DIRECTORY "${GRYM_VOIX_DOSSIER}" "${GRYM_VOIX_TELECHARGES}")
+        set(GRYM_VOIX_OK TRUE)
+        file(DOWNLOAD "${GRYM_SHERPA_DEPOT}/v2.0.1/${GRYM_SHERPA_NOM}.tar.bz2" "${GRYM_VOIX_TELECHARGES}/sherpa.tar.bz2"
+             EXPECTED_HASH SHA256=${GRYM_SHERPA_EMPREINTE} STATUS s1)
+        file(DOWNLOAD "${GRYM_SHERPA_DEPOT}/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2"
+             "${GRYM_VOIX_TELECHARGES}/segmentation.tar.bz2"
+             EXPECTED_HASH SHA256=24615ee884c897d9d2ba09bb4d30da6bb1b15e685065962db5b02e76e4996488 STATUS s2)
+        file(DOWNLOAD "${GRYM_SHERPA_DEPOT}/speaker-recongition-models/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx"
+             "${GRYM_VOIX_TELECHARGES}/empreinte.onnx"
+             EXPECTED_HASH SHA256=357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b STATUS s3)
+        foreach(s IN ITEMS s1 s2 s3)
+            list(GET ${s} 0 code)
+            if(NOT code EQUAL 0)
+                set(GRYM_VOIX_OK FALSE)
+                message(WARNING "Séparation des voix : un téléchargement a échoué (${${s}}) ; l'atelier se construit sans elle.")
+            endif()
+        endforeach()
+        if(GRYM_VOIX_OK)
+            execute_process(COMMAND ${CMAKE_COMMAND} -E tar xjf sherpa.tar.bz2 WORKING_DIRECTORY "${GRYM_VOIX_TELECHARGES}")
+            execute_process(COMMAND ${CMAKE_COMMAND} -E tar xjf segmentation.tar.bz2 WORKING_DIRECTORY "${GRYM_VOIX_TELECHARGES}")
+            file(GLOB GRYM_SHERPA_LIBS "${GRYM_VOIX_TELECHARGES}/${GRYM_SHERPA_NOM}/lib/*sherpa-onnx-c-api*"
+                                       "${GRYM_VOIX_TELECHARGES}/${GRYM_SHERPA_NOM}/lib/*onnxruntime*")
+            file(COPY ${GRYM_SHERPA_LIBS} DESTINATION "${GRYM_VOIX_DOSSIER}")
+            configure_file("${GRYM_VOIX_TELECHARGES}/sherpa-onnx-pyannote-segmentation-3-0/model.onnx" "${GRYM_VOIX_DOSSIER}/pyannote-segmentation-3-0.onnx" COPYONLY)
+            configure_file("${GRYM_VOIX_TELECHARGES}/sherpa-onnx-pyannote-segmentation-3-0/LICENSE" "${GRYM_VOIX_DOSSIER}/LICENCE-pyannote-segmentation.txt" COPYONLY)
+            configure_file("${GRYM_VOIX_TELECHARGES}/empreinte.onnx" "${GRYM_VOIX_DOSSIER}/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx" COPYONLY)
+        endif()
+    endif()
+endif()
+
 # SQLite embarqué, avec les réglages du Makefile (vendor/sqlite, voir PROVENANCE.md).
 add_library(grym_sqlite STATIC vendor/sqlite/sqlite3.c)
 target_include_directories(grym_sqlite SYSTEM PUBLIC vendor/sqlite)
@@ -55,8 +104,9 @@ endif()
 
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp src/atelier/ecoute.cpp src/atelier/recherche.cpp src/atelier/agenda.cpp src/atelier/courriel.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/voix.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp src/atelier/ecoute.cpp src/atelier/recherche.cpp src/atelier/agenda.cpp src/atelier/courriel.cpp)
 target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
+target_compile_definitions(grym-atelier PRIVATE GRYMOIR_VOIX_CONSTRUCTION="${GRYM_VOIX_DOSSIER}")   # 3.40
 # Windows : l'icône de l'exécutable et le manifeste qui fait lire les chemins en UTF-8 (outils/windows).
 if(WIN32)
     enable_language(RC)
@@ -127,7 +177,7 @@ endif()
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp src/atelier/ecoute.cpp src/atelier/recherche.cpp src/atelier/agenda.cpp src/atelier/courriel.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/voix.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp src/atelier/ecoute.cpp src/atelier/recherche.cpp src/atelier/agenda.cpp src/atelier/courriel.cpp)
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
 target_sources(test_atelier PRIVATE ${GRYM_MICRO})
@@ -138,6 +188,7 @@ if(APPLE)
     target_link_libraries(test_atelier PRIVATE "-framework AVFoundation")
 endif()
 target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
+target_compile_definitions(test_atelier PRIVATE GRYMOIR_VOIX_CONSTRUCTION="${GRYM_VOIX_DOSSIER}")   # 3.40
 # le modèle d'essai miniature de whisper.cpp : il se charge et tourne comme un vrai, sans rien transcrire d'utile
 target_compile_definitions(test_atelier PRIVATE MODELE_ESSAI="${whisper_SOURCE_DIR}/models/for-tests-ggml-tiny.bin")
 grym_ressources_theme(test_atelier)
