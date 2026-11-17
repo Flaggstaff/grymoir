@@ -182,6 +182,11 @@ int main(void) {
          "Les l valent les lignes du x.\nPour chaque ligne parmi les lignes de x, afficher ligne.\n");
     COMP("Les t valent la table où « a » vaut 1.\nAfficher le JSON des t.\nLes l valent les lignes de « a ».\n",
          "_les t << _table « a » _vaut 1\n_afficher _json(t)\n_les l << _lignes « a »\n");
+    /* les segments d'un son (3.39) */
+    FIXE("Le x vaut le fichier « a.wav ».\nLes l valent les segments du x.\n"
+         "Pour chaque s parmi les segments de x, afficher le champ « texte » de s.\n");
+    COMP("Le x vaut le fichier « a.wav ».\nLes l valent les segments du x.\n",
+         "_le x << _fichier « a.wav »\n_les l << _segments x\n");
     FIXE("Les arguments valent la liste « -n » et « a ».\nAfficher la sortie de la commande « echo » avec les arguments.\n"
          "Le x vaut la sortie de la commande « date ».\nLe p vaut « ls ».\nLe y vaut la sortie de la commande p.\n");
     COMP("Le x vaut la sortie de la commande « date ».\n", "_le x << _commande(« date »)\n");

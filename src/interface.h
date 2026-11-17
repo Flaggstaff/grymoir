@@ -273,6 +273,11 @@ typedef struct {
      * NULL : l'interface ne lance rien (le navigateur). */
     int (*commande)(void *contexte, const char *programme, const char *const *arguments, size_t nb, char **sortie,
                     size_t *taille, char **erreurs, int *code, char **erreur);
+    /* « les segments de x » (3.39, § 15.8) : un son transcrit par segments, chacun dans sa langue ; un tableau JSON
+     * (malloc) d'objets {"début", "fin" (secondes depuis le début du son), "langue" (ISO 639-1), "texte", "mots" : [{"mot",
+     * "début", "fin", "douteux"}]}, ou NULL avec *erreur. NULL : l'interface ne sait pas transcrire (console, navigateur) ;
+     * la liste est alors vide. */
+    char *(*transcrire_segments)(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

@@ -62,6 +62,7 @@ extern "C" {
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QJsonDocument>
 #include <QScrollBar>
 #include <QScrollArea>
 #include <QCalendarWidget>
@@ -601,6 +602,43 @@ int main(int argc, char **argv) {
         VERIFIER(!modele_charge());
         QString sans;
         VERIFIER(transcrire_son(wav(16000, 1, 16, 1.0), QString(), &sans).isEmpty() && sans.contains("introuvable"));
+        // les segments (3.39) : le son coupé aux pauses (0,4 s), le silence écarté, un morceau trop court recollé, un
+        // morceau trop long coupé ; puis la passe complète avec le modèle d'essai, qui rend un tableau JSON
+        {
+            unsigned graine = 12345;
+            auto bruit = [&] { graine = graine * 1103515245u + 12345u; return ((float)((graine >> 16) & 0x7fff) / 32768.0f - 0.5f) * 0.002f; };
+            auto ajouter = [&](std::vector<float> *p, double s, bool voix) {
+                const size_t n = (size_t)(s * 16000);
+                for (size_t i = 0; i < n; i++)
+                    p->push_back(voix ? 0.3f * (float)std::sin(2 * M_PI * 220 * (double)(p->size()) / 16000) + bruit() : bruit());
+            };
+            std::vector<float> p;
+            ajouter(&p, 0.5, false); ajouter(&p, 2.0, true);    // une première parole
+            ajouter(&p, 1.0, false);                             // une pause : coupée
+            ajouter(&p, 3.0, true); ajouter(&p, 0.2, false); ajouter(&p, 0.5, true);   // une pause trop brève : gardée
+            ajouter(&p, 1.5, false);
+            ajouter(&p, 0.3, true);                              // trop court : recollé à son voisin le plus proche
+            ajouter(&p, 2.0, false);                             // la fin, du silence : écartée
+            const auto m = morceaux_aux_pauses(p);
+            auto sec = [](size_t e) { return (double)e / 16000; };
+            VERIFIER(m.size() == 2);
+            VERIFIER(m.size() == 2 && sec(m[0].first) < 0.5 && sec(m[0].second) > 2.5 && sec(m[0].second) < 3.0);
+            VERIFIER(m.size() == 2 && sec(m[1].first) > 3.0 && sec(m[1].first) < 3.6 && sec(m[1].second) > 8.8 && sec(m[1].second) < 9.5);   // 3,7 s, la parole brève recollée
+            std::vector<float> long_;
+            ajouter(&long_, 1.0, false); ajouter(&long_, 70.0, true); ajouter(&long_, 1.0, false);
+            const auto ml = morceaux_aux_pauses(long_);
+            VERIFIER(ml.size() >= 3 && ml.size() <= 5 && sec(ml[0].first) > 0.6 && sec(ml.back().second) < 71.4);   // le silence des bords ôté
+            bool borne = true;
+            for (const auto &x : ml) borne = borne && sec(x.second - x.first) <= 28.01;
+            VERIFIER(borne);
+            VERIFIER(morceaux_aux_pauses(std::vector<float>()).empty());
+            QString e2;
+            const QString js = transcrire_segments_son(wav(16000, 1, 16, 2.0), MODELE_ESSAI, &e2, QString(QChar(0x1d)));
+            VERIFIER(e2.isEmpty() && QJsonDocument::fromJson(js.toUtf8()).isArray());
+            QString e3;
+            VERIFIER(transcrire_segments_son(wav(16000, 1, 16, 1.0), QString(), &e3).isEmpty() && e3.contains("introuvable"));
+            liberer_transcription();
+        }
         // la relecture : des marques invisibles, des nombres et des doutes surlignés, un doute qui part à la correction
         {
             const QFontMetrics fm(QApplication::font());

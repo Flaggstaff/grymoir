@@ -503,6 +503,10 @@ void machine_transcripteur(Machine *m, char *(*transcrire)(void *, const unsigne
     m->iface.transcrire = transcrire;   /* sur l'interface en place, son contexte compris (§ 15.8) */
 }
 
+void machine_transcripteur_segments(Machine *m, char *(*segments)(void *, const unsigned char *, size_t, char **)) {
+    m->iface.transcrire_segments = segments;   /* « les segments de x » (3.39) : sur l'interface en place */
+}
+
 void machine_dossier_ecriture(Machine *m, const char *dossier) {
     free(m->dossier_ecriture);
     m->dossier_ecriture = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
@@ -8088,6 +8092,36 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             m->minuterie = (long)op;
             break;
         case I_LIGNES: {   /* « les lignes de x » : d'un texte, ou d'un fichier en UTF-8 (§ 15.9) */
+            if (op == 1) {   /* « les segments de x » (3.39, § 15.8) : un son, transcrit par segments ; des textes JSON */
+                Valeur x = depiler(&pile);
+                char *mp = NULL;
+                if (x.type == V_ABSENT) mp = message_absent(&x);
+                else if (x.type != V_FICHIER)
+                    mp = grym_echec(NULL, "« les segments de » se lisent dans un son, pas dans %s.", nom_type(x.type));
+                Valeur r = liste_vide();
+                if (!mp && m->iface.transcrire_segments) {
+                    if (!x.fichier->octets) { char *e = NULL; base_fichier_lire(x.fichier, &e); free(e); }
+                    char *err = NULL;
+                    char *js = x.fichier->octets
+                        ? m->iface.transcrire_segments(m->iface.contexte, x.fichier->octets, x.fichier->taille, &err) : NULL;
+                    free(err);   /* comme « la transcription de x » : un son que l'interface ne transcrit pas, rien */
+                    err = NULL;
+                    Json *j = js ? json_lire(js, strlen(js), &err) : NULL;
+                    free(err);
+                    free(js);
+                    if (j && j->type == JSON_TABLEAU)
+                        for (size_t q = 0; q < j->nb; q++) {
+                            Chaine c = {0};
+                            json_ecrire(&c, j->elements[q]);
+                            ensemble_gagner(&r, vi_texte_pris(chaine_rendre(&c)));
+                        }
+                    json_liberer(j);
+                }
+                valeur_liberer(&x);
+                if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+                empiler(&pile, r);
+                break;
+            }
             Valeur x = depiler(&pile);
             char *mp = NULL;
             const char *s = NULL;

@@ -300,6 +300,8 @@ int main(void) {
         "Forme attendue : « _contrat payable _calcul _le montant_dû(_une chose_payable) »");
     ALLER_RETOUR("_le x << « a »\n_afficher _json(_nu x) ; _json(_nu x _suivi « b »)\n_les l << _lignes _nu x\n"
                  "_pour_chaque ligne _parmi _lignes _nu x\n    _afficher ligne\n_fin\n", NULL);
+    ALLER_RETOUR("_le x << _fichier « a.wav »\n_les l << _segments x\n"
+                 "_pour_chaque s _parmi _segments x\n    _afficher _champ « texte » s\n_fin\n", NULL);   /* 3.39 */
     ALLER_RETOUR("_les arguments << _liste « -n » ; « a »\n_afficher _commande(« echo » ; arguments)\n_le x << _commande(« date »)\n", NULL);
     ERR("_afficher _commande(« echo » ; 3)\n", 1, 11, "« _commande » s'écrit ainsi : _commande(« rigctl »), _commande(« rigctl » ; arguments).");
     ALLER_RETOUR("_scénario « a »\n    _le x << 1\n    _vérifier x = 1\n_fin\n", NULL);

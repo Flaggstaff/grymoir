@@ -2803,7 +2803,8 @@ Interface serveur_interface(Serveur *s) {
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
                     serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0,
                     serveur_ecran_signaler, NULL, serveur_ecran_choix, NULL,   /* NULL : pas de courriel (§ 22.27) */
-                    serveur_ecran_minuterie, NULL };   /* NULL : pas de commande dans le navigateur (§ 15.10) */
+                    serveur_ecran_minuterie, NULL,   /* NULL : pas de commande dans le navigateur (§ 15.10) */
+                    NULL };   /* NULL : pas de segments dans le navigateur (3.39) */
     return i;
 }
 

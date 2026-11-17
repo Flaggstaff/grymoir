@@ -175,7 +175,8 @@ typedef enum {
                            des clés, puis] la liste ; empile la liste triée, nouvelle (§ 13.12) */
     I_PERMIS,           /* opérande : une constante texte « type␝valeurs » ; la valeur au sommet, qui reste, doit être l'une
                            d'elles (§ 16.16) */
-    I_LIGNES,           /* remplace un texte ou un fichier par la liste de ses lignes (§ 15.9) */
+    I_LIGNES,           /* remplace un texte ou un fichier par la liste de ses lignes (§ 15.9) ; opérande 1 : un son par la liste
+                           de ses segments transcrits, en textes JSON (3.39, § 15.8) */
     I_JSON,             /* remplace une valeur par son texte JSON (§ 15.9) */
     I_MINUTERIE,        /* opérande : l'intervalle en secondes de la minuterie de l'écran, pour l'ÉCRAN_ATTENDRE qui suit (3.03) */
     I_COMMANDE,         /* opérande : 1 avec une liste d'arguments ; dépile [la liste, puis] le programme ; empile sa sortie (§ 15.10) */

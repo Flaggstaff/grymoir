@@ -41,6 +41,12 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
 // Le texte d'un son déjà en 16 kHz mono ; rapide : la recherche gloutonne (pour le direct).
 QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide, const QString &amorce = QString());
 
+// « les segments de x » (3.39) : le son coupé aux pauses, chaque morceau transcrit à part, avec sa propre langue (sous
+// « en toute langue ») ; un tableau JSON de segments {"début", "fin", "langue", "texte", "mots"}, ou vide avec *erreur.
+QString transcrire_segments_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce = QString());
+// Les morceaux d'un son en 16 kHz mono, coupés aux pauses : [début, fin[ en échantillons (exposé pour les essais).
+std::vector<std::pair<size_t, size_t>> morceaux_aux_pauses(const std::vector<float> &pcm);
+
 // Du son brut (n'importe quelle fréquence, mono ou stéréo entrelacé) ajouté à « pcm », en 16 kHz mono.
 void pcm_en_16k(const std::vector<float> &entree, int frequence, int canaux, std::vector<float> *pcm);
 

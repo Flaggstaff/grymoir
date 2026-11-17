@@ -533,9 +533,10 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k = fin;
             continue;
         }
-        if (est_cle(t, "lignes")) {   /* _lignes x → les lignes de x (§ 15.9) ; après « _parmi », « parmi les » est écrit */
+        if (est_cle(t, "lignes") || est_cle(t, "segments")) {   /* _lignes x → les lignes de x (§ 15.9) ; _segments x → les
+                                                                   segments de x (3.39) ; après « _parmi », « parmi les » est écrit */
             if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);
-            mot(r, "lignes", t);
+            mot(r, est_cle(t, "lignes") ? "lignes" : "segments", t);
             mot(r, "de", t);
             continue;
         }

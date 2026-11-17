@@ -73,6 +73,7 @@ static char *reponses(void *contexte, Chaine *sortie, const char *question) {
 }
 
 static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
+static char *faux_segments(void *contexte, const unsigned char *octets, size_t taille, char **erreur);   /* 3.39 */
 
 static void verifier_saisie(int l, const char *src, const char *const *lignes, size_t n, const char *attendu) {
     total++;
@@ -100,6 +101,7 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_transcripteur(m, faux_transcrire);   /* § 15.8 : un faux transcripteur, sans Whisper */
+    machine_transcripteur_segments(m, faux_segments);   /* 3.39 */
     char *r = executer_source(p, m, src, interactif);
     int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
     if (!ok) signaler(l, src, attendu, r);
@@ -207,6 +209,17 @@ static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t
     return grym_formater("transcription de %lu octets", (unsigned long)taille);
 }
 
+/* Un faux transcripteur par segments (3.39) : deux segments, l'un en turc, l'autre en français ; 17 octets, un échec. */
+static char *faux_segments(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
+    (void)contexte; (void)octets;
+    if (taille == 17) { *erreur = grym_dupliquer("modèle absent."); return NULL; }
+    return grym_dupliquer("[{\"début\":0.5,\"fin\":2.25,\"langue\":\"tr\",\"texte\":\"Merhaba, nasılsınız?\","
+                          "\"mots\":[{\"mot\":\"Merhaba,\",\"début\":0.5,\"fin\":1.1,\"douteux\":false},"
+                          "{\"mot\":\"nasılsınız?\",\"début\":1.2,\"fin\":2.25,\"douteux\":true}]},"
+                          "{\"début\":3.75,\"fin\":5,\"langue\":\"fr\",\"texte\":\"Bonjour.\","
+                          "\"mots\":[{\"mot\":\"Bonjour.\",\"début\":3.75,\"fin\":5,\"douteux\":false}]}]");
+}
+
 static int page_disponible(void *contexte) { (void)contexte; return 1; }
 
 static Issue page_formulaire(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret,
@@ -251,7 +264,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1348,7 +1361,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -3494,6 +3507,25 @@ int main(void) {
                  "Le v vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son17.wav ».\nAfficher la note de v.\n"
                  "Le w vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son18.wav ».\nAfficher la note de w.",
                  "⚠ Transcription impossible : modèle absent.\n⚠ Rien n'a été reconnu dans cet enregistrement.");
+            /* les segments (3.39) : des textes JSON, lus par « le champ » ; un échec, une liste vide */
+            PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\n"
+                 "Pour chaque s parmi les segments du mémo de v :\n"
+                 "    Afficher le champ « langue » de s puis le champ « début » de s puis le champ « fin » de s puis le champ « texte » de s.\n"
+                 "    Pour chaque mot du champ « mots » de s :\n"
+                 "        Afficher le champ « mot » du mot puis le champ « douteux » du mot.",
+                 "tr 0.5 2.25 Merhaba, nasılsınız?\nMerhaba, faux\nnasılsınız? vrai\nfr 3.75 5 Bonjour.\nBonjour. faux");
+            PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\n"
+                 "Les morceaux valent les segments du mémo de v.\n"
+                 "Afficher le nombre de morceaux puis le champ « texte » du dernier élément des morceaux.\n"
+                 "Le dernier vaut le dernier élément des morceaux.\n"
+                 "Afficher (le champ « fin » du dernier en remplaçant « . » par « , ») en nombre\n"
+                 "    - (le champ « début » du dernier en remplaçant « . » par « , ») en nombre.\n"
+                 "Le w vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son17.wav ».\n"
+                 "Les rien valent les segments du mémo de w.\nAfficher le nombre de rien.",
+                 "2 Bonjour.\n1,25\n0");
+            PROG("Afficher les segments de « bonjour ».", "~« les segments de » se lisent dans un son, pas dans un texte.");
             remove("_essai_son17.wav");
             remove("_essai_son18.wav");
         }

@@ -26,6 +26,11 @@
 
 #include "whisper.h"
 
+extern "C" {
+#include "json.h"
+#include "texte.h"
+}
+
 static const char *const NOM_MODELE = "ggml-large-v3-turbo-q5_0.bin";
 
 QString modele_de_transcription() {
@@ -219,6 +224,10 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
     return transcrire_pcm(std::move(pcm), modele, erreur, false, amorce);
 }
 
+static bool charger_modele(const QString &modele, QString *erreur);
+static whisper_full_params parametres(bool rapide, const QString &amorce, QByteArray *amorce8_garde);
+static QString texte_des_segments();
+
 QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide, const QString &amorce) {
     if (modele.isEmpty()) {
         *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
@@ -234,7 +243,20 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     }
     // le modèle, chargé une fois (environ un gigaoctet en mémoire), gardé pour les transcriptions suivantes
     QMutexLocker garde(&verrou);
-    if (fermeture) { *erreur = "L'application se ferme."; return QString(); }
+    if (!charger_modele(modele, erreur)) return QString();
+    // en direct (24 octobre 2026) : la recherche gloutonne, plus rapide ; le texte final reprend la recherche en faisceau
+    QByteArray amorce8;
+    whisper_full_params p = parametres(rapide, amorce, &amorce8);
+    if (whisper_full(ctx, p, pcm.data(), (int)pcm.size()) != 0) {
+        *erreur = "La transcription a échoué.";
+        return QString();
+    }
+    return texte_des_segments();
+}
+
+// Le modèle, chargé une fois, sous le verrou ; faux et *erreur s'il ne se charge pas, ou si l'application se ferme.
+static bool charger_modele(const QString &modele, QString *erreur) {
+    if (fermeture) { *erreur = "L'application se ferme."; return false; }
     if (!ctx || charge != modele) {
         whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);   // pas de journal dans une application
         if (ctx) whisper_free(ctx);
@@ -246,9 +268,14 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
             qAddPostRoutine(fermer_transcription);
             inscrit = true;
         }
-        if (!ctx) { *erreur = "Le modèle de transcription ne se charge pas : " + modele; return QString(); }
+        if (!ctx) { *erreur = "Le modèle de transcription ne se charge pas : " + modele; return false; }
     }
-    // en direct (24 octobre 2026) : la recherche gloutonne, plus rapide ; le texte final reprend la recherche en faisceau
+    return true;
+}
+
+// Les réglages de Whisper, communs à la transcription d'un son et à ses segments (3.39). amorce8 garde le texte de
+// l'amorce, que les réglages désignent : il doit vivre jusqu'à la fin de whisper_full.
+static whisper_full_params parametres(bool rapide, const QString &amorce, QByteArray *amorce8_garde) {
     whisper_full_params p = whisper_full_default_params(rapide ? WHISPER_SAMPLING_GREEDY : WHISPER_SAMPLING_BEAM_SEARCH);
     // « en toute langue » (2.86) : l'amorce commence par U+001D ; Whisper reconnaît la langue parlée et l'écrit telle
     // quelle (« auto ») ; sinon, le français imposé, comme avant
@@ -264,7 +291,8 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     // L'amorce (2.80) : le vocabulaire, donné comme texte précédent à chaque fenêtre de 30 secondes (carry_initial_prompt).
     // whisper.cpp (v1.9.5) ne met aucun texte précédent si n_max_text_ctx vaut 0 : il vaut ici la taille de l'amorce,
     // plus la marque qui la précède, si bien que le texte déjà transcrit n'y entre toujours pas (« -mc 0 » tenu).
-    const QByteArray amorce8 = (toute_langue ? amorce.mid(1) : amorce).trimmed().toUtf8();
+    *amorce8_garde = (toute_langue ? amorce.mid(1) : amorce).trimmed().toUtf8();
+    const QByteArray &amorce8 = *amorce8_garde;
     if (!amorce8.isEmpty()) {
         std::vector<whisper_token> jetons(1024);
         int n = whisper_tokenize(ctx, amorce8.constData(), jetons.data(), (int)jetons.size());
@@ -275,10 +303,11 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
             p.n_max_text_ctx = n + 1;
         }
     }
-    if (whisper_full(ctx, p, pcm.data(), (int)pcm.size()) != 0) {
-        *erreur = "La transcription a échoué.";
-        return QString();
-    }
+    return p;
+}
+
+// Le texte de la dernière passe, sous le verrou.
+static QString texte_des_segments() {
     // le texte, mot par mot, avec ses doutes : un mot commence par un morceau précédé d'une espace ; sa probabilité est
     // celle de son morceau le moins sûr ; un passage entièrement inventé (« [Propos inaudibles] »…) est écarté
     const whisper_token fin = whisper_token_eot(ctx);
@@ -311,6 +340,176 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
         if (!passage.trimmed().isEmpty()) passages << passage.trimmed();
     }
     return passages.isEmpty() ? QString() : QString(QChar(MARQUE_TRANSCRIT)) + passages.join('\n');
+}
+
+// --- Les segments d'un son (3.39) ---
+
+// Les morceaux d'un son, coupés aux pauses : [début, fin[ en échantillons. Les niveaux par trames de 20 ms ; une pause,
+// 0,4 seconde au moins sous le seuil, tiré comme celui de la dictée : huit décibels au-dessus du bruit de fond (le 2e
+// centile), dix au moins sous la voix (le 90e) ; sans quinze décibels entre les deux, aucune pause ne se reconnaît. Un
+// morceau qui dépasse 28 secondes est coupé à la trame la plus calme de la seconde moitié de sa fenêtre. Chaque morceau est
+// ramené à sa parole, avec 0,2 seconde de marge ; un morceau sans aucune trame au-dessus du seuil (du silence) est écarté. Un morceau de moins d'une seconde rejoint son voisin le plus proche : Whisper reconnaît mal
+// la langue, et invente, sur un son trop court.
+std::vector<std::pair<size_t, size_t>> morceaux_aux_pauses(const std::vector<float> &pcm) {
+    const size_t trame = 320, nb = pcm.size() / trame + (pcm.size() % trame ? 1 : 0);
+    std::vector<std::pair<size_t, size_t>> r;
+    if (!nb) return r;
+    std::vector<double> db(nb);
+    for (size_t t = 0; t < nb; t++) {
+        double e = 0;
+        const size_t d = t * trame, f = std::min(pcm.size(), d + trame);
+        for (size_t i = d; i < f; i++) e += (double)pcm[i] * pcm[i];
+        e /= (double)(f - d);
+        db[t] = e > 1e-10 ? 10 * std::log10(e) : -100;
+    }
+    std::vector<double> tri = db;
+    std::sort(tri.begin(), tri.end());
+    const double fond = tri[(size_t)(0.02 * (double)(nb - 1))], voix = tri[(size_t)(0.90 * (double)(nb - 1))];
+    const bool contraste = nb >= 50 && voix - fond >= 15;
+    const double seuil = contraste ? std::min(fond + 8, voix - 10) : -1000;
+    const size_t pause = 20, maximum = 28 * 50, minimum = 50;   // en trames : 0,4 s, 28 s, 1 s
+    // les coupes : au milieu de chaque pause assez longue
+    std::vector<size_t> coupes{0};
+    if (contraste) {
+        size_t t = 0;
+        while (t < nb) {
+            if (db[t] >= seuil) { t++; continue; }
+            size_t f = t;
+            while (f < nb && db[f] < seuil) f++;
+            if (f - t >= pause && t > 0 && f < nb) coupes.push_back((t + f) / 2);
+            t = f;
+        }
+    }
+    coupes.push_back(nb);
+    // trop long : coupé à la trame la plus calme, en gardant une seconde de part et d'autre
+    std::vector<size_t> c2{0};
+    for (size_t k = 1; k < coupes.size(); k++) {
+        size_t d = c2.back();
+        const size_t f = coupes[k];
+        while (f - d > maximum) {   // dans la seconde moitié de la fenêtre : des morceaux de 14 à 28 secondes
+            size_t meilleure = d + maximum / 2;
+            for (size_t t = d + maximum / 2; t < d + maximum && t < f; t++)
+                if (db[t] < db[meilleure]) meilleure = t;
+            c2.push_back(meilleure);
+            d = meilleure;
+        }
+        c2.push_back(f);
+    }
+    // les morceaux, ramenés à leur parole, avec 0,2 seconde de marge ; le silence écarté
+    std::vector<std::pair<size_t, size_t>> m;
+    const size_t marge = 10;
+    for (size_t k = 0; k + 1 < c2.size(); k++) {
+        if (!contraste) { m.push_back({c2[k], c2[k + 1]}); continue; }
+        size_t d = c2[k + 1], f = c2[k];
+        for (size_t t = c2[k]; t < c2[k + 1]; t++)
+            if (db[t] >= seuil) { d = std::min(d, t); f = t + 1; }
+        if (f <= d) continue;
+        m.push_back({d > c2[k] + marge ? d - marge : c2[k], std::min(c2[k + 1], f + marge)});
+    }
+    // trop court : rejoint le voisin le plus proche, s'il en reste un et que l'ensemble ne dépasse pas le maximum
+    for (size_t k = 0; k < m.size();) {
+        if (m.size() == 1 || m[k].second - m[k].first >= minimum) { k++; continue; }
+        const bool avant = k > 0, apres = k + 1 < m.size();
+        const size_t ecart_avant = avant ? m[k].first - m[k - 1].second : SIZE_MAX;
+        const size_t ecart_apres = apres ? m[k + 1].first - m[k].second : SIZE_MAX;
+        const size_t v = ecart_avant <= ecart_apres ? k - 1 : k + 1;
+        const size_t d = std::min(m[v].first, m[k].first), f = std::max(m[v].second, m[k].second);
+        if (f - d > maximum) { k++; continue; }
+        m[std::min(v, k)] = {d, f};
+        m.erase(m.begin() + (long)std::max(v, k));
+        if (v < k) k = v;
+    }
+    for (const auto &x : m) r.push_back({x.first * trame, std::min(pcm.size(), x.second * trame)});
+    return r;
+}
+
+// Un nombre de secondes pour le JSON : au centième, avec un point.
+static QString secondes(double s) {
+    return QString::number(std::round(s * 100) / 100, 'g', 12);
+}
+
+QString transcrire_segments_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce) {
+    if (modele.isEmpty()) {
+        *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
+        return QString();
+    }
+    std::vector<float> pcm;
+    if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QString();
+    float crete = 0;   // comme transcrire_pcm : un enregistrement faible, ramené à un niveau que Whisper entend
+    for (const float x : pcm) crete = std::max(crete, std::fabs(x));
+    if (crete > 0 && crete < 0.5f) {
+        const float gain = std::min(0.9f / crete, 20.0f);
+        for (float &x : pcm) x *= gain;
+    }
+    const std::vector<std::pair<size_t, size_t>> morceaux = morceaux_aux_pauses(pcm);
+    QMutexLocker garde(&verrou);
+    if (!charger_modele(modele, erreur)) return QString();
+    QByteArray amorce8;
+    whisper_full_params p = parametres(false, amorce, &amorce8);
+    p.token_timestamps = true;   // l'heure de chaque morceau de mot
+    const whisper_token fin = whisper_token_eot(ctx);
+    QString json = "[";
+    bool premier = true;
+    for (const auto &mc : morceaux) {
+        if (fermeture) { *erreur = "L'application se ferme."; return QString(); }
+        const double decalage = (double)mc.first / 16000;
+        if (whisper_full(ctx, p, pcm.data() + mc.first, (int)(mc.second - mc.first)) != 0) {
+            *erreur = "La transcription a échoué.";
+            return QString();
+        }
+        // la langue du morceau : reconnue (« en toute langue »), ou celle imposée
+        const int id = whisper_full_lang_id(ctx);
+        const char *langue = id >= 0 ? whisper_lang_str(id) : p.language;
+        const int n = whisper_full_n_segments(ctx);
+        for (int i = 0; i < n; i++) {
+            const QString texte = nettoyer_transcription(QString::fromUtf8(whisper_full_get_segment_text(ctx, i))).trimmed();
+            if (texte.isEmpty()) continue;
+            // les mots : un mot commence par un morceau précédé d'une espace ; son heure va du début de son premier
+            // morceau à la fin de son dernier ; douteux si son morceau le moins sûr l'est (sous 0,5)
+            QString mots;
+            QByteArray mot;
+            float sur = 1;
+            long t0 = -1, t1 = -1;
+            auto finir = [&] {
+                const QString m = QString::fromUtf8(mot).trimmed();
+                if (!m.isEmpty()) {
+                    Chaine c = {};
+                    json_ecrire_texte(&c, m.toUtf8().constData());
+                    char *e = chaine_rendre(&c);
+                    if (!mots.isEmpty()) mots += ",";
+                    mots += QString("{\"mot\":%1,\"début\":%2,\"fin\":%3,\"douteux\":%4}")
+                                .arg(QString::fromUtf8(e), secondes(decalage + (double)t0 / 100),
+                                     secondes(decalage + (double)t1 / 100), sur < 0.5f ? "true" : "false");
+                    free(e);
+                }
+                mot.clear();
+                sur = 1;
+                t0 = t1 = -1;
+            };
+            for (int j = 0; j < whisper_full_n_tokens(ctx, i); j++) {
+                const whisper_token_data d = whisper_full_get_token_data(ctx, i, j);
+                if (d.id >= fin) continue;   // les jetons spéciaux
+                const QByteArray t = whisper_full_get_token_text(ctx, i, j);
+                if (t.startsWith(' ')) finir();
+                if (t0 < 0) t0 = d.t0;
+                t1 = d.t1;
+                mot += t;
+                sur = qMin(sur, d.p);
+            }
+            finir();
+            Chaine c = {};
+            json_ecrire_texte(&c, texte.toUtf8().constData());
+            char *e = chaine_rendre(&c);
+            if (!premier) json += ",";
+            premier = false;
+            json += QString("{\"début\":%1,\"fin\":%2,\"langue\":\"%3\",\"texte\":%4,\"mots\":[%5]}")
+                        .arg(secondes(decalage + (double)whisper_full_get_segment_t0(ctx, i) / 100),
+                             secondes(decalage + (double)whisper_full_get_segment_t1(ctx, i) / 100),
+                             QString::fromUtf8(langue ? langue : ""), QString::fromUtf8(e), mots);
+            free(e);
+        }
+    }
+    return json + "]";
 }
 
 // --- Le son du micro, en 16 kHz mono (24 octobre 2026) ---

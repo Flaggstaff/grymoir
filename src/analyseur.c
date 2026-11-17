@@ -3776,11 +3776,15 @@ static Noeud *base(Analyse *a) {
             const Jeton *apres = NULL;
             if (m_les >= 0 && est_mot(voir(a, m_les), "lignes") && !ensemble_en(a, a->i + (size_t)m_les, &fe0) && !visible(a, "lignes"))
                 { sorte = 1; apres = voir(a, m_les + 1); }
+            else if (m_les >= 0 && est_mot(voir(a, m_les), "segments") && !ensemble_en(a, a->i + (size_t)m_les, &fe0)
+                     && !visible(a, "segments"))   /* « les segments de x » (3.39, § 15.8) : un son, transcrit par segments */
+                { sorte = 3; apres = voir(a, m_les + 1); }
             else if (m_le >= 0 && est_mot(voir(a, m_le), "json") && !visible(a, "json")) { sorte = 2; apres = voir(a, m_le + 1); }
             const int des = sorte && est_mot(apres, "des");   /* « le JSON des données » : une table, une liste */
             if (sorte && (de_ou_d(apres) || est_mot(apres, "du") || des)) {
-                Noeud *n = noeud_creer(sorte == 1 ? N_LIGNES : N_JSON_ECRIT, t->ligne, t->colonne, t->debut);
-                const int saut = sorte == 1 ? m_les + 1 : m_le + 1;
+                Noeud *n = noeud_creer(sorte == 2 ? N_JSON_ECRIT : N_LIGNES, t->ligne, t->colonne, t->debut);
+                n->forme = sorte == 3;   /* N_LIGNES, forme 1 : « les segments de x » (3.39) */
+                const int saut = sorte == 2 ? m_le + 1 : m_les + 1;
                 a->article_force = ART_AUCUN;
                 for (int q = 0; q < saut; q++) avancer(a);
                 Noeud *x = des ? nom_ensemble(a) : mots_de(a);
@@ -7122,7 +7126,9 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
         if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les")
             && ((est_mot(&a->j[k2 + 2], "décodages") && est_mot(&a->j[k2 + 3], "wsjt"))
                 || (est_mot(&a->j[k2 + 2], "lignes") && !visible(a, "lignes")   /* « parmi les lignes de t » (§ 15.9) */
-                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du") || est_mot(&a->j[k2 + 3], "des"))))
+                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du") || est_mot(&a->j[k2 + 3], "des")))
+                || (est_mot(&a->j[k2 + 2], "segments") && !visible(a, "segments")   /* « parmi les segments de x » (3.39) */
+                    && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du"))))
             && article_de(&a->j[d]) == ART_AUCUN) {
             /* « Pour chaque d parmi les décodages WSJT [du port p] : » (2.88) : lus une fois au début */
             char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);

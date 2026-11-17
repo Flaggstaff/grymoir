@@ -492,7 +492,7 @@ static void expression(Compilation *c, const Noeud *n) {
         return;
     case N_LIGNES: case N_JSON_ECRIT:   /* la valeur, puis LIGNES ou JSON (§ 15.9) */
         expression(c, n->enfants[0]);
-        emettre(c, n->type == N_LIGNES ? I_LIGNES : I_JSON, 0, n->ligne, n->colonne);
+        emettre(c, n->type == N_LIGNES ? I_LIGNES : I_JSON, n->type == N_LIGNES && n->forme == 1, n->ligne, n->colonne);   /* 1 : segments (3.39) */
         return;
     case N_LOCAL:   /* une case cachée (2.97) */
         emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
