@@ -154,6 +154,8 @@ typedef enum {
     I_DERNIERE_SAUVEGARDE, /* remplace un préfixe par le chemin de sa copie datée la plus récente, ou absent (2.85) */
     I_HISTORIQUE,       /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
     I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) */
+    I_ECOUTER,          /* « Écouter x » (3.41) : opérande 0, dépile un son ; 1, dépile la fin, le début (en secondes) et le
+                           son ; 2, ne dépile rien et arrête l'écoute */
     I_LANGUE,           /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */
     I_SIGNER,           /* dépile un texte (ou absent) : l'auteur des lignes suivantes du journal (2.87) */
     I_WSJTX,            /* opérande 1 : dépile le port (sinon 2237) ; empile la liste des nouveaux décodages (2.88) */

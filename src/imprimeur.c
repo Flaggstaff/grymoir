@@ -2798,6 +2798,18 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         expression(im, n->enfants[0]);
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_ECOUTER:   /* « Écouter x, de d à f. » ; « _écouter x _dès d _jusqu f » ; « Arrêter l'écoute. » (3.41) */
+        if (n->forme == 2) { aj(im, c ? "_arrêter_écoute\n" : "Arrêter l'écoute.\n"); return; }
+        aj(im, c ? "_écouter " : "Écouter ");
+        expression(im, n->enfants[0]);
+        if (n->forme == 1) {
+            aj(im, c ? " _dès " : ", de ");
+            expression(im, n->enfants[1]);
+            aj(im, c ? " _jusqu " : " à ");
+            expression(im, n->enfants[2]);
+        }
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_AMORCER:   /* « Amorcer la transcription avec t. » ; « _amorcer t » (2.80) */
         aj(im, c ? "_amorcer " : "Amorcer la transcription avec ");
         expression(im, n->enfants[0]);

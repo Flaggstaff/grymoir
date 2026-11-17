@@ -214,3 +214,106 @@ Scénario « le bouton Nommer les voix, depuis l'écran » :
     Vérifier que la correspondance du e = « 1 INT, 2 MA, 3 INPRET ».
     Pour chaque tour conservé dont le rang = 2 :
         Vérifier que le sigle du tour = « MA ».
+
+Remarque : Drogman 0.3 : joindre, couper, corriger une voix, la durée, la traduction jointe ou non.
+Scénario « joindre un tour au suivant : textes bout à bout, fin reprise, rangs resserrés » :
+    Poser « EensA1_20130306_Ens_11 », qui donne le e.
+    Transcrire à trois voix le e.
+    On choisit le e dans l'écran des entretiens.
+    Le deuxième vaut absent.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le deuxième devient le tour.
+    On choisit le deuxième dans l'écran de l'entretien.
+    On clique sur « Joindre au suivant » dans l'écran du tour.
+    On confirme.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés = 3.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que la base du tour = « İyiyim, teşekkür ederim. ».
+        Vérifier que la version corel du tour = « İyiyim, teşekkür ederim. ».
+        Vérifier que le début du tour = 4.
+        Vérifier que la fin du tour = 7,5.
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la base du tour = « Il dit : ça va bien. ».
+
+Scénario « couper un tour au | : deux tours, l'heure au prorata, les rangs d'après avancent » :
+    Poser « EensA1_20130306_Ens_12 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On écrit « Bonjour, | comment allez-vous ? » dans la base de l'écran du tour.
+    On écrit « Bonjour, | comment allez-VOUS ? » dans la version corel de l'écran du tour.
+    On clique sur « Couper au | » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés = 4.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que la base du tour = « Bonjour, ».
+        Vérifier que la version corel du tour = « Bonjour, ».
+        Vérifier que le début du tour = 1,5.
+        Remarque : 8 caractères sur 8 + 20 : 1,5 + 1,7 × 8 ÷ 28.
+        Vérifier que la fin du tour = 1,5 + 1,7 × 8 ÷ 28.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que la base du tour = « comment allez-vous ? ».
+        Vérifier que la version corel du tour = « comment allez-VOUS ? ».
+        Vérifier que la fin du tour = 3,2.
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la langue du tour = « tr ».
+    Pour chaque tour conservé dont le rang = 4 :
+        Vérifier que la base du tour = « Il dit : ça va bien. ».
+
+Scénario « couper sans | : un refus » :
+    Poser « EensA1_20130306_Ens_13 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On clique sur « Couper au | » dans l'écran du tour.
+    On voit l'erreur "Mets un « | » dans la base" dans l'écran du tour.
+    On ferme l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés = 3.
+
+Scénario « une voix corrigée reprend le sigle de la correspondance » :
+    Poser « EensA1_20130306_Ens_14 », qui donne le e.
+    La correspondance du e devient « 1 INT, 2 PA, 3 INPRET ».
+    Transcrire à trois voix le e.
+    Nommer le e, qui donne le n.
+    On choisit le e dans l'écran des entretiens.
+    Le troisième vaut absent.
+    Pour chaque tour conservé dont le rang = 3 :
+        Le troisième devient le tour.
+    On choisit le troisième dans l'écran de l'entretien.
+    On écrit « 2 » dans la voix de l'écran du tour.
+    On clique sur « Enregistrer » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la voix du tour = 2.
+        Vérifier que le sigle du tour = « PA ».
+
+Scénario « la durée lue d'après le dernier tour » :
+    Poser « EensA1_20130306_Ens_15 », qui donne le e.
+    Transcrire le e.
+    Remarque : le dernier tour finit à 3727 s : 62 minutes et 7 secondes, arrondies à la minute au-dessus.
+    Vérifier que la durée lue du e = « 01h03 ».
+
+Scénario « la traduction jointe décochée : la transcription COREL ne garde que la parole » :
+    Poser « EensA1_20130306_Ens_16 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        La traduction du tour devient « Je vais bien, merci. ».
+    Vérifier que le document COREL du e contient « [Je vais bien, merci.] ».
+    La traduction jointe du e devient faux.
+    Vérifier que le document COREL du e ne contient pas « Je vais bien ».

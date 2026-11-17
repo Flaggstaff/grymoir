@@ -75,6 +75,8 @@ static char *reponses(void *contexte, Chaine *sortie, const char *question) {
 static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
 static char *faux_segments(void *contexte, const unsigned char *octets, size_t taille, char **erreur);   /* 3.39 */
 static char *fausses_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur);   /* 3.40 */
+static void faux_jouer(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin);   /* 3.41 */
+static char jeux[256];   /* ce que le faux lecteur a joué, à la suite (3.41) */
 
 static void verifier_saisie(int l, const char *src, const char *const *lignes, size_t n, const char *attendu) {
     total++;
@@ -104,6 +106,7 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
     machine_transcripteur(m, faux_transcrire);   /* § 15.8 : un faux transcripteur, sans Whisper */
     machine_transcripteur_segments(m, faux_segments);   /* 3.39 */
     machine_separateur_voix(m, fausses_voix);           /* 3.40 */
+    machine_joueur(m, faux_jouer);                     /* 3.41 */
     char *r = executer_source(p, m, src, interactif);
     int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
     if (!ok) signaler(l, src, attendu, r);
@@ -231,6 +234,15 @@ static char *fausses_voix(void *contexte, const unsigned char *octets, size_t ta
                          "{\"début\":8.25,\"fin\":9,\"voix\":%ld}]", nombre ? nombre : 1);
 }
 
+/* Un faux lecteur (3.41) : note « taille:début:fin » ou « stop » à la suite de jeux. */
+static void faux_jouer(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin) {
+    (void)contexte;
+    char t[64];
+    if (!octets) snprintf(t, sizeof t, "stop;");
+    else snprintf(t, sizeof t, "%zu:%.2f:%.2f;", taille, debut, fin);
+    strncat(jeux, t, sizeof jeux - strlen(jeux) - 1);
+}
+
 static int page_disponible(void *contexte) { (void)contexte; return 1; }
 
 static Issue page_formulaire(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret,
@@ -275,7 +287,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1372,7 +1384,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -3552,6 +3564,24 @@ int main(void) {
             PROG("Une visite, conservée, a : un mémo (son).\nLe w vaut une nouvelle visite :\n"
                  "    Le mémo vaut le fichier « _essai_son.wav ».\nLes v valent les 0 voix du mémo de w.",
                  "~Le nombre de voix est un nombre entier de 1 à 20.");
+            /* écouter (3.41) : en entier, d'une seconde à une autre, l'arrêt ; les refus */
+            jeux[0] = 0;
+            PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\n"
+                 "Écouter le mémo de v.\nÉcouter le mémo du v, de 1,5 à 2 + 1,25.\nArrêter l'écoute.\nAfficher « fait ».", "fait");
+            {
+                char attendu[128];
+                long t = 0;
+                FILE *fs = fopen("_essai_son.wav", "rb");
+                if (fs) { fseek(fs, 0, SEEK_END); t = ftell(fs); fclose(fs); }
+                snprintf(attendu, sizeof attendu, "%ld:0.00:-1.00;%ld:1.50:3.25;stop;", t, t);
+                total++;
+                if (strcmp(jeux, attendu) != 0) { echecs++; printf("ÉCHEC : écouter : « %s » au lieu de « %s »\n", jeux, attendu); }
+            }
+            PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\nÉcouter le mémo de v, de 3 à 2.",
+                 "~Une écoute va d'une seconde positive à une seconde plus loin.");
+            PROG("Écouter « bonjour ».", "~« Écouter » joue un son, pas un texte.");
             remove("_essai_son17.wav");
             remove("_essai_son18.wav");
         }

@@ -167,6 +167,8 @@ typedef enum {
                         texte : chemin du logo tel qu'écrit, ou NULL */
     P_AMORCER,       /* « Amorcer la transcription avec t. » (2.80) : un enfant, le texte qui amorce le transcripteur */
     P_SIGNER,        /* « Signer le journal avec t. » (2.87) : un enfant, l'auteur des lignes suivantes du journal */
+    P_ECOUTER,       /* « Écouter x. », « Écouter x, de d à f. », « Arrêter l'écoute. » (3.41) : forme 0, un enfant (le son) ;
+                        forme 1, trois (le son, le début et la fin, en secondes) ; forme 2, aucun (l'écoute s'arrête) */
     P_SIGNALER,      /* « Signaler « Séance payée. » puis x. » (§ 22.22, 2.71) : enfants comme P_REFUSER */
     P_REFUSER,       /* « Refuser « Débits : » puis d. » (§ 18.1) : enfants : les éléments du message, comme
                         « Afficher » (reliés par « puis », séparés par une espace) */

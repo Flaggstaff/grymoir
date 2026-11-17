@@ -453,6 +453,13 @@ static char *iface_transcrire_segments(void *contexte, const unsigned char *octe
     return grym_dupliquer(json.toUtf8().constData());
 }
 
+// « Écouter x, de d à f. » (3.41) : le son copié, joué dans le fil de la fenêtre, sans attendre.
+static void iface_jouer(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin) {
+    (void)contexte;
+    const QByteArray o = octets ? QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille) : QByteArray();
+    QMetaObject::invokeMethod(qApp, [o, debut, fin] { jouer_extrait(o, debut, fin); }, Qt::QueuedConnection);
+}
+
 // « les voix de x » (3.40) : qui parle quand, dans le fil de la machine ; un tableau JSON.
 static char *iface_separer_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur) {
     (void)contexte;
@@ -760,7 +767,8 @@ void Travail::run() {
                    1,    // les écoutes captent le son (2.69)
                    iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel, iface_ecran_minuterie, iface_commande,
                    iface_transcrire_segments,   // « les segments de x » (3.39)
-                   iface_separer_voix};         // « les voix de x » (3.40)
+                   iface_separer_voix,          // « les voix de x » (3.40)
+                   iface_jouer};                // « Écouter x » (3.41)
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)

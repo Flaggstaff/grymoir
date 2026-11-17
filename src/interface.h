@@ -283,6 +283,10 @@ typedef struct {
      * *erreur (la séparation est un échec rattrapable). NULL : l'interface ne sépare pas les voix (console, navigateur) ;
      * la liste est alors vide. */
     char *(*separer_voix)(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur);
+    /* « Écouter x[, de d à f]. » (3.41) : joue un son (les octets du fichier, copiés par l'interface), de la seconde debut à
+     * la seconde fin (fin < 0 : jusqu'au bout), sans attendre ; octets NULL : l'écoute en cours s'arrête. NULL : l'interface
+     * ne joue rien (console, navigateur). */
+    void (*jouer)(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

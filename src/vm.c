@@ -507,6 +507,19 @@ void machine_transcripteur_segments(Machine *m, char *(*segments)(void *, const 
     m->iface.transcrire_segments = segments;   /* « les segments de x » (3.39) : sur l'interface en place */
 }
 
+/* Un nombre de secondes en double, pour l'interface (« Écouter x, de d à f. », 3.41) : la forme canonique, virgule en point. */
+static double secondes_en_double(const Decimal *d) {
+    char *t = dec_canonique(d);
+    for (char *p = t; *p; p++) if (*p == ',') *p = '.';
+    const double r = strtod(t, NULL);
+    free(t);
+    return r;
+}
+
+void machine_joueur(Machine *m, void (*jouer)(void *, const unsigned char *, size_t, double, double)) {
+    m->iface.jouer = jouer;   /* « Écouter x » (3.41) : sur l'interface en place */
+}
+
 void machine_separateur_voix(Machine *m, char *(*voix)(void *, const unsigned char *, size_t, long, char **)) {
     m->iface.separer_voix = voix;   /* « les voix de x » (3.40) : sur l'interface en place */
 }
@@ -8957,6 +8970,34 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             empiler(&pile, valeur_nombre(r));
+            break;
+        }
+        case I_ECOUTER: {   /* « Écouter x[, de d à f]. », « Arrêter l'écoute. » (3.41) */
+            if (op == 2) { if (m->iface.jouer) m->iface.jouer(m->iface.contexte, NULL, 0, 0, 0); break; }
+            double de = 0, a_ = -1;
+            char *mp = NULL;
+            if (op == 1) {
+                Valeur vf = depiler(&pile), vd = depiler(&pile);
+                if (vd.type != V_NOMBRE || vf.type != V_NOMBRE)
+                    mp = grym_echec(ABSENCE(vd.type != V_NOMBRE ? vd.type : vf.type), "Le début et la fin d'une écoute sont des nombres de secondes.");
+                else {
+                    de = secondes_en_double(&vd.nombre);
+                    a_ = secondes_en_double(&vf.nombre);
+                    if (de < 0 || a_ <= de) mp = grym_echec(NULL, "Une écoute va d'une seconde positive à une seconde plus loin.");
+                }
+                valeur_liberer(&vf);
+                valeur_liberer(&vd);
+            }
+            Valeur x = depiler(&pile);
+            if (mp) ;
+            else if (x.type == V_ABSENT) mp = message_absent(&x);
+            else if (x.type != V_FICHIER) mp = grym_echec(NULL, "« Écouter » joue un son, pas %s.", nom_type(x.type));
+            if (!mp && m->iface.jouer) {
+                if (!x.fichier->octets) { char *e = NULL; base_fichier_lire(x.fichier, &e); free(e); }
+                if (x.fichier->octets) m->iface.jouer(m->iface.contexte, x.fichier->octets, x.fichier->taille, de, a_);
+            }
+            valeur_liberer(&x);
+            if (mp) ok = echouer(diag, b, debut, mp);
             break;
         }
         case I_AMORCER:

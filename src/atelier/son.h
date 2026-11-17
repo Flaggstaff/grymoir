@@ -102,3 +102,7 @@ public:
     void nourrir_direct(const std::vector<float> &pcm16k);   // pour les essais : du son, comme s'il venait du micro
     std::shared_ptr<struct Dictee> dictee() const { return direct; }   // pour les essais
 };
+
+// « Écouter x, de d à f. » (3.41) : joue un son de la seconde debut à la seconde fin (fin < 0 : jusqu'au bout), sans
+// attendre ; octets vides : l'écoute s'arrête. Dans le fil de la fenêtre seulement.
+void jouer_extrait(const QByteArray &octets, double debut, double fin);

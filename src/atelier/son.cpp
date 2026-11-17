@@ -459,3 +459,56 @@ void EnregistreurSon::arreter_direct() {
 }
 
 QString EnregistreurSon::texte_direct() const { return direct ? direct->texte() : QString(); }
+
+// --- Écouter x, de d à f (3.41) ---
+
+// Le lecteur des « Écouter » d'un programme : un seul, dans le fil de la fenêtre ; une nouvelle écoute remplace la
+// précédente. Le son garde son format (pas de conversion) ; le lecteur se place au début voulu dès que le son est chargé,
+// et s'arrête de lui-même à la fin voulue. Le même son, rejoué, n'est pas rechargé.
+namespace {
+struct Joueur {
+    QMediaPlayer *lecteur = nullptr;
+    QAudioOutput *sortie = nullptr;
+    QBuffer *tampon = nullptr;
+    QByteArray octets;
+    qint64 debut = 0, fin = -1;
+    bool attendre = false;
+};
+Joueur joueur;
+}
+
+void jouer_extrait(const QByteArray &octets, double debut, double fin) {
+    if (!joueur.lecteur) {
+        joueur.lecteur = new QMediaPlayer(qApp);
+        joueur.sortie = new QAudioOutput(qApp);
+        joueur.lecteur->setAudioOutput(joueur.sortie);
+        QObject::connect(joueur.lecteur, &QMediaPlayer::positionChanged, qApp, [](qint64 p) {
+            if (joueur.fin >= 0 && p >= joueur.fin) joueur.lecteur->pause();
+        });
+        QObject::connect(joueur.lecteur, &QMediaPlayer::mediaStatusChanged, qApp, [](QMediaPlayer::MediaStatus e) {
+            if (joueur.attendre && (e == QMediaPlayer::LoadedMedia || e == QMediaPlayer::BufferedMedia)) {
+                joueur.attendre = false;
+                joueur.lecteur->setPosition(joueur.debut);
+                joueur.lecteur->play();
+            }
+        });
+    }
+    joueur.lecteur->pause();
+    if (octets.isEmpty()) return;   // « Arrêter l'écoute. »
+    joueur.debut = (qint64)(debut * 1000);
+    joueur.fin = fin < 0 ? -1 : (qint64)(fin * 1000);
+    if (octets.size() == joueur.octets.size() && octets == joueur.octets && joueur.tampon) {
+        joueur.lecteur->setPosition(joueur.debut);
+        joueur.lecteur->play();
+        return;
+    }
+    joueur.lecteur->stop();
+    joueur.lecteur->setSourceDevice(nullptr);
+    delete joueur.tampon;
+    joueur.octets = octets;
+    joueur.tampon = new QBuffer(qApp);
+    joueur.tampon->setData(joueur.octets);
+    joueur.tampon->open(QIODevice::ReadOnly);
+    joueur.attendre = true;
+    joueur.lecteur->setSourceDevice(joueur.tampon, QUrl("son." + extension_du_format(octets)));
+}

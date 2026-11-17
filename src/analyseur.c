@@ -12893,6 +12893,45 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = fin_jeton(b);
         return n;
     }
+    if (est_mot(t, "arrêter") && voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écoute") && voir(a, 3)->type == J_POINT) {
+        /* « Arrêter l'écoute. » (3.41) : le son qu'« Écouter » joue s'arrête */
+        if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'arrête rien : arrête l'écoute dans une action."));
+        a->i += 3;
+        Noeud *n = noeud_creer(P_ECOUTER, t->ligne, t->colonne, t->debut);
+        n->forme = 2;
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        return n;
+    }
+    if (est_mot(t, "écouter") && !(voir(a, 1)->type == J_POINT)) {
+        /* « Écouter x. », « Écouter x, de d à f. » (3.41) : x, un son, joué sur l'ordinateur, en entier ou de la seconde d
+         * à la seconde f ; la suite du programme n'attend pas la fin du son ; une nouvelle écoute remplace la précédente */
+        if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'écoute rien : écoute dans une action."));
+        a->i += 1;
+        Noeud *n = noeud_creer(P_ECOUTER, t->ligne, t->colonne, t->debut);
+        Noeud *x = valeur(a);
+        if (!x) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "de")) {
+            a->i += 2;
+            Noeud *d = valeur(a);
+            if (!d) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, d);
+            if (!est_mot(cour(a), "à")) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("« à » attendu : « Écouter le son, de 4,5 à 7. » (en secondes)."));
+            }
+            avancer(a);
+            Noeud *f = valeur(a);
+            if (!f) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, f);
+            n->forme = 1;
+            n->fin = f->fin;
+        }
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        return n;
+    }
     if (est_mot(t, "amorcer") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "transcription") && est_mot(voir(a, 3), "avec")) {
         /* « Amorcer la transcription avec t. » (2.80) : t, un texte (ou absent), donne au transcripteur le vocabulaire
          * attendu (indicatifs, codes, noms propres) pour les transcriptions suivantes de l'exécution */

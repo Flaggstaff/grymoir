@@ -561,6 +561,12 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_ECOUTER:   /* (écouter x [d f]), (arrêter-écoute) (3.41) */
+        if (n->forme == 2) { chaine_ajouter(c, "(arrêter-écoute)"); return; }
+        chaine_ajouter(c, "(écouter");
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
     case P_AMORCER:   /* (amorcer t) (2.80) */
         chaine_ajouter(c, n->forme ? "(amorcer-toute-langue " : "(amorcer ");
         decrire(n->enfants[0], c);

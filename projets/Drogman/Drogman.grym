@@ -1,4 +1,4 @@
-Remarque : Drogman 0.2 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.3 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -24,11 +24,13 @@ Un entretien, conservé, a :
     un intervieweur (texte), facultatif,
     un enregistrement (son), facultatif,
     un effectif (nombre entier), facultatif,
-    une correspondance (texte), facultative.
+    une correspondance (texte), facultative,
+    une traduction jointe (vrai ou faux), facultative.
 
 Remarque : les voix (0.2) : l'effectif dit combien de personnes parlent, interprète compris ; connu, il aide la séparation
 Remarque : des voix. La correspondance donne un sigle à chaque voix numérotée (« 1 INT, 2 PA, 3 INPRET ») : la voix 1 est
-Remarque : celle qui parle la première.
+Remarque : celle qui parle la première. La traduction jointe (0.3) : la transcription COREL porte aussi la traduction des tours
+Remarque : non français, entre crochets ; décochée, elle ne garde que la parole.
 
 Remarque : un tour de parole : un segment de la transcription, à sa place (le rang), avec son début et sa fin en secondes depuis
 Remarque : le début de l'enregistrement, la langue reconnue (« tr », « fr »), et ses trois versions. Le sigle dit qui parle
@@ -188,6 +190,43 @@ Pour nommer un dossier :
                 Le n devient le n + 1.
     Rendre le n.
 
+Remarque : le sigle que la correspondance d'un dossier donne à une voix, ou absent (0.3 : une voix corrigée à la main).
+Pour trouver le sigle d'un dossier et une voix :
+    Le s vaut absent.
+    Si la correspondance du dossier est présente :
+        Les paires valent les morceaux de (la correspondance du dossier en remplaçant « ; » par « , ») séparés par « , ».
+        Pour chaque paire parmi les paires :
+            Les ps valent les mots de (la paire en remplaçant « = » par " " en remplaçant « : » par " ").
+            Si le nombre de ps = 2 et le premier élément des ps = ("" suivi de voix), le s devient le dernier élément des ps en majuscules.
+    Rendre le s.
+
+Remarque : la durée d'un entretien, d'après la fin de son dernier tour, à la façon du modèle : « 00h45 ».
+La durée lue d'un e :
+    Le f vaut 0.
+    Pour chaque tour conservé dont l'entretien = le e :
+        Si la fin du tour > le f, le f devient la fin du tour.
+    Le m vaut la partie entière de ((le f + 59) ÷ 60).
+    Rendre la paire de chiffres de (la partie entière de (le m ÷ 60)) suivi de « h » suivi de la paire de chiffres de (le m − 60 × la partie entière de (le m ÷ 60)).
+
+Remarque : les rangs d'un entretien qui suivent un rang avancent ou reculent d'un cran (pour joindre et couper).
+Pour décaler un dossier et un seuil et un pas :
+    Pour chaque tour conservé dont l'entretien = le dossier et le rang > seuil :
+        Le rang du tour devient le rang du tour + pas.
+
+Remarque : un texte sans espaces en trop, aux bords comme entre les mots.
+L'épuré d'un texte :
+    Le r vaut « ».
+    Pour chaque m parmi les mots du texte :
+        Si le r ≠ « », le r devient le r suivi de " ".
+        Le r devient le r suivi du m.
+    Rendre le r.
+
+Remarque : deux textes mis bout à bout, l'un ou l'autre pouvant manquer.
+La jonction d'un a et d'un b :
+    Si le a est absent, rendre le b.
+    Si le b est absent, rendre le a.
+    Rendre le a suivi de " " suivi du b.
+
 Remarque : un texte en français, par Google Cloud Translation (version simple, la clé dans l'adresse ; le turc reconnu par
 Remarque : Google, « source » laissée vide) ; sans clé : un refus qui le dit ; Google muet ou qui refuse la clé : un refus aussi.
 Pour traduire un texte :
@@ -238,12 +277,15 @@ Le document COREL d'un e :
     Si le réalisé ≠ « », le r devient le r suivi du paragraphe RTF du réalisé.
     Si la durée du e est présente, le r devient le r suivi du paragraphe RTF de ("Durée : " suivi de la durée du e).
     Le r devient le r suivi du paragraphe RTF de « ».
+    Remarque : la traduction jointe, absente : jointe (les entretiens d'avant la 0.3).
+    Le joint vaut vrai.
+    Si la traduction jointe du e est présente, le joint devient la traduction jointe du e.
     Pour chaque tour conservé dont l'entretien = le e, par rang :
         Le dit vaut la base du tour.
         Si la version corel du tour est présente, le dit devient la version corel du tour.
         Si le dit est absent, le dit devient « ».
         Le r devient le r suivi de "\pard\tx1134\sb0\sa120 " suivi du RTF du sigle du tour suivi de "\tab " suivi du RTF du dit suivi de "\par" suivi d'un saut de ligne.
-        Si la traduction du tour est présente, le r devient le r suivi de "\pard\tx1134\sb0\sa120 \tab [" suivi du RTF de la traduction du tour suivi de "]\par" suivi d'un saut de ligne.
+        Si le joint est vrai et la traduction du tour est présente, le r devient le r suivi de "\pard\tx1134\sb0\sa120 \tab [" suivi du RTF de la traduction du tour suivi de "]\par" suivi d'un saut de ligne.
     Rendre le r suivi de « } ».
 
 Remarque : la transcription pour NVivo, en texte (UTF-8) : une ligne par tour, « 00:01:22 INT: texte », l'horodatage en tête de
@@ -316,6 +358,7 @@ L'écran de l'entretien, « Entretien », pour un entretien, montre :
         un effectif (nombre entier), facultatif, de 1 à 20, avec l'indication « Combien de personnes parlent, interprète compris : aide à séparer les voix »,
         une correspondance (texte), facultative, avec l'indication « Le sigle de chaque voix : 1 INT, 2 PA, 3 INPRET (la voix 1 parle la première) »,
         un bouton « Nommer les voix », actif si l'entretien de l'écran est présent,
+    une traduction jointe (vrai ou faux), facultative, vrai au départ, avec l'indication « La traduction dans la transcription COREL, entre crochets sous chaque tour non français »,
     le texte l'état de l'entretien de l'écran,
     la liste des tours conservés dont le code de l'entretien = le code ouvert, par rang, avec le rang, la voix, le sigle, la langue, la version corel et la traduction,
     côte à côte :
@@ -334,13 +377,20 @@ L'écran de l'entretien, « Entretien », pour un entretien, montre :
 
 L'écran du tour, « Tour de parole », pour un tour, montre :
     le texte "Tour " suivi du rang du tour de l'écran suivi de ", de " suivi de l'horodatage du début du tour de l'écran suivi de " à " suivi de l'horodatage de la fin du tour de l'écran suivi de ", langue : " suivi de la langue du tour de l'écran suivi de la mention de voix du tour de l'écran,
-    un sigle (texte), avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
-    une base (texte), facultative, sur plusieurs lignes, avec l'indication « La parole transcrite, dans sa langue »,
+    côte à côte :
+        un sigle (texte), avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
+        une voix (nombre entier), facultative, de 1 à 20, avec l'indication « Corrigée, elle reprend le sigle de la correspondance »,
+    une base (texte), facultative, sur plusieurs lignes, avec l'indication "La parole transcrite, dans sa langue ; un « | » marque où couper",
     une traduction (texte), facultative, sur plusieurs lignes, avec l'indication « En français ; vide pour un tour français »,
     une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)) »,
     côte à côte :
-        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran,
+        un bouton « ▶ Réécouter », actif si l'enregistrement de l'entretien du tour de l'écran est présent,
+        un bouton « ■ Arrêter »,
+    côte à côte :
+        un bouton « Enregistrer », principal,
         un bouton « Traduire ce tour »,
+        un bouton « Joindre au suivant », à confirmer par « Joindre ce tour et le suivant en un seul ? »,
+        un bouton « Couper au | »,
         un bouton « Fermer », qui ferme l'écran.
 
 L'écran des réglages, « Réglages », montre :
@@ -403,6 +453,7 @@ Quand on clique sur « Transcrire » dans l'écran de l'entretien :
         Verser le s et le e.
     Si le rang courant = 0, refuser « Rien n'a été transcrit : le modèle de transcription manque, ou l'enregistrement est muet. ».
     Nommer le e, qui donne le nommé.
+    Si la durée du e est absente, la durée du e devient la durée lue du e.
     Signaler le rang courant puis « tours de parole transcrits. » suivi de l'avis des voix.
 
 Remarque : traduire : chaque tour qui n'est pas en français et n'a pas encore de traduction ; une traduction corrigée à la
@@ -449,6 +500,89 @@ Quand on clique sur « Exporter NVivo » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.
     Déposer ((le texte NVivo du e) en fichier) et (le code du e suivi de " NVivo") et « .txt », qui donne le chemin.
     Signaler « Transcription pour NVivo écrite dans » puis le chemin.
+
+Remarque : enregistrer un tour (0.3) : une voix changée reprend le sigle que la correspondance lui donne.
+Quand on clique sur « Enregistrer » dans l'écran du tour :
+    Le t vaut le tour de l'écran.
+    L'ancienne voix vaut la voix du t.
+    Enregistrer le tour de l'écran.
+    Si la voix du t est présente et la voix du t ≠ l'ancienne voix :
+        Trouver le sigle de l'entretien du t et la voix du t, qui donne le s.
+        Si le s est présent, le sigle du t devient le s.
+    Fermer l'écran.
+
+Remarque : joindre (0.3) : le tour suivant rejoint celui-ci (textes bout à bout, fin reprise), puis disparaît ; les rangs
+Remarque : d'après reculent d'un cran.
+Quand on clique sur « Joindre au suivant » dans l'écran du tour :
+    Enregistrer le tour de l'écran.
+    Le t vaut le tour de l'écran.
+    Le suivant vaut absent.
+    Le dossier du t vaut l'entretien du t.
+    Le cran vaut le rang du t + 1.
+    Pour chaque tour conservé dont l'entretien = le dossier du t et le rang = le cran :
+        Le suivant devient le tour.
+    Si le suivant est absent, refuser « C'est le dernier tour : rien à joindre. ».
+    La base du t devient la jonction de la base du t et de la base du suivant.
+    La version corel du t devient la jonction de la version corel du t et de la version corel du suivant.
+    La traduction du t devient la jonction de la traduction du t et de la traduction du suivant.
+    La fin du t devient la fin du suivant.
+    Supprimer le suivant.
+    Décaler l'entretien du t et le rang du t et -1.
+    Signaler « Tours joints. ».
+    Arrêter l'écoute.
+    Fermer l'écran.
+
+Remarque : couper (0.3) : un « | » dans la base marque la coupe ; dans la version COREL et la traduction aussi, s'il y est
+Remarque : (sinon la version COREL suit la base, et la traduction reste au premier tour). L'heure de la coupe : au prorata
+Remarque : des caractères de la base. Le nouveau tour garde le sigle, la voix et la langue ; les rangs d'après avancent.
+Quand on clique sur « Couper au | » dans l'écran du tour :
+    Si la base de l'écran est absente ou la base de l'écran ne contient pas « | », refuser "Mets un « | » dans la base, là où le tour doit se couper.".
+    Enregistrer le tour de l'écran.
+    Le t vaut le tour de l'écran.
+    Le avant vaut l'épuré de (la base du t avant « | »).
+    Le après vaut l'épuré de (la base du t après « | »).
+    Si le avant = « » ou le après = « », refuser "Le « | » doit avoir du texte de chaque côté.".
+    Le c1 vaut le avant.
+    Le c2 vaut le après.
+    Si la version corel du t est présente et la version corel du t contient « | » :
+        Le c1 devient l'épuré de (la version corel du t avant « | »).
+        Le c2 devient l'épuré de (la version corel du t après « | »).
+    Le tr1 vaut la traduction du t.
+    Le tr2 vaut absent.
+    Si la traduction du t est présente et la traduction du t contient « | » :
+        Le tr1 devient l'épuré de (la traduction du t avant « | »).
+        Le tr2 devient l'épuré de (la traduction du t après « | »).
+    Le milieu vaut le début du t + (la fin du t − le début du t) × (la longueur du avant) ÷ (la longueur du avant + la longueur du après).
+    Décaler l'entretien du t et le rang du t et 1.
+    Le n vaut un nouveau tour :
+        L'entretien vaut l'entretien du t.
+        Le rang vaut le rang du t + 1.
+        Le début vaut le milieu.
+        La fin vaut la fin du t.
+        Le sigle vaut le sigle du t.
+        La langue vaut la langue du t.
+        La base vaut le après.
+        La version corel vaut le c2.
+        La traduction vaut le tr2.
+    Si la voix du t est présente, la voix du n devient la voix du t.
+    Conserver le n.
+    La base du t devient le avant.
+    La version corel du t devient le c1.
+    La traduction du t devient le tr1.
+    La fin du t devient le milieu.
+    Signaler « Tour coupé en deux. ».
+    Fermer l'écran.
+
+Remarque : réécouter un tour (0.3, grammaire 3.41) : le passage de l'enregistrement, avec un tiers de seconde de marge de
+Remarque : chaque côté (les heures de Whisper sont approchées).
+Quand on clique sur « ▶ Réécouter » dans l'écran du tour :
+    Le t vaut le tour de l'écran.
+    Le départ vaut le début du t − 0,3.
+    Si le départ < 0, le départ devient 0.
+    Écouter l'enregistrement de l'entretien du t, de (le départ) à (la fin du t + 0,3).
+
+Quand on clique sur « ■ Arrêter » dans l'écran du tour :
+    Arrêter l'écoute.
 
 Quand on clique sur « Traduire ce tour » dans l'écran du tour :
     Le t vaut le tour de l'écran.

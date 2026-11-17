@@ -1394,6 +1394,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         expression(c, ph->enfants[0]);
         emettre(c, I_SIGNER, 0, ph->ligne, ph->colonne);
         return;
+    case P_ECOUTER:   /* « Écouter x[, de d à f]. », « Arrêter l'écoute. » (3.41) */
+        for (size_t k = 0; k < ph->nb_enfants; k++) expression(c, ph->enfants[k]);
+        emettre(c, I_ECOUTER, ph->forme, ph->ligne, ph->colonne);
+        return;
     case P_AMORCER:   /* « Amorcer la transcription avec t. » (2.80) */
         expression(c, ph->enfants[0]);
         emettre(c, ph->forme ? I_AMORCER_LANGUES : I_AMORCER, 0, ph->ligne, ph->colonne);

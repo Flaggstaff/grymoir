@@ -3136,6 +3136,29 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "avec", t);
             expression(r, d + 1, f);
             point(r, f);
+        } else if (!strcmp(c, "arrêter_écoute")) {   /* _arrêter_écoute → Arrêter l'écoute. (3.41) */
+            mot(r, "arrêter", t);
+            emettre(r, J_ELISION, "l'", t, 0);
+            mot(r, "écoute", t);
+            point(r, f);
+        } else if (!strcmp(c, "écouter")) {   /* _écouter x [_dès d _jusqu f] → Écouter x[, de d à f]. (3.41) */
+            if (d + 1 >= f) {
+                echouer(r, t, grym_dupliquer("« _écouter » attend un son : « _écouter s » ou « _écouter s _dès 3 _jusqu 5 »."));
+                return;
+            }
+            const size_t des = chercher(r, d + 1, f, "dès");
+            const size_t jusqu = des < f ? chercher(r, des + 1, f, "jusqu") : f;
+            if (des < f && jusqu >= f) { echouer(r, &r->e[des], grym_dupliquer("« _dès » attend sa fin : « _jusqu 5 ».")); return; }
+            mot(r, "écouter", t);
+            expression(r, d + 1, des);
+            if (des < f) {
+                emettre(r, J_VIRGULE, NULL, &r->e[des], 1);
+                mot(r, "de", &r->e[des]);
+                expression(r, des + 1, jusqu);
+                mot(r, "à", &r->e[jusqu]);
+                expression(r, jusqu + 1, f);
+            }
+            point(r, f);
         } else if (!strcmp(c, "amorcer")) {   /* _amorcer t → Amorcer la transcription avec t. (2.80) */
             if (d + 1 >= f) {
                 echouer(r, t, grym_dupliquer("« _amorcer » attend un texte : « _amorcer « … » »."));
