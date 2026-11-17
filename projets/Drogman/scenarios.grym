@@ -215,7 +215,7 @@ Scénario « le bouton Nommer les voix, depuis l'écran » :
     Pour chaque tour conservé dont le rang = 2 :
         Vérifier que le sigle du tour = « MA ».
 
-Remarque : Drogman 0.3 : joindre, couper, corriger une voix, la durée, la traduction jointe ou non.
+Remarque : Drogman 0.3 et 0.3.1 : joindre, couper (à la barre oblique), corriger une voix, la durée, la traduction jointe ou non.
 Scénario « joindre un tour au suivant : textes bout à bout, fin reprise, rangs resserrés » :
     Poser « EensA1_20130306_Ens_11 », qui donne le e.
     Transcrire à trois voix le e.
@@ -238,7 +238,7 @@ Scénario « joindre un tour au suivant : textes bout à bout, fin reprise, rang
     Pour chaque tour conservé dont le rang = 3 :
         Vérifier que la base du tour = « Il dit : ça va bien. ».
 
-Scénario « couper un tour au | : deux tours, l'heure au prorata, les rangs d'après avancent » :
+Scénario « couper un tour à la barre oblique : deux tours, l'heure au prorata, les rangs d'après avancent » :
     Poser « EensA1_20130306_Ens_12 », qui donne le e.
     Transcrire le e.
     On choisit le e dans l'écran des entretiens.
@@ -246,9 +246,9 @@ Scénario « couper un tour au | : deux tours, l'heure au prorata, les rangs d'a
     Pour chaque tour conservé dont le rang = 1 :
         Le premier devient le tour.
     On choisit le premier dans l'écran de l'entretien.
-    On écrit « Bonjour, | comment allez-vous ? » dans la base de l'écran du tour.
-    On écrit « Bonjour, | comment allez-VOUS ? » dans la version corel de l'écran du tour.
-    On clique sur « Couper au | » dans l'écran du tour.
+    On écrit « Bonjour, / comment allez-vous ? » dans la base de l'écran du tour.
+    On écrit « Bonjour, / comment allez-VOUS ? » dans la version corel de l'écran du tour.
+    On clique sur « Couper au / » dans l'écran du tour.
     On ferme l'écran de l'entretien.
     On ferme l'écran des entretiens.
     Ouvrir l'écran des entretiens.
@@ -268,7 +268,7 @@ Scénario « couper un tour au | : deux tours, l'heure au prorata, les rangs d'a
     Pour chaque tour conservé dont le rang = 4 :
         Vérifier que la base du tour = « Il dit : ça va bien. ».
 
-Scénario « couper sans | : un refus » :
+Scénario « couper sans barre oblique : un refus » :
     Poser « EensA1_20130306_Ens_13 », qui donne le e.
     Transcrire le e.
     On choisit le e dans l'écran des entretiens.
@@ -276,8 +276,8 @@ Scénario « couper sans | : un refus » :
     Pour chaque tour conservé dont le rang = 1 :
         Le premier devient le tour.
     On choisit le premier dans l'écran de l'entretien.
-    On clique sur « Couper au | » dans l'écran du tour.
-    On voit l'erreur "Mets un « | » dans la base" dans l'écran du tour.
+    On clique sur « Couper au / » dans l'écran du tour.
+    On voit l'erreur "Mets une barre oblique « / » dans la base" dans l'écran du tour.
     On ferme l'écran du tour.
     On ferme l'écran de l'entretien.
     On ferme l'écran des entretiens.

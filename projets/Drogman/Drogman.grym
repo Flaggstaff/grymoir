@@ -1,4 +1,4 @@
-Remarque : Drogman 0.3 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.3.1 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -380,7 +380,7 @@ L'écran du tour, « Tour de parole », pour un tour, montre :
     côte à côte :
         un sigle (texte), avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
         une voix (nombre entier), facultative, de 1 à 20, avec l'indication « Corrigée, elle reprend le sigle de la correspondance »,
-    une base (texte), facultative, sur plusieurs lignes, avec l'indication "La parole transcrite, dans sa langue ; un « | » marque où couper",
+    une base (texte), facultative, sur plusieurs lignes, avec l'indication "La parole transcrite, dans sa langue ; une barre oblique « / » marque où couper",
     une traduction (texte), facultative, sur plusieurs lignes, avec l'indication « En français ; vide pour un tour français »,
     une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)) »,
     côte à côte :
@@ -390,7 +390,7 @@ L'écran du tour, « Tour de parole », pour un tour, montre :
         un bouton « Enregistrer », principal,
         un bouton « Traduire ce tour »,
         un bouton « Joindre au suivant », à confirmer par « Joindre ce tour et le suivant en un seul ? »,
-        un bouton « Couper au | »,
+        un bouton « Couper au / »,
         un bouton « Fermer », qui ferme l'écran.
 
 L'écran des réglages, « Réglages », montre :
@@ -532,26 +532,27 @@ Quand on clique sur « Joindre au suivant » dans l'écran du tour :
     Arrêter l'écoute.
     Fermer l'écran.
 
-Remarque : couper (0.3) : un « | » dans la base marque la coupe ; dans la version COREL et la traduction aussi, s'il y est
+Remarque : couper (0.3 ; la barre oblique depuis la 0.3.1, une touche du clavier suisse romand) : une « / » dans la base
+Remarque : marque la coupe (la première, s'il y en a plusieurs) ; dans la version COREL et la traduction aussi, s'il y est
 Remarque : (sinon la version COREL suit la base, et la traduction reste au premier tour). L'heure de la coupe : au prorata
 Remarque : des caractères de la base. Le nouveau tour garde le sigle, la voix et la langue ; les rangs d'après avancent.
-Quand on clique sur « Couper au | » dans l'écran du tour :
-    Si la base de l'écran est absente ou la base de l'écran ne contient pas « | », refuser "Mets un « | » dans la base, là où le tour doit se couper.".
+Quand on clique sur « Couper au / » dans l'écran du tour :
+    Si la base de l'écran est absente ou la base de l'écran ne contient pas « / », refuser "Mets une barre oblique « / » dans la base, là où le tour doit se couper.".
     Enregistrer le tour de l'écran.
     Le t vaut le tour de l'écran.
-    Le avant vaut l'épuré de (la base du t avant « | »).
-    Le après vaut l'épuré de (la base du t après « | »).
-    Si le avant = « » ou le après = « », refuser "Le « | » doit avoir du texte de chaque côté.".
+    Le avant vaut l'épuré de (la base du t avant « / »).
+    Le après vaut l'épuré de (la base du t après « / »).
+    Si le avant = « » ou le après = « », refuser "La barre oblique « / » doit avoir du texte de chaque côté.".
     Le c1 vaut le avant.
     Le c2 vaut le après.
-    Si la version corel du t est présente et la version corel du t contient « | » :
-        Le c1 devient l'épuré de (la version corel du t avant « | »).
-        Le c2 devient l'épuré de (la version corel du t après « | »).
+    Si la version corel du t est présente et la version corel du t contient « / » :
+        Le c1 devient l'épuré de (la version corel du t avant « / »).
+        Le c2 devient l'épuré de (la version corel du t après « / »).
     Le tr1 vaut la traduction du t.
     Le tr2 vaut absent.
-    Si la traduction du t est présente et la traduction du t contient « | » :
-        Le tr1 devient l'épuré de (la traduction du t avant « | »).
-        Le tr2 devient l'épuré de (la traduction du t après « | »).
+    Si la traduction du t est présente et la traduction du t contient « / » :
+        Le tr1 devient l'épuré de (la traduction du t avant « / »).
+        Le tr2 devient l'épuré de (la traduction du t après « / »).
     Le milieu vaut le début du t + (la fin du t − le début du t) × (la longueur du avant) ÷ (la longueur du avant + la longueur du après).
     Décaler l'entretien du t et le rang du t et 1.
     Le n vaut un nouveau tour :
