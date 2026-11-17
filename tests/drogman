@@ -67,7 +67,7 @@ Le u vaut un nouveau tour :
     La langue vaut « tr ».
     La base vaut « İyiyim, teşekkür ederim. ».
     La traduction vaut « Je vais bien, merci. ».
-    La version corel vaut « İyiyim, (.) teşekkür ederim. ».
+    La version corel vaut « Je vais bien (.) merci. ».
 Conserver le u.' > /dev/null
 lancer entretien "ligne:EensA1_20130306_Ens_01"
 verifier "$(grep -c 'erreur' "$d/entretien.txt")" "0" "l'écran de l'entretien s'ouvre sans erreur"
@@ -77,7 +77,8 @@ lancer reecoute "ligne:EensA1_20130306_Ens_01;ligne:PA;▶ Réécouter;■ Arrê
 verifier "$(grep -c 'erreur' "$d/reecoute.txt")" "0" "réécouter un tour, puis arrêter, sans erreur"
 lancer exports "ligne:EensA1_20130306_Ens_01;Exporter COREL;Exporter NVivo"
 verifier "$([ -s "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf" ] && echo oui)" "oui" "le RTF COREL est écrit"
-verifier "$(grep -c 'PA\\tab \\u304?yiyim, (.) te\\u351?ekk\\u252?r ederim.\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "le tour turc, en RTF"
+verifier "$(grep -c 'PA\\tab \\u304?yiyim, te\\u351?ekk\\u252?r ederim.\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "le tour turc, en RTF : la parole d'origine"
+verifier "$(grep -c '\\tab \[Je vais bien (.) merci.\]\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "dessous, sa version COREL faite sur la traduction"
 verifier "$(sed -n 2p "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01 NVivo.txt")" "00:00:04 PA: İyiyim, teşekkür ederim. [Je vais bien, merci.]" "la ligne NVivo du tour turc"
 lancer transcrire "ligne:EensA1_20130306_Ens_01;Transcrire;confirmer"
 verifier "$(grep -c 'erreur' "$d/transcrire.txt")" "0" "Transcrire tourne jusqu'au bout"

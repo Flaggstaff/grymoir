@@ -20,7 +20,7 @@ Remarque : trois segments : une question en français, la réponse du père en t
 Remarque : mots), la traduction de l'interprète.
 Pour transcrire un entretien :
     Préparer l'écoute.
-    Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":2.1,"douteux":false},{"mot":"comment","début":2.2,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien.
+    Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":1.9,"douteux":false},{"mot":"comment","début":2.4,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien.
     Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien.
     Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien.
 
@@ -34,10 +34,11 @@ Scénario « un segment devient un tour, avec sa langue, ses heures et sa versio
         Vérifier que la fin du tour = 7,5.
         Vérifier que le sigle du tour = « ? ».
         Vérifier que la base du tour = « İyiyim, teşekkür ederim. ».
-        Remarque : 1,1 seconde de silence entre « İyiyim, » et « teşekkür » : une petite pause.
-        Vérifier que la version corel du tour = « İyiyim, (.) teşekkür ederim. ».
+        Remarque : un tour turc : sa version COREL attend la traduction (Drogman 0.4).
+        Vérifier que la version corel du tour est absente.
+    Remarque : un tour français : sa version COREL tout de suite ; une demi-seconde de silence entre « Bonjour, » et « comment » : une petite pause.
     Pour chaque tour conservé dont le rang = 1 :
-        Vérifier que la version corel du tour = « Bonjour, comment allez-vous ? ».
+        Vérifier que la version corel du tour = « Bonjour, (.) comment allez-vous ? ».
     Remarque : un segment sans mots garde son texte.
     Pour chaque tour conservé dont le rang = 3 :
         Vérifier que la version corel du tour = « Il dit : ça va bien. ».
@@ -113,9 +114,10 @@ Scénario « le document COREL : l'en-tête, le sigle, la tabulation, le turc en
     Vérifier que le d contient "(Interpr\u232?te (INPRET) : Elif Demir)".
     Vérifier que le d contient "R\u233?alis\u233? par Dilan (INT), domicile des parents".
     Vérifier que le d contient "Dur\u233?e : 00h45".
-    Vérifier que le d contient "PA\tab \u304?yiyim, (.) te\u351?ekk\u252?r ederim.\par".
+    Remarque : un tour turc : la parole d'origine, puis la traduction dessous (sans version COREL encore).
+    Vérifier que le d contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
     Vérifier que le d contient "\tab [Je vais bien, merci.]\par".
-    Vérifier que le d contient "?\tab Bonjour, comment allez-vous ?\par".
+    Vérifier que le d contient "?\tab Bonjour, (.) comment allez-vous ?\par".
     Vérifier que le d finit par « } ».
     Remarque : les lettres de la table ne restent pas telles quelles (« contient » ne regarde ni accents ni casse : des mots entiers).
     Vérifier que le d ne contient pas « Réalisé ».
@@ -187,7 +189,7 @@ Scénario « les voix coupent un segment en deux tours, et la correspondance pos
         Vérifier que la fin du tour = 4,8.
     Pour chaque tour conservé dont le rang = 3 :
         Vérifier que la voix du tour = 3.
-        Vérifier que la version corel du tour = « teşekkür ederim. ».
+        Vérifier que la base du tour = « teşekkür ederim. ».
         Vérifier que le début du tour = 5,9.
     Remarque : un segment hors de toute voix garde la dernière entendue.
     Pour chaque tour conservé dont le rang = 4 :
@@ -232,7 +234,7 @@ Scénario « joindre un tour au suivant : textes bout à bout, fin reprise, rang
     Vérifier que le nombre de tours conservés = 3.
     Pour chaque tour conservé dont le rang = 2 :
         Vérifier que la base du tour = « İyiyim, teşekkür ederim. ».
-        Vérifier que la version corel du tour = « İyiyim, teşekkür ederim. ».
+        Vérifier que la version corel du tour est absente.
         Vérifier que le début du tour = 4.
         Vérifier que la fin du tour = 7,5.
     Pour chaque tour conservé dont le rang = 3 :
@@ -317,3 +319,59 @@ Scénario « la traduction jointe décochée : la transcription COREL ne garde q
     Vérifier que le document COREL du e contient « [Je vais bien, merci.] ».
     La traduction jointe du e devient faux.
     Vérifier que le document COREL du e ne contient pas « Je vais bien ».
+
+Remarque : Drogman 0.4 : la version COREL d'un tour non français se fait sur sa traduction ; le document COREL la met sous la
+Remarque : parole d'origine ; le sigle s'écrit en majuscules.
+Scénario « un tour turc : sa version COREL, faite sur la traduction, passe sous la parole d'origine » :
+    Poser « EensA1_20130306_Ens_17 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « Je vais bien, merci. ».
+        La version corel du tour devient « Je vais bien (.) merci. ».
+    Le d vaut le document COREL du e.
+    Vérifier que le d contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
+    Vérifier que le d contient "\tab [Je vais bien (.) merci.]\par".
+    Vérifier que le d ne contient pas « [Je vais bien, merci.] ».
+    La traduction jointe du e devient faux.
+    Vérifier que le document COREL du e ne contient pas « Je vais bien ».
+
+Scénario « couper un tour turc : sa version COREL reste au premier, la traduction se coupe à sa barre » :
+    Poser « EensA1_20130306_Ens_18 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le deuxième vaut absent.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le deuxième devient le tour.
+    On choisit le deuxième dans l'écran de l'entretien.
+    On écrit « İyiyim, / teşekkür ederim. » dans la base de l'écran du tour.
+    On écrit « Je vais bien, / merci. » dans la traduction de l'écran du tour.
+    On écrit « pa » dans le sigle de l'écran du tour.
+    On clique sur « Couper au / » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que la base du tour = « İyiyim, ».
+        Vérifier que la traduction du tour = « Je vais bien, ».
+        Vérifier que la version corel du tour = « Je vais bien, ».
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la base du tour = « teşekkür ederim. ».
+        Vérifier que la version corel du tour = « merci. ».
+        Vérifier que le sigle du tour = « PA ».
+
+Scénario « le sigle d'un tour enregistré s'écrit en majuscules » :
+    Poser « EensA1_20130306_Ens_19 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On écrit « int » dans le sigle de l'écran du tour.
+    On clique sur « Enregistrer » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que le sigle du tour = « INT ».

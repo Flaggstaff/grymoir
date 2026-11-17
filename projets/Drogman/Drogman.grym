@@ -1,4 +1,4 @@
-Remarque : Drogman 0.3.1 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.4 (17 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -110,7 +110,9 @@ Pour clore un entretien et une langue :
             Le sigle vaut « ? ».
             La langue vaut langue.
             La base vaut le texte en cours.
-            La version corel vaut la version en cours.
+        Remarque : la version COREL d'un tour non français se fait sur sa traduction (Dilan, 17 novembre 2026) : elle attend
+        Remarque : « Traduire » ; celle d'un tour français est proposée tout de suite.
+        Si langue = « fr », la version corel du t devient la version en cours.
         Si la voix en cours > 0, la voix du t devient la voix en cours.
         Conserver le t.
         Le texte en cours devient « ».
@@ -280,12 +282,20 @@ Le document COREL d'un e :
     Remarque : la traduction jointe, absente : jointe (les entretiens d'avant la 0.3).
     Le joint vaut vrai.
     Si la traduction jointe du e est présente, le joint devient la traduction jointe du e.
+    Remarque : un tour français : « SIGLE<tab>version COREL ». Un tour d'une autre langue (0.4) : « SIGLE<tab>parole d'origine »,
+    Remarque : puis, sous lui, sa version COREL faite sur la traduction, entre crochets (la traduction brute si la version COREL
+    Remarque : manque) ; « Traduction jointe » décochée : la parole d'origine seule.
     Pour chaque tour conservé dont l'entretien = le e, par rang :
         Le dit vaut la base du tour.
-        Si la version corel du tour est présente, le dit devient la version corel du tour.
+        Le dessous vaut absent.
+        Si la langue du tour = « fr » :
+            Si la version corel du tour est présente, le dit devient la version corel du tour.
+        Sinon :
+            Le dessous devient la traduction du tour.
+            Si la version corel du tour est présente, le dessous devient la version corel du tour.
         Si le dit est absent, le dit devient « ».
         Le r devient le r suivi de "\pard\tx1134\sb0\sa120 " suivi du RTF du sigle du tour suivi de "\tab " suivi du RTF du dit suivi de "\par" suivi d'un saut de ligne.
-        Si le joint est vrai et la traduction du tour est présente, le r devient le r suivi de "\pard\tx1134\sb0\sa120 \tab [" suivi du RTF de la traduction du tour suivi de "]\par" suivi d'un saut de ligne.
+        Si le joint est vrai et le dessous est présent, le r devient le r suivi de "\pard\tx1134\sb0\sa120 \tab [" suivi du RTF du dessous suivi de "]\par" suivi d'un saut de ligne.
     Rendre le r suivi de « } ».
 
 Remarque : la transcription pour NVivo, en texte (UTF-8) : une ligne par tour, « 00:01:22 INT: texte », l'horodatage en tête de
@@ -465,6 +475,7 @@ Quand on clique sur « Traduire » dans l'écran de l'entretien :
         Si la langue du tour ≠ « fr » et la traduction du tour est absente et la base du tour est présente :
             Traduire la base du tour, qui donne le texte traduit.
             La traduction du tour devient le texte traduit.
+            Si la version corel du tour est absente, la version corel du tour devient le texte traduit.
             Le n devient le n + 1.
     Signaler le n puis « tours traduits. ».
 
@@ -506,6 +517,8 @@ Quand on clique sur « Enregistrer » dans l'écran du tour :
     Le t vaut le tour de l'écran.
     L'ancienne voix vaut la voix du t.
     Enregistrer le tour de l'écran.
+    Remarque : le sigle en majuscules, comme le modèle les écrit (« pa » devient « PA »).
+    Le sigle du t devient le sigle du t en majuscules.
     Si la voix du t est présente et la voix du t ≠ l'ancienne voix :
         Trouver le sigle de l'entretien du t et la voix du t, qui donne le s.
         Si le s est présent, le sigle du t devient le s.
@@ -516,6 +529,7 @@ Remarque : d'après reculent d'un cran.
 Quand on clique sur « Joindre au suivant » dans l'écran du tour :
     Enregistrer le tour de l'écran.
     Le t vaut le tour de l'écran.
+    Le sigle du t devient le sigle du t en majuscules.
     Le suivant vaut absent.
     Le dossier du t vaut l'entretien du t.
     Le cran vaut le rang du t + 1.
@@ -540,11 +554,17 @@ Quand on clique sur « Couper au / » dans l'écran du tour :
     Si la base de l'écran est absente ou la base de l'écran ne contient pas « / », refuser "Mets une barre oblique « / » dans la base, là où le tour doit se couper.".
     Enregistrer le tour de l'écran.
     Le t vaut le tour de l'écran.
+    Le sigle du t devient le sigle du t en majuscules.
     Le avant vaut l'épuré de (la base du t avant « / »).
     Le après vaut l'épuré de (la base du t après « / »).
     Si le avant = « » ou le après = « », refuser "La barre oblique « / » doit avoir du texte de chaque côté.".
+    Remarque : la version COREL d'un tour français suit la base ; celle d'un autre tour (faite sur la traduction) reste entière
+    Remarque : au premier, sauf si elle porte sa propre barre oblique (ou, sans version COREL, si la traduction en porte une).
     Le c1 vaut le avant.
     Le c2 vaut le après.
+    Si la langue du t ≠ « fr » :
+        Le c1 devient la version corel du t.
+        Le c2 devient absent.
     Si la version corel du t est présente et la version corel du t contient « / » :
         Le c1 devient l'épuré de (la version corel du t avant « / »).
         Le c2 devient l'épuré de (la version corel du t après « / »).
@@ -553,6 +573,9 @@ Quand on clique sur « Couper au / » dans l'écran du tour :
     Si la traduction du t est présente et la traduction du t contient « / » :
         Le tr1 devient l'épuré de (la traduction du t avant « / »).
         Le tr2 devient l'épuré de (la traduction du t après « / »).
+        Si la langue du t ≠ « fr » et la version corel du t est absente :
+            Le c1 devient le tr1.
+            Le c2 devient le tr2.
     Le milieu vaut le début du t + (la fin du t − le début du t) × (la longueur du avant) ÷ (la longueur du avant + la longueur du après).
     Décaler l'entretien du t et le rang du t et 1.
     Le n vaut un nouveau tour :
@@ -590,6 +613,7 @@ Quand on clique sur « Traduire ce tour » dans l'écran du tour :
     Si la base de l'écran est absente, refuser « Ce tour n'a pas de texte à traduire. ».
     Traduire la base de l'écran, qui donne le texte traduit.
     La traduction de l'écran devient le texte traduit.
+    Si la version corel de l'écran est absente, la version corel de l'écran devient le texte traduit.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Pour chaque réglage conservé :
