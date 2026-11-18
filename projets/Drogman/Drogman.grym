@@ -1,12 +1,12 @@
-Remarque : Drogman 0.10 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.11 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
 Remarque : était l'interprète officiel auprès de la Porte ottomane.
 Remarque : la transcription se fait sur l'ordinateur (Whisper, grammaire § 15.8, « les segments de », 3.39), comme la
-Remarque : séparation des voix (sherpa-onnx, « les voix de », 3.40) : le son ne part nulle part. Seule la traduction part chez Google (Cloud Translation), et seulement le texte des tours non français.
+Remarque : séparation des voix (sherpa-onnx, « les voix de », 3.40) : le son ne part nulle part. Seule la traduction sort de l'ordinateur, et seulement le texte des tours non français : chez DeepL d'abord, chez Google (Cloud Translation) si DeepL refuse ou se tait (0.11).
 
-Remarque : la base est chiffrée (grammaire § 16.18) : elle garde des entretiens de recherche et la clé de Google ; Drogman
+Remarque : la base est chiffrée (grammaire § 16.18) : elle garde des entretiens de recherche et les clés de DeepL et de Google ; Drogman
 Remarque : demande son mot de passe à chaque lancement, et le fait choisir au premier.
 La base est chiffrée.
 
@@ -26,7 +26,13 @@ Un entretien, conservé, a :
     un enregistrement (son), facultatif,
     un effectif (nombre entier), facultatif,
     une correspondance (texte), facultative,
-    une traduction jointe (vrai ou faux), facultative.
+    une traduction jointe (vrai ou faux), facultative,
+    une langue étrangère (« turc », « albanais », « allemand », « anglais », « arabe », « bosniaque », « croate », « espagnol », « italien », « pachto », « persan », « portugais », « russe », « serbe », « somali », « tamoul », « ukrainien » ou « aucune »), facultative, « turc » au départ,
+    une étape (texte), facultative.
+
+Remarque : la langue étrangère (0.11) : une par entretien, à côté du français ; la transcription n'attend qu'elles deux, la
+Remarque : traduction part de celle-là. « aucune » : un entretien tout en français. Absente (un entretien d'avant la 0.11) : le
+Remarque : turc. L'étape dit où en est l'entretien, pour la liste de l'accueil ; elle se refait quand son écran se ferme.
 
 Remarque : les voix (0.2) : l'effectif dit combien de personnes parlent, interprète compris ; connu, il aide la séparation
 Remarque : des voix. La correspondance donne un sigle à chaque voix numérotée (« 1 INT, 2 PA, 3 INPRET ») : la voix 1 est
@@ -55,11 +61,20 @@ Remarque : la relecture (0.9) : le doute garde les mots dont la transcription n'
 Remarque : relu (enregistré dans son écran) ; la marque dit ce qui reste à faire sur le tour (« doute », « sans-sigle »,
 Remarque : « à-traduire »), pour les filtres de la liste.
 
-Remarque : les réglages : la clé de Google (un secret : elle ne se relit jamais, elle part seulement vers Google) ; le
-Remarque : vocabulaire donné à Whisper (noms propres, lieux, termes de l'école) pour qu'il les écrive juste.
+Remarque : les réglages (0.11 : la configuration) : les clés de traduction (des secrets : elles ne se relisent jamais, elles
+Remarque : partent seulement vers leur service), DeepL d'abord, Google en relève ; le compte gratuit dit laquelle des deux
+Remarque : adresses de DeepL appeler ; l'abri, le dossier de sauvegarde, de préférence synchronisé avec un nuage, reçoit une copie
+Remarque : chiffrée par jour ; le vocabulaire donné à Whisper (noms propres, lieux, termes de l'école) ; l'intervieweur
+Remarque : habituel, proposé à chaque nouvel entretien ; la configuration faite : son écran s'est ouvert une première fois.
 Un réglage, conservé, a :
     une clé google (secret), facultative,
-    un vocabulaire (texte), facultatif.
+    un vocabulaire (texte), facultatif,
+    une clé deepl (secret), facultative,
+    un compte gratuit (vrai ou faux), facultatif,
+    un abri (texte), facultatif,
+    une dernière sauvegarde (date), facultative,
+    un intervieweur habituel (texte), facultatif,
+    une configuration faite (vrai ou faux), facultative.
 
 Remarque : l'analyse (0.7), à la manière des logiciels d'analyse qualitative (NVivo, que Dilan n'a pas) : des thèmes, et des
 Remarque : codages, chacun posant un thème sur un tour de parole, avec l'extrait retenu et une note. L'origine dit d'où vient
@@ -112,6 +127,11 @@ Le filtre vaut « ».
 Remarque : le tour que « Suivant » ou « Précédent » demande : l'écran du tour se ferme, et celui qui l'avait ouvert rouvre
 Remarque : sur ce tour (un écran ouvert depuis un événement s'ouvrirait par-dessus : cent tours relus, cent fenêtres).
 Le prochain vaut absent.
+Remarque : la traduction (0.11) : qui a traduit le dernier texte, « DeepL » ou « Google ».
+Le traducteur vaut « ».
+Remarque : la sauvegarde (0.11) : une copie automatique ratée, que l'accueil montre ; le tout premier lancement.
+L'échec de sauvegarde vaut absent.
+Le premier lancement vaut faux.
 Remarque : la copie COREL écrite avant « Tout retranscrire », pour le message de fin.
 L'avis de copie vaut « ».
 
@@ -300,22 +320,130 @@ La jonction d'un a et d'un b :
     Si le b est absent, rendre le a.
     Rendre le a suivi de " " suivi du b.
 
-Remarque : un texte en français, par Google Cloud Translation (version simple, la clé dans l'adresse ; le turc reconnu par
-Remarque : Google, « source » laissée vide) ; sans clé : un refus qui le dit ; Google muet ou qui refuse la clé : un refus aussi.
-Pour traduire un texte :
-    Si le nombre de réglages conservés = 0, refuser "Aucune clé Google : Réglages, « Clé Google ».".
+Remarque : le code d'une langue (ISO 639-1), celui que Whisper, DeepL et Google attendent ; « » pour « aucune ».
+Le code de langue d'un idiome :
+    Si l'idiome = « aucune », rendre « ».
+    Si l'idiome = « albanais », rendre « sq ».
+    Si l'idiome = « allemand », rendre « de ».
+    Si l'idiome = « anglais », rendre « en ».
+    Si l'idiome = « arabe », rendre « ar ».
+    Si l'idiome = « bosniaque », rendre « bs ».
+    Si l'idiome = « croate », rendre « hr ».
+    Si l'idiome = « espagnol », rendre « es ».
+    Si l'idiome = « italien », rendre « it ».
+    Si l'idiome = « pachto », rendre « ps ».
+    Si l'idiome = « persan », rendre « fa ».
+    Si l'idiome = « portugais », rendre « pt ».
+    Si l'idiome = « russe », rendre « ru ».
+    Si l'idiome = « serbe », rendre « sr ».
+    Si l'idiome = « somali », rendre « so ».
+    Si l'idiome = « tamoul », rendre « ta ».
+    Si l'idiome = « ukrainien », rendre « uk ».
+    Rendre « tr ».
+
+Remarque : la langue étrangère d'un entretien, en code ; le turc pour un entretien d'avant la 0.11.
+La langue de travail d'un e :
+    Si la langue étrangère du e est absente, rendre « tr ».
+    Rendre le code de langue de la langue étrangère du e.
+
+Remarque : les langues que la transcription attend : le français et la langue étrangère de l'entretien (grammaire 3.42).
+L'attente de langues d'un e :
+    Le c vaut la langue de travail du e.
+    Si le c = « », rendre « fr ».
+    Rendre "fr, " suivi du c.
+
+Remarque : un texte en français (0.11, comme Écoutille) : DeepL d'abord (https://developers.deepl.com, le texte en liste, la
+Remarque : clé dans l'en-tête « DeepL-Auth-Key », la langue de départ dite) ; s'il refuse (456 : quota épuisé ; une langue
+Remarque : qu'il ne traduit pas) ou ne répond pas, Google Cloud Translation, version simple (la clé dans l'adresse). Sans
+Remarque : aucune clé, ou les deux muets : un refus qui dit pourquoi. « Le traducteur » retient qui a répondu.
+Pour traduire un texte et une origine :
+    Si le nombre de réglages conservés = 0, refuser "Aucune clé de traduction : « Configuration », puis « Traduction ».".
     Le rg vaut le réglage conservé.
-    Si la clé google du rg est absente, refuser "Aucune clé Google : Réglages, « Clé Google ».".
+    Si la clé deepl du rg est absente et la clé google du rg est absente, refuser "Aucune clé de traduction : « Configuration », puis « Traduction ».".
+    Si l'origine = « », refuser « Langue de départ inconnue : choisis la langue étrangère de l'entretien (onglet 1). ».
+    Le tort vaut « ».
+    Si la clé deepl du rg est présente :
+        L'adresse vaut « https://api.deepl.com/v2/translate ».
+        Si le compte gratuit du rg est présent :
+            Si le compte gratuit du rg est vrai, l'adresse devient « https://api-free.deepl.com/v2/translate ».
+        Les textes valent un ensemble vide.
+        Les textes gagnent texte.
+        Essayer :
+            La r vaut l'envoi à (l'adresse) avec :
+                l'en-tête « Authorization » : "DeepL-Auth-Key " suivi de la clé deepl du rg,
+            et de :
+                « text » : les textes,
+                « source_lang » : l'origine en majuscules,
+                « target_lang » : « FR ».
+            Le traducteur devient « DeepL ».
+            Rendre le champ « translations.0.text » de la r.
+        En cas d'échec :
+            Le tort devient « DeepL n'a pas traduit ( » suivi du motif de l'échec suivi de "). ".
+    Si la clé google du rg est absente, refuser le tort suivi de "Pas de clé Google pour prendre le relais : « Configuration ».".
     Essayer :
         La r vaut l'envoi à « https://translation.googleapis.com/language/translate/v2 » avec :
             « key » : la clé google du rg,
         et de :
             « q » : texte,
+            « source » : l'origine,
             « target » : « fr »,
             « format » : « text ».
+        Le traducteur devient « Google ».
         Rendre le champ « data.translations.0.translatedText » de la r.
     En cas d'échec :
-        Refuser "Google n'a pas traduit : " suivi du motif de l'échec.
+        Refuser le tort suivi de "Google n'a pas traduit : " suivi du motif de l'échec.
+
+Remarque : le quota DeepL du mois (comme Écoutille) : ce que DeepL a compté et sa limite, lus sur /v2/usage.
+Pour lire le quota :
+    Le rg vaut le réglage conservé.
+    Si la clé deepl du rg est absente, rendre « Aucune clé DeepL enregistrée : rien à lire. ».
+    L'adresse vaut « https://api.deepl.com/v2/usage ».
+    Si le compte gratuit du rg est présent :
+        Si le compte gratuit du rg est vrai, l'adresse devient « https://api-free.deepl.com/v2/usage ».
+    Essayer :
+        La r vaut la lecture de (l'adresse) avec :
+            l'en-tête « Authorization » : "DeepL-Auth-Key " suivi de la clé deepl du rg.
+        Rendre "DeepL ce mois : " suivi du champ « character_count » de la r suivi de " caractères traduits sur " suivi du champ « character_limit » de la r suivi de « . ».
+    En cas d'échec :
+        Rendre "DeepL n'a pas répondu : " suivi du motif de l'échec.
+
+Remarque : la sauvegarde (0.11, comme Praxis) : la copie chiffrée de toute la base, enregistrements compris, dans un dossier,
+Remarque : nommée par le jour et l'heure (« Drogman-2026-11-18-1512.coffre ») ; des jours passés, seule la dernière de chacun reste.
+Pour consigner un lieu :
+    Pour chaque réglage conservé :
+        La dernière sauvegarde du réglage devient aujourd'hui.
+    Sauvegarder la base dans (le lieu suivi de « /Drogman »), une par jour passé.
+
+Remarque : la copie automatique : une fois par jour, à l'ouverture, dans le dossier de sauvegarde s'il est choisi ; la copie
+Remarque : d'avant est d'abord vérifiée (déchiffrée, intacte) ; ratée, l'accueil le dit.
+Pour archiver les données :
+    Le rg vaut le réglage conservé.
+    Si l'abri du rg est présent :
+        Le besoin vaut vrai.
+        Si la dernière sauvegarde du rg est présente :
+            Si la dernière sauvegarde du rg = aujourd'hui, le besoin devient faux.
+        Si le besoin :
+            Essayer :
+                La copie d'avant vaut la dernière sauvegarde de (l'abri du rg suivi de « /Drogman »).
+                Si la copie d'avant est présente, vérifier la sauvegarde la copie d'avant.
+            En cas d'échec :
+                L'échec de sauvegarde devient « La dernière copie ne s'ouvre pas ( » suivi du motif de l'échec suivi de « ) : vérifie le dossier de sauvegarde. ».
+            Essayer :
+                Consigner l'abri du rg.
+            En cas d'échec :
+                L'échec de sauvegarde devient le motif de l'échec.
+
+Remarque : ce que l'accueil dit des sauvegardes : une copie automatique ratée d'abord ; sans dossier, qu'aucune copie ne se
+Remarque : fait d'elle-même ; au-delà de sept jours, il presse.
+L'alerte de sauvegarde d'un jour et d'un échec :
+    Si l'échec est présent, rendre "⚠ La sauvegarde automatique a échoué : " suivi de l'échec.
+    Pour chaque réglage conservé :
+        Si l'abri du réglage est absent, rendre "⚠ Aucune copie automatique : choisis un dossier de sauvegarde dans « Configuration ».".
+        Si la dernière sauvegarde du réglage est absente, rendre « Sauvegarde : pas encore de copie dans le dossier choisi. ».
+        L'écart vaut le nombre de jours entre la dernière sauvegarde du réglage et le jour.
+        Si l'écart > 7, rendre "⚠ Dernière sauvegarde le " suivi de la dernière sauvegarde du réglage suivi de " : ouvre « Configuration », « Sauvegarder maintenant ».".
+        Rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du réglage suivi de « . ».
+    Rendre « ».
 
 Remarque : le RTF : un texte qui s'ouvre dans Word et que NVivo importe. Les caractères hors ASCII s'écrivent « \uN? » (leur
 Remarque : numéro Unicode) : ceux du français et du turc, les guillemets et les tirets. Une lettre absente de la table
@@ -490,6 +618,34 @@ L'état d'un e :
     Le reste vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente.
     Rendre le n suivi de " tours de parole ; " suivi du sans suivi de " sans sigle ; " suivi de l'étranger suivi de " dans une autre langue que le français, dont " suivi du reste suivi de " à traduire.".
 
+Remarque : où en est un entretien (0.11), en cinq étapes : la fiche et l'enregistrement, la transcription, la relecture
+Remarque : (des mots peu sûrs, des tours sans sigle), la traduction, les documents. Le stade est court, pour la liste de
+Remarque : l'accueil ; le conseil dit quoi faire, en tête de l'écran de l'entretien.
+Le stade d'un e :
+    Le n vaut le nombre de tours conservés dont l'entretien = le e.
+    Si le n = 0 et l'enregistrement du e est absent, rendre « 1 · sans enregistrement ».
+    Si le n = 0, rendre « 2 · à transcrire ».
+    Le flou vaut le nombre de tours conservés dont l'entretien = le e et le doute est présent.
+    Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
+    Si le flou + le sans > 0, rendre « 3 · à relire ».
+    Si le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente > 0, rendre « 4 · à traduire ».
+    Rendre « 5 · prêt à exporter ».
+
+Le conseil d'un e :
+    Si le e est absent, rendre "À faire maintenant, étape 1 : écris le code et le jour, choisis la langue étrangère et l'enregistrement, puis « Enregistrer ».".
+    Le n vaut le nombre de tours conservés dont l'entretien = le e.
+    Si le n = 0 et l'enregistrement du e est absent, rendre "À faire maintenant, étape 1 : choisis l'enregistrement de l'entretien, puis « Enregistrer ».".
+    Si le n = 0, rendre "À faire maintenant, étape 2 : onglet « 2 · Transcrire », bouton « Transcrire ».".
+    Le flou vaut le nombre de tours conservés dont l'entretien = le e et le doute est présent.
+    Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
+    Si le flou + le sans > 0, rendre "À faire maintenant, étape 3 : onglet « 3 · Relire » : " suivi du flou suivi de " tours à vérifier, " suivi du sans suivi de " sans sigle. Un clic sur un tour l'ouvre et le fait entendre.".
+    Le reste vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente.
+    Si le reste > 0, rendre "À faire maintenant, étape 4 : onglet « 4 · Traduire » : " suivi du reste suivi de " tours à traduire.".
+    Rendre "Tout est relu et traduit : étape 5, onglet « 5 · Exporter ».".
+
+Pour situer un dossier :
+    L'étape du dossier devient le stade du dossier.
+
 Remarque : les thèmes posés sur un tour, pour son écran : « Thèmes : accueil, langue », ou l'invitation à coder.
 La mention de thèmes d'un t :
     Le r vaut « ».
@@ -587,10 +743,20 @@ La mention de doute d'un tour :
     Si le doute du tour est absent, rendre « ».
     Rendre "Mots peu sûrs à la transcription : " suivi du doute du tour.
 
-Remarque : ce que l'écran des réglages dit de la clé, sans jamais la montrer.
-Le témoin d'un réglage :
-    Si le réglage est présent et la clé google du réglage est présente, rendre « Une clé Google est enregistrée. ».
-    Rendre « Aucune clé Google : la traduction ne marchera pas. ».
+Remarque : ce que la configuration dit de la traduction, sans jamais montrer une clé.
+Le témoin d'un titre :
+    Pour chaque réglage conservé :
+        Si la clé deepl du réglage est présente et la clé google du réglage est présente, rendre "✓ " suivi du titre suivi de " prête : DeepL d'abord, Google en relève.".
+        Si la clé deepl du réglage est présente, rendre "✓ " suivi du titre suivi de " prête : DeepL. Sans clé Google, rien ne prend le relais si DeepL refuse (quota, langue).".
+        Si la clé google du réglage est présente, rendre "✓ " suivi du titre suivi de " prête : Google seulement (pas de clé DeepL).".
+    Rendre "✗ " suivi du titre suivi de " : aucune clé. Les tours non français ne pourront pas être traduits.".
+
+Le témoin de sauvegarde d'un titre :
+    Pour chaque réglage conservé :
+        Si l'abri du réglage est absent, rendre "✗ " suivi du titre suivi de " : aucun dossier. Rien ne se copie de soi-même : si l'ordinateur lâche, les entretiens sont perdus.".
+        Si la dernière sauvegarde du réglage est absente, rendre "✓ " suivi du titre suivi de " : une copie chiffrée par jour dans " suivi de l'abri du réglage suivi de « . ».
+        Rendre "✓ " suivi du titre suivi de " : une copie chiffrée par jour dans " suivi de l'abri du réglage suivi de " ; la dernière, le " suivi de la dernière sauvegarde du réglage suivi de « . ».
+    Rendre « ».
 
 Remarque : la voix d'un tour, pour son écran : « , voix 2 », ou rien.
 La mention de voix d'un tour :
@@ -598,84 +764,103 @@ La mention de voix d'un tour :
     Rendre ", voix " suivi de la voix du tour.
 
 L'écran des entretiens, « Drogman », montre :
+    le texte "Un entretien passe par cinq étapes : 1 la fiche et l'enregistrement, 2 la transcription, 3 la relecture, 4 la traduction, 5 les documents. La colonne « Étape » dit où en est chacun ; son écran dit quoi faire.",
+    le texte l'alerte de sauvegarde d'aujourd'hui et de l'échec de sauvegarde,
     le texte « Entretiens », en petites capitales,
-    la liste des entretiens conservés, par jour décroissant, avec le code, le jour, le lieu et l'intervieweur,
+    la liste des entretiens conservés, par jour décroissant, avec le code, le jour, le lieu, la langue étrangère et l'étape,
     côte à côte :
         un bouton « Nouvel entretien », principal,
         un bouton « Analyse »,
         un bouton « Anonymisation »,
-        un bouton « Sauvegarder »,
-        un bouton « Réglages »,
+        un bouton « Configuration »,
         un bouton « Fermer », qui ferme l'écran.
 
+Remarque : l'écran d'un entretien (0.11) : le conseil en tête, puis un onglet par étape, dans l'ordre du travail.
 L'écran de l'entretien, « Entretien », pour un entretien, montre :
+    le texte le conseil de l'entretien de l'écran,
+    les onglets :
+        l'onglet « 1 · Fiche et enregistrement » :
+            côte à côte :
+                un code (texte), avec l'indication « EensA1_20130306_Ens_01 »,
+                un jour (date), avec l'indication « Le jour de l'entretien »,
+                une heure (heure), facultative, avec l'indication « 14:30 »,
+                une durée (texte), facultative, avec l'indication « 01h05 ; vide : calculée »,
+            côte à côte :
+                un lieu (texte), facultatif, avec l'indication « Domicile des parents, à l'école »,
+                un intervieweur (texte), facultatif, avec l'indication « Prénom, nom de l'intervieweur-euse (INT) »,
+                un interprète (texte), facultatif, avec l'indication « Prénom, nom (INPRET) »,
+            côte à côte :
+                une présence (texte), facultative, avec l'indication « Prénom, nom du père (PA), de la mère (MA), autre »,
+                une famille (texte), facultative, avec l'indication « Prénom, nom de l'enfant »,
+            côte à côte :
+                une langue étrangère (« turc », « albanais », « allemand », « anglais », « arabe », « bosniaque », « croate », « espagnol », « italien », « pachto », « persan », « portugais », « russe », « serbe », « somali », « tamoul », « ukrainien » ou « aucune »), « turc » au départ, facultative, avec l'indication « Parlée à côté du français »,
+                un enregistrement (son), facultatif,
+            un bouton « Enregistrer », principal,
+        l'onglet « 2 · Transcrire » :
+            le texte « Drogman écrit ce qui est dit, tour de parole par tour de parole, en français et dans la langue étrangère de la fiche. Tout se fait sur cet ordinateur ; une fenêtre montre l'avancement. Les deux zones aident à savoir qui parle : elles peuvent rester vides. »,
+            côte à côte :
+                un effectif (nombre entier), facultatif, de 1 à 20, avec l'indication « Nombre de voix, interprète compris »,
+                une correspondance (texte), facultative, avec l'indication « 1 INT, 2 PA, 3 INPRET : la voix 1 parle la première »,
+                un bouton « Nommer les voix », actif si l'entretien de l'écran est présent,
+            côte à côte :
+                un bouton « Transcrire », à confirmer par « Transcrire l'enregistrement ? Un long entretien prend du temps : une fenêtre montre l'avancement. », actif si l'entretien de l'écran est présent,
+                un bouton « Tout retranscrire », destructif, à confirmer par « Tout retranscrire ? Les tours déjà là sont remplacés : leurs corrections, leurs traductions et leurs codages sont perdus. Une copie COREL de l'état actuel est d'abord écrite dans Documents/Drogman. » en tapant « remplacer », actif si l'entretien de l'écran est présent,
+        l'onglet « 3 · Relire » :
+            le texte l'état de l'entretien de l'écran,
+            côte à côte :
+                un bouton « Tous les tours »,
+                un bouton « À vérifier »,
+                un bouton « Sans sigle »,
+                un bouton « À traduire »,
+            la liste des tours conservés dont le code de l'entretien = le code ouvert et la marque contient le filtre, par rang, avec le rang, la voix, le sigle, la langue, la base et la version corel,
+            côte à côte :
+                un sigle à poser (texte), facultatif, avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
+                un premier rang (nombre entier), facultatif, avec l'indication « Du tour… (vide : le premier) »,
+                un dernier rang (nombre entier), facultatif, avec l'indication « au tour… (vide : le dernier) »,
+                un bouton « Poser le sigle », actif si l'entretien de l'écran est présent,
+        l'onglet « 4 · Traduire » :
+            le texte « Chaque tour qui n'est pas en français reçoit sa traduction, par DeepL d'abord, par Google si DeepL refuse. Seul le texte de ces tours part sur Internet. Une traduction déjà là, ou corrigée à la main, n'est jamais remplacée. Les clés se rangent à l'accueil, sous Configuration. »,
+            le texte le témoin de « Traduction »,
+            un bouton « Traduire », actif si l'entretien de l'écran est présent,
+        l'onglet « 5 · Exporter » :
+            le texte « Un document par étape, écrit dans Documents/Drogman ; les noms de la table d'anonymisation y sont remplacés. »,
+            une traduction jointe (vrai ou faux), vrai au départ, facultative, avec l'indication « Dans la transcription COREL, entre crochets sous chaque tour non français »,
+            côte à côte :
+                un bouton « Exporter la transcription », actif si l'entretien de l'écran est présent,
+                un bouton « Exporter la traduction », actif si l'entretien de l'écran est présent,
+                un bouton « Exporter COREL », actif si l'entretien de l'écran est présent,
+                un bouton « Exporter NVivo », actif si l'entretien de l'écran est présent,
     côte à côte :
-        un code (texte), avec l'indication « EensA1_20130306_Ens_01 »,
-        un jour (date), avec l'indication « Le jour de l'entretien »,
-        une heure (heure), facultative, avec l'indication « 14:30 »,
-        une durée (texte), facultative, avec l'indication « 01h05 ; vide : calculée »,
-    côte à côte :
-        un lieu (texte), facultatif, avec l'indication « Domicile des parents, à l'école »,
-        un intervieweur (texte), facultatif, avec l'indication « Prénom, nom de l'intervieweur-euse (INT) »,
-        un interprète (texte), facultatif, avec l'indication « Prénom, nom (INPRET) »,
-    côte à côte :
-        une présence (texte), facultative, avec l'indication « Prénom, nom du père (PA), de la mère (MA), autre »,
-        une famille (texte), facultative, avec l'indication « Prénom, nom de l'enfant »,
-    un enregistrement (son), facultatif,
-    côte à côte :
-        un effectif (nombre entier), facultatif, de 1 à 20, avec l'indication « Nombre de voix, interprète compris »,
-        une correspondance (texte), facultative, avec l'indication « 1 INT, 2 PA, 3 INPRET : la voix 1 parle la première »,
-        un bouton « Nommer les voix », actif si l'entretien de l'écran est présent,
-    une traduction jointe (vrai ou faux), vrai au départ, facultative, avec l'indication « Dans la transcription COREL, entre crochets sous chaque tour non français »,
-    le texte l'état de l'entretien de l'écran,
-    côte à côte :
-        un bouton « Tous les tours »,
-        un bouton « À vérifier »,
-        un bouton « Sans sigle »,
-        un bouton « À traduire »,
-    la liste des tours conservés dont le code de l'entretien = le code ouvert et la marque contient le filtre, par rang, avec le rang, la voix, le sigle, la langue, la base et la version corel,
-    côte à côte :
-        un sigle à poser (texte), facultatif, avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
-        un premier rang (nombre entier), facultatif, avec l'indication « Du tour… (vide : le premier) »,
-        un dernier rang (nombre entier), facultatif, avec l'indication « au tour… (vide : le dernier) »,
-        un bouton « Poser le sigle », actif si l'entretien de l'écran est présent,
-    côte à côte :
-        un bouton « Enregistrer », principal,
-        un bouton « Transcrire », à confirmer par « Transcrire l'enregistrement ? Un long entretien prend du temps : une fenêtre montre l'avancement. », actif si l'entretien de l'écran est présent,
-        un bouton « Tout retranscrire », destructif, à confirmer par « Tout retranscrire ? Les tours déjà là sont remplacés : leurs corrections, leurs traductions et leurs codages sont perdus. Une copie COREL de l'état actuel est d'abord écrite dans Documents/Drogman. » en tapant « remplacer », actif si l'entretien de l'écran est présent,
-        un bouton « Traduire », actif si l'entretien de l'écran est présent,
-    côte à côte :
-        un bouton « Exporter la transcription », actif si l'entretien de l'écran est présent,
-        un bouton « Exporter la traduction », actif si l'entretien de l'écran est présent,
-        un bouton « Exporter COREL », actif si l'entretien de l'écran est présent,
-        un bouton « Exporter NVivo », actif si l'entretien de l'écran est présent,
         un bouton « Supprimer l'entretien », à confirmer par « Supprimer cet entretien, son enregistrement et tous ses tours de parole ? C'est définitif. », actif si l'entretien de l'écran est présent,
         un bouton « Fermer », qui ferme l'écran.
 
 L'écran du tour, « Tour de parole », pour un tour, montre :
     le texte "Tour " suivi du rang du tour de l'écran suivi de ", de " suivi de l'horodatage du début du tour de l'écran suivi de " à " suivi de l'horodatage de la fin du tour de l'écran suivi de la mention de voix du tour de l'écran,
     côte à côte :
+        un bouton « ▶ Réécouter », actif si l'enregistrement de l'entretien du tour de l'écran est présent,
+        un bouton « ■ Arrêter »,
+        un bouton « ◀ Précédent »,
+        un bouton « Suivant ▶ »,
+    le texte « Suivant ▶ et ◀ Précédent enregistrent ce tour, puis ouvrent l'autre et le font entendre. »,
+    côte à côte :
         un sigle (texte), avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
-        une langue (texte), facultative, avec l'indication « fr, tr… : à corriger si la transcription s'est trompée de langue ; vide : fr »,
+        une langue (texte), facultative, avec l'indication « fr, ou le code de la langue étrangère (tr, sq, ar…) ; vide : fr »,
         une voix (nombre entier), facultative, de 1 à 20, avec l'indication « Corrigée, elle reprend le sigle de la correspondance »,
     une base (texte), facultative, sur plusieurs lignes, avec l'indication "La parole transcrite, dans sa langue ; une barre oblique « / » marque où couper",
     une traduction (texte), facultative, sur plusieurs lignes, avec l'indication « En français ; vide pour un tour français »,
-    une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)) »,
+    une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)), <((en riant)) texte> »,
     le texte la mention de doute du tour de l'écran,
     le texte la mention de thèmes du tour de l'écran,
     côte à côte :
-        un bouton « ▶ Réécouter », actif si l'enregistrement de l'entretien du tour de l'écran est présent,
-        un bouton « ■ Arrêter »,
-        un bouton « Coder ce tour »,
-        un bouton « ◀ Précédent »,
-        un bouton « Suivant ▶ »,
-    côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Traduire ce tour »,
-        un bouton « Joindre au suivant », à confirmer par « Joindre ce tour et le suivant en un seul ? »,
-        un bouton « Couper au / »,
-        un bouton « Supprimer ce tour », à confirmer par « Supprimer ce tour de parole ? »,
-        un bouton « Fermer », qui ferme l'écran.
+        un bouton « Coder ce tour »,
+        un bouton « Fermer », qui ferme l'écran,
+    le groupe « Découper » :
+        côte à côte :
+            un bouton « Joindre au suivant », à confirmer par « Joindre ce tour et le suivant en un seul ? »,
+            un bouton « Couper au / »,
+            un bouton « Supprimer ce tour », à confirmer par « Supprimer ce tour de parole ? ».
 
 L'écran de l'analyse, « Analyse », montre :
     le texte « Thèmes », en petites capitales,
@@ -729,10 +914,32 @@ L'écran du pseudonyme, « Nom à remplacer », pour un pseudonyme, montre :
         un bouton « Supprimer ce nom », à confirmer par « Ne plus remplacer ce nom ? », actif si le pseudonyme de l'écran est présent,
         un bouton « Fermer », qui ferme l'écran.
 
-L'écran des réglages, « Réglages », montre :
-    une clé google (secret), facultative, avec l'indication « Google Cloud, Cloud Translation API, clé d'API ; vide : celle enregistrée reste »,
-    le texte le témoin du réglage conservé,
-    un vocabulaire (texte), facultatif, sur plusieurs lignes, avec l'indication « Noms propres, lieux, mots de l'école, séparés par des virgules : la transcription les écrit juste »,
+Remarque : la configuration (0.11) : tout ce qu'il faut pour que Drogman marche, sur une page ; elle s'ouvre d'elle-même au
+Remarque : premier lancement, puis par « Configuration ». La transcription et la séparation des voix n'ont rien à régler.
+L'écran des réglages, « Configuration », montre :
+    le texte "Bienvenue dans Drogman. Trois réglages, et tout est prêt : la traduction, la sauvegarde, la transcription. Ils se retrouvent ensuite sous « Configuration », à l'accueil.", visible si le premier lancement,
+    le groupe « 1 · Traduction : DeepL d'abord, Google en relève » :
+        le texte le témoin de « Traduction »,
+        côte à côte :
+            une clé deepl (secret), facultative, avec l'indication « deepl.com, Compte, Clés d'API ; vide : celle enregistrée reste »,
+            un compte gratuit (vrai ou faux), faux au départ, en interrupteur, avec l'indication « Allumé : API Free ; éteint : API Pro »,
+        une clé google (secret), facultative, avec l'indication « Google Cloud, Cloud Translation API, clé d'API ; vide : celle enregistrée reste »,
+        le texte « DeepL API Free suit les règles du service gratuit de DeepL (textes gardés un temps pour améliorer le service, données personnelles exclues) ; DeepL API Pro efface les textes après la traduction. Pour des entretiens de recherche : Pro, ou l'accord de l'université. »,
+        côte à côte :
+            un bouton « Essayer la traduction »,
+            un bouton « Quota DeepL »,
+    le groupe « 2 · Sauvegarde : une copie chiffrée par jour » :
+        le texte le témoin de sauvegarde de « Sauvegarde »,
+        une destination (texte), facultative, avec le choix d'un dossier, avec l'indication « Un dossier synchronisé avec un nuage (iCloud Drive, SWITCHdrive, OneDrive…) : l'icône au bout du champ le choisit. Vide : pas de copie automatique. »,
+        un bouton « Sauvegarder maintenant »,
+        côte à côte :
+            une sauvegarde (fichier), facultative, avec l'indication « Pour restaurer : un fichier .coffre ; il remplace toutes les données à la prochaine ouverture »,
+            un ancien mot de passe (texte), facultatif, masqué, avec l'indication « Celui de cette copie, s'il a changé depuis ; vide : l'actuel »,
+            un bouton « Restaurer », destructif, à confirmer par « Remplacer toutes les données par cette copie, à la prochaine ouverture ? Les données actuelles sont gardées à côté. »,
+    le groupe « 3 · Transcription » :
+        le texte « La transcription et la séparation des voix se font sur cet ordinateur : rien à régler, rien ne part sur Internet. »,
+        un vocabulaire (texte), facultatif, sur plusieurs lignes, avec l'indication « Noms propres, lieux, mots de l'école, séparés par des virgules : la transcription les écrit juste »,
+        un intervieweur habituel (texte), facultatif, avec l'indication « Proposé à chaque nouvel entretien »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer », qui ferme l'écran.
@@ -842,8 +1049,18 @@ Quand on clique sur « Supprimer ce nom » dans l'écran du pseudonyme :
     Supprimer le pseudonyme de l'écran.
     Fermer l'écran.
 
-Quand on clique sur « Réglages » dans l'écran des entretiens :
+Quand on clique sur « Configuration » dans l'écran des entretiens :
     Ouvrir l'écran des réglages.
+
+Remarque : un nouvel entretien propose l'intervieweur habituel (0.11).
+Quand on ouvre l'écran de l'entretien :
+    Si l'entretien de l'écran est absent :
+        Pour chaque réglage conservé :
+            Si l'intervieweur habituel du réglage est présent, l'intervieweur de l'écran devient l'intervieweur habituel du réglage.
+
+Remarque : l'étape de l'entretien, pour la liste de l'accueil, refaite quand son écran se ferme (0.11).
+Quand on ferme l'écran de l'entretien :
+    Si le dossier ouvert est présent, situer le dossier ouvert.
 
 Quand on clique sur « Enregistrer » dans l'écran de l'entretien :
     Enregistrer l'entretien de l'écran.
@@ -867,9 +1084,9 @@ Pour dérouler un e :
     Le mots vaut « ».
     Pour chaque réglage conservé :
         Si le vocabulaire du réglage est présent, le mots devient le vocabulaire du réglage.
-    Remarque : cette version : le français et le turc seulement (0.7, grammaire 3.42) ; un passage que Whisper prend pour une
-    Remarque : autre langue est repris dans la plus probable des deux.
-    Amorcer la transcription avec le mots, en toute langue parmi « fr, tr ».
+    Remarque : le français et la langue étrangère de l'entretien (0.11, grammaire 3.42) ; un passage que Whisper prend pour
+    Remarque : une autre langue est repris dans la plus probable des deux.
+    Amorcer la transcription avec le mots, en toute langue parmi (l'attente de langues du e).
     Préparer l'écoute.
     L'avis des voix vaut « ».
     Essayer :
@@ -921,21 +1138,28 @@ Remarque : traduire : chaque tour qui n'est pas en français et n'a pas encore d
 Remarque : main n'est jamais remplacée.
 Quand on clique sur « Traduire » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.
+    L'étrangère vaut la langue de travail du e.
     Le n vaut 0.
-    Remarque : Google qui lâche en route (0.5) : les tours déjà traduits restent, le reste attend un nouveau « Traduire ».
+    Le compte deepl vaut 0.
+    Remarque : un service qui lâche en route (0.5) : les tours déjà traduits restent, le reste attend un nouveau « Traduire ».
     La panne vaut « ».
     Pour chaque tour conservé dont l'entretien = le e, par rang :
         Si la panne = « » et la langue du tour ≠ « fr » et la traduction du tour est absente et la base du tour est présente :
+            L'origine vaut l'étrangère.
+            Si la langue du tour est présente, l'origine devient la langue du tour.
             Essayer :
-                Traduire la base du tour, qui donne le texte traduit.
+                Traduire la base du tour et l'origine, qui donne le texte traduit.
                 La traduction du tour devient le texte traduit.
                 Si la version corel du tour est absente, la version corel du tour devient le texte traduit.
                 Le n devient le n + 1.
+                Si le traducteur = « DeepL », le compte deepl devient le compte deepl + 1.
             En cas d'échec :
                 La panne devient le motif de l'échec.
+    Marquer le e.
     Si la panne ≠ « » et le n = 0, refuser la panne.
-    Si la panne ≠ « », signaler le n puis « tours traduits, puis arrêt : » suivi de la panne.
-    Sinon, signaler le n puis « tours traduits. ».
+    Le détail vaut " (" suivi du compte deepl suivi de " par DeepL, " suivi de (le n − le compte deepl) suivi de " par Google)".
+    Si la panne ≠ « », signaler le n puis « tours traduits » suivi du détail suivi de « , puis arrêt : » suivi de la panne.
+    Sinon, signaler le n puis « tours traduits » suivi du détail suivi de « . ».
 
 Remarque : poser un sigle sur une plage de tours (du premier au dernier rang ; sans dernier, jusqu'au bout ; sans premier,
 Remarque : depuis le début) : la façon rapide de dire qui parle.
@@ -1091,15 +1315,6 @@ Quand on clique sur « À traduire » dans l'écran de l'entretien :
     Marquer l'entretien de l'écran.
     Le filtre devient « à-traduire ».
 
-Remarque : sauvegarder (0.9) : une copie de toute la base, nommée par le jour et l'heure, dans Documents/Drogman/Sauvegardes ;
-Remarque : des jours passés, seule la dernière copie de chacun reste. À garder aussi ailleurs que sur cet ordinateur.
-Quand on clique sur « Sauvegarder » dans l'écran des entretiens :
-    Essayer :
-        Sauvegarder la base dans « ~/Documents/Drogman/Sauvegardes/Drogman », une par jour passé.
-        Signaler « Sauvegarde écrite dans Documents/Drogman/Sauvegardes. ».
-    En cas d'échec :
-        Refuser le motif de l'échec.
-
 Remarque : joindre (0.3) : le tour suivant rejoint celui-ci (textes bout à bout, fin reprise), puis disparaît ; les rangs
 Remarque : d'après reculent d'un cran.
 Quand on clique sur « Joindre au suivant » dans l'écran du tour :
@@ -1194,24 +1409,101 @@ Quand on clique sur « ■ Arrêter » dans l'écran du tour :
 Quand on clique sur « Traduire ce tour » dans l'écran du tour :
     Le t vaut le tour de l'écran.
     Si la base de l'écran est absente, refuser « Ce tour n'a pas de texte à traduire. ».
-    Traduire la base de l'écran, qui donne le texte traduit.
+    L'origine vaut la langue de travail de l'entretien du t.
+    Si la langue de l'écran est présente et la langue de l'écran ≠ « fr », l'origine devient la langue de l'écran.
+    Traduire la base de l'écran et l'origine, qui donne le texte traduit.
     La traduction de l'écran devient le texte traduit.
     Si la version corel de l'écran est absente, la version corel de l'écran devient le texte traduit.
 
+Remarque : la configuration : chaque bouton range d'abord ce que l'écran montre ; une clé laissée vide garde celle d'avant.
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Pour chaque réglage conservé :
         Le vocabulaire du réglage devient le vocabulaire de l'écran.
+        L'intervieweur habituel du réglage devient l'intervieweur habituel de l'écran.
+        Le compte gratuit du réglage devient le compte gratuit de l'écran.
+        L'abri du réglage devient la destination de l'écran.
+        Si la clé deepl de l'écran est présente, la clé deepl du réglage devient la clé deepl de l'écran.
         Si la clé google de l'écran est présente, la clé google du réglage devient la clé google de l'écran.
-    Signaler « Réglages enregistrés. ».
+    Signaler « Configuration enregistrée. ».
     Fermer l'écran.
+
+Remarque : un mot de turc, pour voir si les clés répondent ; un échec se dit sans rien défaire (les clés restent rangées).
+Quand on clique sur « Essayer la traduction » dans l'écran des réglages :
+    Pour chaque réglage conservé :
+        Le vocabulaire du réglage devient le vocabulaire de l'écran.
+        L'intervieweur habituel du réglage devient l'intervieweur habituel de l'écran.
+        Le compte gratuit du réglage devient le compte gratuit de l'écran.
+        L'abri du réglage devient la destination de l'écran.
+        Si la clé deepl de l'écran est présente, la clé deepl du réglage devient la clé deepl de l'écran.
+        Si la clé google de l'écran est présente, la clé google du réglage devient la clé google de l'écran.
+    Essayer :
+        Traduire « Merhaba, nasılsınız? » et « tr », qui donne l'essai.
+        Signaler "Traduction en ordre, par " suivi du traducteur suivi de " : « Merhaba, nasılsınız? » donne « " suivi de l'essai suivi de " ».".
+    En cas d'échec :
+        Signaler le motif de l'échec.
+
+Quand on clique sur « Quota DeepL » dans l'écran des réglages :
+    Pour chaque réglage conservé :
+        Le vocabulaire du réglage devient le vocabulaire de l'écran.
+        L'intervieweur habituel du réglage devient l'intervieweur habituel de l'écran.
+        Le compte gratuit du réglage devient le compte gratuit de l'écran.
+        L'abri du réglage devient la destination de l'écran.
+        Si la clé deepl de l'écran est présente, la clé deepl du réglage devient la clé deepl de l'écran.
+        Si la clé google de l'écran est présente, la clé google du réglage devient la clé google de l'écran.
+    Lire le quota, qui donne le compte.
+    Signaler le compte.
+
+Remarque : une copie tout de suite, dans le dossier choisi, sinon dans Documents/Drogman/Sauvegardes.
+Quand on clique sur « Sauvegarder maintenant » dans l'écran des réglages :
+    Pour chaque réglage conservé :
+        Le vocabulaire du réglage devient le vocabulaire de l'écran.
+        L'intervieweur habituel du réglage devient l'intervieweur habituel de l'écran.
+        Le compte gratuit du réglage devient le compte gratuit de l'écran.
+        L'abri du réglage devient la destination de l'écran.
+        Si la clé deepl de l'écran est présente, la clé deepl du réglage devient la clé deepl de l'écran.
+        Si la clé google de l'écran est présente, la clé google du réglage devient la clé google de l'écran.
+    Le lieu vaut « ~/Documents/Drogman/Sauvegardes ».
+    Si la destination de l'écran est présente, le lieu devient la destination de l'écran.
+    Essayer :
+        Consigner le lieu.
+        L'échec de sauvegarde devient absent.
+        Signaler "Copie chiffrée écrite dans " suivi du lieu suivi de « . ».
+    En cas d'échec :
+        Signaler le motif de l'échec.
+
+Remarque : la copie choisie remplace toutes les données à la prochaine ouverture ; les actuelles restent à côté.
+Quand on clique sur « Restaurer » dans l'écran des réglages :
+    Si la sauvegarde de l'écran est absente, refuser « Choisis d'abord la copie à restaurer (un fichier .coffre). ».
+    Si l'ancien mot de passe de l'écran est présent, restaurer la base depuis la sauvegarde de l'écran avec le mot de passe l'ancien mot de passe de l'écran.
+    Sinon, restaurer la base depuis la sauvegarde de l'écran.
+    Signaler « Restauration prête : ferme puis rouvre Drogman. Ce que tu saisis d'ici là sera perdu. ».
 
 Quand on ouvre l'écran des réglages :
     Pour chaque réglage conservé :
         Le vocabulaire de l'écran devient le vocabulaire du réglage.
+        L'intervieweur habituel de l'écran devient l'intervieweur habituel du réglage.
+        La destination de l'écran devient l'abri du réglage.
+        Si le compte gratuit du réglage est présent, le compte gratuit de l'écran devient le compte gratuit du réglage.
 
-Remarque : un seul réglage, créé au premier lancement.
+Remarque : la configuration vue une fois ne s'ouvre plus d'elle-même.
+Quand on ferme l'écran des réglages :
+    Le premier lancement devient faux.
+    Pour chaque réglage conservé :
+        La configuration faite du réglage devient vrai.
+
+Remarque : un seul réglage, créé au premier lancement ; la configuration s'ouvre alors d'elle-même, une fois (0.11) ; puis
+Remarque : la copie du jour part dans le dossier de sauvegarde, et l'accueil s'ouvre.
 Si le nombre de réglages conservés = 0 :
     Le r vaut un nouveau réglage.
     Conserver le r.
+Le premier lancement devient vrai.
+Pour chaque réglage conservé :
+    Si la configuration faite du réglage est présente, le premier lancement devient faux.
+Si le premier lancement, ouvrir l'écran des réglages.
+Archiver les données.
+Remarque : les entretiens d'avant la 0.11 : le turc pour langue étrangère ; l'étape de chacun, pour la liste de l'accueil.
+Pour chaque entretien conservé :
+    Si la langue étrangère de l'entretien est absente, la langue étrangère de l'entretien devient « turc ».
+    Situer l'entretien.
 
 Ouvrir l'écran des entretiens.

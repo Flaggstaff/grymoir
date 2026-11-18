@@ -89,12 +89,12 @@ Scénario « un tour se corrige dans son écran » :
         Vérifier que la version corel du tour = « Bonjour, comment allez-VOUS ? ».
         Vérifier que la base du tour = « Bonjour, comment allez-vous ? ».
 
-Scénario « traduire sans clé Google : un refus qui le dit » :
+Scénario « traduire sans aucune clé : un refus qui le dit » :
     Poser « EensA1_20130306_Ens_04 », qui donne le e.
     Transcrire le e.
     On choisit le e dans l'écran des entretiens.
     On clique sur « Traduire » dans l'écran de l'entretien.
-    On voit l'erreur « Aucune clé Google » dans l'écran de l'entretien.
+    On voit l'erreur « Aucune clé de traduction » dans l'écran de l'entretien.
     On ferme l'écran de l'entretien.
     On ferme l'écran des entretiens.
     Ouvrir l'écran des entretiens.
@@ -839,3 +839,74 @@ Scénario « Transcrire refuse d'effacer un tour relu ; Tout retranscrire passe 
     Ouvrir l'écran des entretiens.
     Vérifier que le nombre de tours conservés = 3.
     Vérifier que le nombre de tours conservés dont la retouche est vraie = 1.
+
+Remarque : la langue étrangère (0.11) : une par entretien ; la transcription attend le français et elle.
+Scénario « la langue étrangère d'un entretien : son code, les langues que la transcription attend » :
+    Poser « EensA1_20130306_Ens_50 », qui donne le e.
+    Vérifier que la langue de travail du e = « tr ».
+    Vérifier que l'attente de langues du e = « fr, tr ».
+    La langue étrangère du e devient « albanais ».
+    Vérifier que l'attente de langues du e = « fr, sq ».
+    La langue étrangère du e devient « aucune ».
+    Vérifier que la langue de travail du e = « ».
+    Vérifier que l'attente de langues du e = « fr ».
+
+Remarque : les cinq étapes (0.11) : le stade pour la liste de l'accueil, le conseil en tête de l'écran ; l'étape se range
+Remarque : quand l'écran de l'entretien se ferme.
+Scénario « un entretien avance d'étape en étape : le stade, le conseil, l'étape rangée » :
+    Poser « EensA1_20130306_Ens_51 », qui donne le e.
+    Vérifier que le stade du e = « 1 · sans enregistrement ».
+    Vérifier que le conseil du e contient « étape 1 : choisis l'enregistrement ».
+    Transcrire le e.
+    Vérifier que le stade du e = « 3 · à relire ».
+    Vérifier que le conseil du e contient "étape 3 : onglet « 3 · Relire » : 1 tours à vérifier, 3 sans sigle".
+    Pour chaque tour conservé :
+        Le sigle du tour devient « INT ».
+        Le doute du tour devient absent.
+    Vérifier que le stade du e = « 4 · à traduire ».
+    Vérifier que le conseil du e contient "étape 4 : onglet « 4 · Traduire » : 1 tours à traduire".
+    On choisit le e dans l'écran des entretiens.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que l'étape du e = « 4 · à traduire ».
+    Pour chaque tour conservé dont le rang = 2 :
+        La traduction du tour devient « Je vais bien, merci. ».
+    Vérifier que le stade du e = « 5 · prêt à exporter ».
+    Vérifier que le conseil du e contient « étape 5 ».
+
+Remarque : la configuration (0.11) : les clés (jamais montrées), le dossier de sauvegarde, le vocabulaire, l'intervieweur
+Remarque : habituel, proposé au nouvel entretien. Le réglage, que le programme crée à son premier lancement, est posé ici ;
+Remarque : une clé est un secret, que seule une base chiffrée range : elle s'éprouve dans tests/drogman.
+Scénario « la configuration range ses réglages ; le nouvel entretien propose l'intervieweur habituel » :
+    Le r vaut un nouveau réglage.
+    Conserver le r.
+    Vérifier que le témoin de « Traduction » contient « ✗ Traduction : aucune clé ».
+    Vérifier que le témoin de sauvegarde de « Sauvegarde » contient « ✗ Sauvegarde : aucun dossier ».
+    Vérifier que l'alerte de sauvegarde d'aujourd'hui et d'absent contient « Aucune copie automatique ».
+    On clique sur « Configuration » dans l'écran des entretiens.
+    On écrit « Dilan » dans l'intervieweur habituel de l'écran des réglages.
+    On écrit « Fribourg, Schoenberg » dans le vocabulaire de l'écran des réglages.
+    On écrit « /tmp/drogman-essai » dans la destination de l'écran des réglages.
+    On clique sur « Enregistrer » dans l'écran des réglages.
+    On clique sur « Nouvel entretien » dans l'écran des entretiens.
+    On écrit « EensA1_20261118_Ens_52 » dans le code de l'écran de l'entretien.
+    On écrit « 18.11.2026 » dans le jour de l'écran de l'entretien.
+    On clique sur « Enregistrer » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque réglage conservé :
+        Vérifier que l'intervieweur habituel du réglage = « Dilan ».
+        Vérifier que l'abri du réglage = « /tmp/drogman-essai ».
+        Vérifier que la configuration faite du réglage est présente.
+    Vérifier que le témoin de sauvegarde de « Sauvegarde » contient « une copie chiffrée par jour dans /tmp/drogman-essai ».
+    Pour chaque entretien conservé :
+        Vérifier que l'intervieweur de l'entretien = « Dilan ».
+        Vérifier que la langue étrangère de l'entretien = « turc ».
+        Vérifier que l'étape de l'entretien = « 1 · sans enregistrement ».
+    Remarque : une sauvegarde de plus de sept jours : l'accueil presse.
+    Pour chaque réglage conservé :
+        La dernière sauvegarde du réglage devient 01.10.2026.
+    Vérifier que l'alerte de sauvegarde d'aujourd'hui et d'absent contient « ⚠ Dernière sauvegarde le ».
+    Vérifier que l'alerte de sauvegarde d'aujourd'hui et de « disque plein » contient « a échoué : disque plein ».

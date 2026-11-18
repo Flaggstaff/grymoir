@@ -33,7 +33,12 @@ jouer() {
 }
 lancer premier ""
 verifier "$(grep -c 'erreur' "$d/premier.txt")" "0" "Drogman se lance sans erreur"
-verifier "$([ -s "$d/premier.png" ] && echo oui)" "oui" "la liste des entretiens se dessine"
+verifier "$([ -s "$d/premier.png" ] && echo oui)" "oui" "au premier lancement, la configuration se dessine"
+# la configuration (0.11) s'ouvre d'elle-même la première fois ; fermée, elle ne revient plus et l'accueil s'ouvre
+lancer bienvenue "Fermer"
+verifier "$(grep -c 'erreur' "$d/bienvenue.txt")" "0" "la configuration se ferme, l'accueil s'ouvre"
+verifier "$(jouer 'Pour chaque réglage conservé :
+    Si la configuration faite du réglage est présente, afficher « vue ».')" "vue" "la configuration vue une fois ne s'ouvre plus d'elle-même"
 verifier "$(jouer 'Afficher le nombre de réglages conservés.')" "1" "un réglage, créé au premier lancement"
 # un entretien, deux tours, et un son : un tiers de seconde de silence en WAV 16 kHz mono
 python3 -c "
@@ -93,7 +98,7 @@ lancer suivant "ligne:EensA1_20130306_Ens_01;ligne:INT;Suivant ▶"
 verifier "$(grep -c 'erreur' "$d/suivant.txt")" "0" "le filtre, puis Suivant, sans erreur"
 verifier "$(jouer 'Pour chaque tour conservé dont le rang = 1 :
     Si le doute du tour est absent, afficher « relu ».')" "relu" "le tour relu par Suivant est écrit, écrans encore ouverts"
-lancer sauvegarde "Sauvegarder"
+lancer sauvegarde "Configuration;Sauvegarder maintenant"
 verifier "$(ls "$d/maison/Documents/Drogman/Sauvegardes" 2>/dev/null | grep -c '^Drogman')" "1" "la sauvegarde est écrite"
 # l'analyse (0.7) : un thème et un codage posés par la console ; l'écran de l'analyse, celui du thème ; les deux exports
 jouer 'Le th vaut un nouveau thème :
@@ -159,5 +164,22 @@ lancer retranscrire "ligne:EensA1_20130306_Ens_01;Tout retranscrire;taper:rempla
 verifier "$(grep -c 'erreur' "$d/retranscrire.txt")" "0" "Tout retranscrire tourne jusqu'au bout"
 verifier "$(ls "$d/maison/Documents/Drogman/" | grep -c 'avant retranscription.rtf')" "0" "le refus annule aussi la copie d'avant, devenue inutile"
 verifier "$(jouer 'Afficher le nombre de tours conservés.')" "2" "un refus n'efface pas les tours d'avant"
+# la traduction (0.11) : DeepL d'abord ; une clé fausse, pas de clé Google : « Essayer la traduction » le dit sans rien casser
+jouer 'Pour chaque réglage conservé :
+    La clé deepl du réglage devient « clé-fausse ».' > /dev/null
+lancer essai "Configuration;Essayer la traduction"
+verifier "$(grep -c 'erreur' "$d/essai.txt")" "0" "Essayer la traduction, clé fausse : un message, pas une erreur"
+verifier "$(jouer 'Pour chaque réglage conservé :
+    Si la clé deepl du réglage est présente, afficher « gardée ».')" "gardée" "la clé reste rangée après un essai manqué"
+# la sauvegarde automatique (0.11) : un dossier choisi, et le lancement suivant y écrit la copie chiffrée du jour
+jouer "Pour chaque réglage conservé :
+    L'abri du réglage devient « $d/nuage ».
+    La dernière sauvegarde du réglage devient absente." > /dev/null
+lancer nuage ""
+verifier "$(ls "$d/nuage" 2>/dev/null | grep -c '^Drogman-.*\.coffre$')" "1" "la copie du jour part dans le dossier de sauvegarde, à l'ouverture"
+verifier "$(jouer 'Pour chaque réglage conservé :
+    Si la dernière sauvegarde du réglage = aujourd'"'"'hui, afficher « du jour ».')" "du jour" "et sa date est rangée"
+lancer nuage2 ""
+verifier "$(ls "$d/nuage" 2>/dev/null | grep -c '^Drogman-.*\.coffre$')" "1" "une seule copie automatique par jour"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]
