@@ -44,6 +44,7 @@ void machine_dossier_ecriture(Machine *m, const char *dossier);
 void machine_transcripteur(Machine *m, char *(*transcrire)(void *, const unsigned char *, size_t, char **));
 void machine_transcripteur_segments(Machine *m, char *(*segments)(void *, const unsigned char *, size_t, char **));   /* 3.39 */
 void machine_separateur_voix(Machine *m, char *(*voix)(void *, const unsigned char *, size_t, long, char **));   /* 3.40 */
+void machine_compresseur(Machine *m, int (*compresser)(void *, const unsigned char *, size_t, unsigned char **, size_t *, char **));   /* 3.43 */
 void machine_joueur(Machine *m, void (*jouer)(void *, const unsigned char *, size_t, double, double));   /* 3.41 */
 
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */

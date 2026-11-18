@@ -77,7 +77,7 @@ static void console_effacer(void *contexte, Chaine *sortie) {
 
 Interface console_interface(Console *c) {
     Interface i = { c, console_disponible, console_formulaire, console_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, console_commande,
-                    NULL, NULL, NULL };   /* NULL : pas de segments, de voix ni d'écoute en console (3.39 à 3.41) */
+                    NULL, NULL, NULL, NULL };   /* NULL : ni segments, ni voix, ni écoute, ni MP3 en console (3.39 à 3.43) */
     return i;
 }
 

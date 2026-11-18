@@ -76,6 +76,8 @@ static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t
 static char *faux_segments(void *contexte, const unsigned char *octets, size_t taille, char **erreur);   /* 3.39 */
 static char *fausses_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur);   /* 3.40 */
 static void faux_jouer(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin);   /* 3.41 */
+static int faux_compresser(void *contexte, const unsigned char *octets, size_t taille, unsigned char **sortie,
+                           size_t *taille_sortie, char **erreur);   /* 3.43 */
 static char jeux[256];   /* ce que le faux lecteur a joué, à la suite (3.41) */
 
 static void verifier_saisie(int l, const char *src, const char *const *lignes, size_t n, const char *attendu) {
@@ -107,6 +109,7 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
     machine_transcripteur_segments(m, faux_segments);   /* 3.39 */
     machine_separateur_voix(m, fausses_voix);           /* 3.40 */
     machine_joueur(m, faux_jouer);                     /* 3.41 */
+    machine_compresseur(m, faux_compresser);            /* 3.43 */
     char *r = executer_source(p, m, src, interactif);
     int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
     if (!ok) signaler(l, src, attendu, r);
@@ -243,6 +246,17 @@ static void faux_jouer(void *contexte, const unsigned char *octets, size_t taill
     strncat(jeux, t, sizeof jeux - strlen(jeux) - 1);
 }
 
+/* Un faux compresseur (3.43) : cinq octets à la signature d'un MP3 ; 17 octets en entrée, un échec. */
+static int faux_compresser(void *contexte, const unsigned char *octets, size_t taille, unsigned char **sortie,
+                           size_t *taille_sortie, char **erreur) {
+    (void)contexte; (void)octets;
+    if (taille == 17) { *erreur = grym_dupliquer("il ne se décode pas."); return 0; }
+    *sortie = malloc(5);
+    memcpy(*sortie, "ID3\x04\x00", 5);
+    *taille_sortie = 5;
+    return 1;
+}
+
 static int page_disponible(void *contexte) { (void)contexte; return 1; }
 
 static Issue page_formulaire(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret,
@@ -287,7 +301,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1384,7 +1398,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL, NULL, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL, scene_minuterie, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -3597,6 +3611,17 @@ int main(void) {
                  "    Le mémo vaut le fichier « _essai_son.wav ».\nÉcouter le mémo de v, de 3 à 2.",
                  "~Une écoute va d'une seconde positive à une seconde plus loin.");
             PROG("Écouter « bonjour ».", "~« Écouter » joue un son, pas un texte.");
+            /* « x en MP3 » (3.43) : le son allégé, son nom en .mp3 ; absent reste absent ; les refus */
+            PROG("Une visite, conservée, a : un mémo (son), facultatif.\nLe v vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son.wav ».\n"
+                 "Le léger vaut le mémo de v en MP3.\nAfficher la taille du léger puis le format du léger.\n"
+                 "Le mémo de v devient le mémo de v en MP3.\nAfficher le format du mémo de v.\n"
+                 "Le w vaut une nouvelle visite.\nLe rien vaut le mémo de w en MP3.\nSi le rien est absent, afficher « absent ».",
+                 "5 MP3\nMP3\nabsent");
+            PROG("Une visite, conservée, a : un mémo (son).\nLe w vaut une nouvelle visite :\n"
+                 "    Le mémo vaut le fichier « _essai_son17.wav ».\nLe léger vaut le mémo de w en MP3.",
+                 "~Le son ne se compresse pas : il ne se décode pas.");
+            PROG("Afficher « bonjour » en MP3.", "~« en MP3 » s'applique à un son, pas à un texte.");
             remove("_essai_son17.wav");
             remove("_essai_son18.wav");
         }

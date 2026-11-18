@@ -78,6 +78,14 @@ if(GRYMOIR_VOIX AND (APPLE OR (UNIX AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|A
     endif()
 endif()
 
+# Shine, l'encodeur MP3 de « x en MP3 » (grammaire 3.43 ; vendor/shine, LGPL 2, voir PROVENANCE.md) : pour l'atelier seul.
+add_library(grym_shine STATIC vendor/shine/bitstream.c vendor/shine/huffman.c vendor/shine/l3bitstream.c
+            vendor/shine/l3loop.c vendor/shine/l3mdct.c vendor/shine/l3subband.c vendor/shine/layer3.c
+            vendor/shine/reservoir.c vendor/shine/tables.c)
+target_include_directories(grym_shine SYSTEM PUBLIC vendor/shine)
+target_compile_options(grym_shine PRIVATE -w)
+set_target_properties(grym_shine PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # SQLite embarqué, avec les réglages du Makefile (vendor/sqlite, voir PROVENANCE.md).
 add_library(grym_sqlite STATIC vendor/sqlite/sqlite3.c)
 target_include_directories(grym_sqlite SYSTEM PUBLIC vendor/sqlite)
@@ -105,7 +113,7 @@ endif()
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/voix.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp src/atelier/ecoute.cpp src/atelier/recherche.cpp src/atelier/agenda.cpp src/atelier/courriel.cpp)
-target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
+target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper grym_shine)
 target_compile_definitions(grym-atelier PRIVATE GRYMOIR_VOIX_CONSTRUCTION="${GRYM_VOIX_DOSSIER}")   # 3.40
 # Windows : l'icône de l'exécutable et le manifeste qui fait lire les chemins en UTF-8 (outils/windows).
 if(WIN32)
@@ -187,7 +195,7 @@ endif()
 if(APPLE)
     target_link_libraries(test_atelier PRIVATE "-framework AVFoundation")
 endif()
-target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
+target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper grym_shine)
 target_compile_definitions(test_atelier PRIVATE GRYMOIR_VOIX_CONSTRUCTION="${GRYM_VOIX_DOSSIER}")   # 3.40
 # le modèle d'essai miniature de whisper.cpp : il se charge et tourne comme un vrai, sans rien transcrire d'utile
 target_compile_definitions(test_atelier PRIVATE MODELE_ESSAI="${whisper_SOURCE_DIR}/models/for-tests-ggml-tiny.bin")

@@ -512,3 +512,47 @@ void jouer_extrait(const QByteArray &octets, double debut, double fin) {
     joueur.attendre = true;
     joueur.lecteur->setSourceDevice(joueur.tampon, QUrl("son." + extension_du_format(octets)));
 }
+
+// --- x en MP3 (3.43) ---
+
+extern "C" {
+#include "layer3.h"   // vendor/shine
+}
+#include "transcription.h"
+
+// Un son allégé pour la parole : MP3 mono, 16 kHz (ce que la transcription lit de toute façon), 64 kbit/s, soit environ
+// 29 Mo par heure. Pas 48 ni 56 kbit/s : à 16 kHz, Shine y calcule 215,99999999999997 octets par trame au lieu de 216,
+// pose alors le bit de bourrage sur des trames de 216 octets, et les lecteurs se désynchronisent (vu le 18 novembre 2026 ;
+// 32, 40 et 64 kbit/s tombent juste). Le son est décodé comme pour la transcription, puis encodé par Shine (vendor/shine).
+QByteArray compresser_en_mp3(const QByteArray &octets, QString *erreur) {
+    std::vector<float> pcm;
+    if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QByteArray();
+    if (pcm.empty()) { *erreur = "le son est vide."; return QByteArray(); }
+    shine_config_t c;
+    shine_set_config_mpeg_defaults(&c.mpeg);
+    c.wave.channels = PCM_MONO;
+    c.wave.samplerate = 16000;
+    c.mpeg.mode = MONO;
+    c.mpeg.bitr = 64;
+    if (shine_check_config(c.wave.samplerate, c.mpeg.bitr) < 0) { *erreur = "l'encodeur MP3 refuse ses réglages."; return QByteArray(); }
+    shine_t s = shine_initialise(&c);
+    if (!s) { *erreur = "l'encodeur MP3 ne démarre pas."; return QByteArray(); }
+    const size_t pas = (size_t)shine_samples_per_pass(s);
+    std::vector<int16_t> bloc(pas);
+    QByteArray mp3;
+    mp3.reserve((qsizetype)(pcm.size() / 16000 * 8000 + 4096));
+    for (size_t i = 0; i < pcm.size(); i += pas) {
+        for (size_t k = 0; k < pas; k++) {
+            const float x = i + k < pcm.size() ? pcm[i + k] : 0.0f;
+            bloc[k] = (int16_t)std::lround(std::max(-1.0f, std::min(1.0f, x)) * 32767.0f);
+        }
+        int ecrits = 0;
+        const unsigned char *d = shine_encode_buffer_interleaved(s, bloc.data(), &ecrits);
+        if (d && ecrits > 0) mp3.append(reinterpret_cast<const char *>(d), ecrits);
+    }
+    int ecrits = 0;
+    const unsigned char *d = shine_flush(s, &ecrits);
+    if (d && ecrits > 0) mp3.append(reinterpret_cast<const char *>(d), ecrits);
+    shine_close(s);
+    return mp3;
+}

@@ -516,6 +516,10 @@ static double secondes_en_double(const Decimal *d) {
     return r;
 }
 
+void machine_compresseur(Machine *m, int (*compresser)(void *, const unsigned char *, size_t, unsigned char **, size_t *, char **)) {
+    m->iface.compresser = compresser;   /* « x en MP3 » (3.43) : sur l'interface en place */
+}
+
 void machine_joueur(Machine *m, void (*jouer)(void *, const unsigned char *, size_t, double, double)) {
     m->iface.jouer = jouer;   /* « Écouter x » (3.41) : sur l'interface en place */
 }
@@ -7520,9 +7524,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
                                                   "vrai ou faux", "heure", "toutes lettres", "format technique", "IBAN",
-                                                  "date locale", "heure locale", "format universel", "fichier" };
+                                                  "date locale", "heure locale", "format universel", "fichier", "MP3" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux", "une heure", "", "", "", "", "", "", "" };
+                                                "vrai ou faux", "une heure", "", "", "", "", "", "", "", "" };
             (void)CIBLES;
             (void)NOMS;
             if (op == 11 || op == 12) {
@@ -7552,6 +7556,41 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const struct tm l = *localtime(&tt);
                 if (op == 11) empiler(&pile, valeur_date(date_jours(l.tm_year + 1900, l.tm_mon + 1, l.tm_mday)));
                 else empiler(&pile, valeur_heure(l.tm_hour * 60L + l.tm_min));
+                break;
+            }
+            if (op == 15) {
+                /* « l'enregistrement en MP3 » (3.43) : un son, allégé par l'interface (MP3 mono, pour la parole) ; sans
+                 * compresseur (console, navigateur), le son reste tel quel */
+                Valeur vs = depiler(&pile);
+                if (vs.type == V_ABSENT) { empiler(&pile, vs); break; }
+                if (vs.type != V_FICHIER) {
+                    char *mp = grym_echec(NULL, "« en MP3 » s'applique à un son, pas à %s.", nom_type(vs.type));
+                    valeur_liberer(&vs);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                if (!m->iface.compresser) { empiler(&pile, vs); break; }
+                if (!vs.fichier->octets) { char *e = NULL; base_fichier_lire(vs.fichier, &e); free(e); }
+                unsigned char *sortie = NULL;
+                size_t ns = 0;
+                char *err = NULL;
+                if (!vs.fichier->octets
+                    || !m->iface.compresser(m->iface.contexte, vs.fichier->octets, vs.fichier->taille, &sortie, &ns, &err)) {
+                    char *mp = grym_echec(NULL, "Le son ne se compresse pas : %s", err ? err : "il ne se lit pas.");
+                    free(err);
+                    valeur_liberer(&vs);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                /* le nom du son, son extension changée */
+                const char *nom = vs.fichier->nom ? vs.fichier->nom : "son";
+                const char *pt = strrchr(nom, '.');
+                char *nouveau = grym_formater("%.*s.mp3", (int)(pt ? pt - nom : (long)strlen(nom)), nom);
+                Valeur f = vi_fichier((const char *)sortie, ns, nouveau);
+                free(nouveau);
+                free(sortie);
+                valeur_liberer(&vs);
+                empiler(&pile, f);
                 break;
             }
             if (op == 14) {

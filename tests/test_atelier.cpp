@@ -665,6 +665,33 @@ int main(int argc, char **argv) {
             VERIFIER(transcrire_segments_son(wav(16000, 1, 16, 1.0), QString(), &e3).isEmpty() && e3.contains("introuvable"));
             liberer_transcription();
         }
+        // « x en MP3 » (3.43) : dix secondes de WAV deviennent un MP3 bien plus léger, que le décodeur relit à la même durée
+        {
+            const QByteArray w = wav(44100, 2, 16, 10.0);
+            QString e;
+            const QByteArray mp3 = compresser_en_mp3(w, &e);
+            VERIFIER(e.isEmpty() && mp3.size() > 70000 && mp3.size() < 90000);   // 64 kbit/s : 80 ko pour 10 s
+            VERIFIER(mp3.size() >= 2 && (uchar)mp3[0] == 0xFF && ((uchar)mp3[1] & 0xE0) == 0xE0);   // une trame MPEG
+            VERIFIER(octets_de_son(mp3));
+            // les trames, une à une : MPEG-2 couche III, 16 kHz, 64 kbit/s, mono ; 576 échantillons et 288 octets par
+            // trame (72 × 64000 ÷ 16000, plus l'octet de bourrage s'il est annoncé) ; dix secondes : 278 trames à deux près
+            int trames = 0;
+            bool justes = true;
+            qsizetype pos = 0;
+            while (pos + 4 <= mp3.size()) {
+                const uchar h1 = (uchar)mp3[pos + 1], h2 = (uchar)mp3[pos + 2], h3 = (uchar)mp3[pos + 3];
+                if ((uchar)mp3[pos] != 0xFF || (h1 & 0xFE) != 0xF2) { justes = false; break; }   // MPEG-2, couche III
+                if ((h2 >> 4) != 8 || ((h2 >> 2) & 3) != 2 || (h3 >> 6) != 3) { justes = false; break; }   // 64 kbit/s, 16 kHz, mono
+                pos += 288 + ((h2 >> 1) & 1);
+                trames++;
+            }
+            VERIFIER(justes && pos == mp3.size() && trames >= 276 && trames <= 281);
+            if (!(justes && pos == mp3.size())) fprintf(stderr, "mp3 : %d trames, arrêt à %lld sur %lld\n", trames, (long long)pos, (long long)mp3.size());
+            const QByteArray garde = qgetenv("DROGMAN_MP3_ESSAI");   // à la main : le MP3 écrit, pour l'écouter
+            if (!garde.isEmpty()) { QFile f(QString::fromUtf8(garde)); if (f.open(QIODevice::WriteOnly)) f.write(mp3); }
+            QString e3;
+            VERIFIER(compresser_en_mp3(QByteArray("pas un son"), &e3).isEmpty() && !e3.isEmpty());
+        }
         // les voix (3.40) : sans modèles, l'échec le dit ; avec ceux que CMake a téléchargés, un son muet donne un tableau
         // JSON (vide) ; DROGMAN_VOIX_ESSAI : un vrai son, dont les voix s'écrivent (essai à la main)
         {

@@ -106,3 +106,6 @@ public:
 // « Écouter x, de d à f. » (3.41) : joue un son de la seconde debut à la seconde fin (fin < 0 : jusqu'au bout), sans
 // attendre ; octets vides : l'écoute s'arrête. Dans le fil de la fenêtre seulement.
 void jouer_extrait(const QByteArray &octets, double debut, double fin);
+
+// « x en MP3 » (3.43) : un son allégé pour la parole (MP3 mono, 16 kHz, 64 kbit/s) ; vide avec *erreur s'il ne se lit pas.
+QByteArray compresser_en_mp3(const QByteArray &octets, QString *erreur);

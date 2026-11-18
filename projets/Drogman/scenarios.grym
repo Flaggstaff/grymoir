@@ -8,7 +8,7 @@ Pour poser un code :
     Le e vaut un nouvel entretien :
         Le code vaut code.
         Le jour vaut 06.03.2013.
-        La présence vaut "Ayşe Yılmaz, la mère (MA), Mehmet Yılmaz, le père (PA)".
+        La présence vaut « Ayşe Yılmaz, la mère (MA), Mehmet Yılmaz, le père (PA) ».
         L'interprète vaut « Elif Demir ».
         L'intervieweur vaut « Dilan ».
         Le lieu vaut « domicile des parents ».
@@ -106,19 +106,19 @@ Scénario « le document COREL : l'en-tête, le sigle, la tabulation, le turc en
     Pour chaque tour conservé dont le rang = 2 :
         Le sigle du tour devient « PA ».
         La traduction du tour devient « Je vais bien, merci. ».
-    Le d vaut le document COREL du e.
-    Vérifier que le d commence par "{\rtf1\ansi".
-    Vérifier que le d contient "\f0\fs20".
-    Vérifier que le d contient "\chpgn".
-    Vérifier que le d contient "Nom du fichier : EensA1_20130306_Ens_05".
-    Vérifier que le d contient "Entretien du 06.03.2013".
-    Vérifier que le d contient "(Interpr\u232?te (INPRET) : Elif Demir)".
-    Vérifier que le d contient "R\u233?alis\u233? par Dilan (INT), domicile des parents".
-    Vérifier que le d contient "Dur\u233?e : 00h45".
+    Le d vaut le document corel du e.
+    Vérifier que le d commence par « {\rtf1\ansi ».
+    Vérifier que le d contient « \f0\fs20 ».
+    Vérifier que le d contient « \chpgn ».
+    Vérifier que le d contient « Nom du fichier : EensA1_20130306_Ens_05 ».
+    Vérifier que le d contient « Entretien du 06.03.2013 ».
+    Vérifier que le d contient « (Interpr\u232?te (INPRET) : Elif Demir) ».
+    Vérifier que le d contient « R\u233?alis\u233? par Dilan (INT), domicile des parents ».
+    Vérifier que le d contient « Dur\u233?e : 00h45 ».
     Remarque : un tour turc : la parole d'origine, puis la traduction dessous (sans version COREL encore).
-    Vérifier que le d contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
-    Vérifier que le d contient "\tab [Je vais bien, merci.]\par".
-    Vérifier que le d contient "?\tab Bonjour, (.) comment allez-vous ?\par".
+    Vérifier que le d contient « PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par ».
+    Vérifier que le d contient « \tab [Je vais bien, merci.]\par ».
+    Vérifier que le d contient « ?\tab Bonjour, (.) comment allez-vous ?\par ».
     Vérifier que le d finit par « } ».
     Remarque : les lettres de la table ne restent pas telles quelles (« contient » ne regarde ni accents ni casse : des mots entiers).
     Vérifier que le d ne contient pas « Réalisé ».
@@ -130,8 +130,8 @@ Scénario « le texte pour NVivo : une ligne par tour, l'heure, le sigle, deux-p
     Pour chaque tour conservé dont le rang = 2 :
         Le sigle du tour devient « PA ».
         La traduction du tour devient « Je vais bien, merci. ».
-    Le t vaut le texte NVivo du e.
-    Les lignes valent les lignes de le t.
+    Le t vaut le texte nvivo du e.
+    Les lignes valent les lignes du t.
     Vérifier que le nombre de lignes = 3.
     Vérifier que le 1er élément des lignes = « 00:00:01 ?: Bonjour, comment allez-vous ? ».
     Vérifier que le 2e élément des lignes = « 00:00:04 PA: İyiyim, teşekkür ederim. [Je vais bien, merci.] ».
@@ -142,7 +142,7 @@ Scénario « l'état d'un entretien compte les tours sans sigle et ceux d'une au
     Poser « EensA1_20130306_Ens_07 », qui donne le e.
     Vérifier que l'état du e = "Pas encore transcrit : « Transcrire ».".
     Transcrire le e.
-    Vérifier que l'état du e = "3 tours de parole ; 3 sans sigle ; 1 dans une autre langue que le français, dont 1 à traduire.".
+    Vérifier que l'état du e = « 3 tours de parole ; 3 sans sigle ; 1 dans une autre langue que le français, dont 1 à traduire. ».
 
 Scénario « un nouvel entretien s'enregistre par l'écran » :
     On clique sur « Nouvel entretien » dans l'écran des entretiens.
@@ -318,9 +318,9 @@ Scénario « la traduction jointe décochée : la transcription COREL ne garde q
     Transcrire le e.
     Pour chaque tour conservé dont le rang = 2 :
         La traduction du tour devient « Je vais bien, merci. ».
-    Vérifier que le document COREL du e contient « [Je vais bien, merci.] ».
+    Vérifier que le document corel du e contient « [Je vais bien, merci.] ».
     La traduction jointe du e devient faux.
-    Vérifier que le document COREL du e ne contient pas « Je vais bien ».
+    Vérifier que le document corel du e ne contient pas « Je vais bien ».
 
 Remarque : Drogman 0.4 : la version COREL d'un tour non français se fait sur sa traduction ; le document COREL la met sous la
 Remarque : parole d'origine ; le sigle s'écrit en majuscules.
@@ -331,12 +331,12 @@ Scénario « un tour turc : sa version COREL, faite sur la traduction, passe sou
         Le sigle du tour devient « PA ».
         La traduction du tour devient « Je vais bien, merci. ».
         La version corel du tour devient « Je vais bien (.) merci. ».
-    Le d vaut le document COREL du e.
-    Vérifier que le d contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
-    Vérifier que le d contient "\tab [Je vais bien (.) merci.]\par".
+    Le d vaut le document corel du e.
+    Vérifier que le d contient « PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par ».
+    Vérifier que le d contient « \tab [Je vais bien (.) merci.]\par ».
     Vérifier que le d ne contient pas « [Je vais bien, merci.] ».
     La traduction jointe du e devient faux.
-    Vérifier que le document COREL du e ne contient pas « Je vais bien ».
+    Vérifier que le document corel du e ne contient pas « Je vais bien ».
 
 Scénario « couper un tour turc : sa version COREL reste au premier, la traduction se coupe à sa barre » :
     Poser « EensA1_20130306_Ens_18 », qui donne le e.
@@ -426,16 +426,16 @@ Scénario « le document COREL réunit les tours qui se suivent sous le même si
         La version corel du tour devient « très bien ».
     Pour chaque tour conservé dont l'entretien = le e :
         Le sigle du tour devient « INT ».
-    Le d vaut le document COREL du e.
-    Vérifier que le d contient "Universit\u233? de Fribourg, D\u233?partement des Sciences de l'\u233?ducation et de la formation, Prof. Tania Ogay\par".
-    Vérifier que le d contient "Entretien du 06.03.2013, 14:30\par".
-    Vérifier que le d contient "(Famille de Deniz Y\u305?lmaz)\par".
-    Vérifier que le d contient "INT\tab Bonjour, (.) comment allez-vous ? tr\u232?s bien Il dit : \u231?a va bien.\par".
+    Le d vaut le document corel du e.
+    Vérifier que le d contient « Universit\u233? de Fribourg, D\u233?partement des Sciences de l'\u233?ducation et de la formation, Prof. Tania Ogay\par ».
+    Vérifier que le d contient « Entretien du 06.03.2013, 14:30\par ».
+    Vérifier que le d contient « (Famille de Deniz Y\u305?lmaz)\par ».
+    Vérifier que le d contient « INT\tab Bonjour, (.) comment allez-vous ? tr\u232?s bien Il dit : \u231?a va bien.\par ».
     Remarque : un tour sans sigle ne se réunit à rien.
     Pour chaque tour conservé dont le rang = 3 :
         Le sigle du tour devient « ? ».
-    Vérifier que le document COREL du e contient "INT\tab Bonjour, (.) comment allez-vous ? tr\u232?s bien\par".
-    Vérifier que le document COREL du e contient "?\tab Il dit : \u231?a va bien.\par".
+    Vérifier que le document corel du e contient « INT\tab Bonjour, (.) comment allez-vous ? tr\u232?s bien\par ».
+    Vérifier que le document corel du e contient « ?\tab Il dit : \u231?a va bien.\par ».
 
 Scénario « deux tours turcs du même sigle : la parole réunie, puis les versions COREL réunies dessous » :
     Poser « EensA1_20130306_Ens_23 », qui donne le e.
@@ -447,13 +447,13 @@ Scénario « deux tours turcs du même sigle : la parole réunie, puis les versi
         Le sigle du tour devient « PA ».
         La traduction du tour devient « merci. ».
         La version corel du tour devient « MERCI. ».
-    Le d vaut le document COREL du e.
-    Vérifier que le d contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
-    Vérifier que le d contient "\tab [Je vais bien, MERCI.]\par".
+    Le d vaut le document corel du e.
+    Vérifier que le d contient « PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par ».
+    Vérifier que le d contient « \tab [Je vais bien, MERCI.]\par ».
 
 Scénario « le RTF écrit l'espagnol et les espaces insécables » :
-    Vérifier que le RTF de « señora ¿qué? » = "se\u241?ora \u191?qu\u233??".
-    Vérifier que le RTF de « oui ! » = "oui\u160?!".
+    Vérifier que le RTF de « señora ¿qué? » = « se\u241?ora \u191?qu\u233?? ».
+    Vérifier que le RTF de « oui ! » = « oui\u160?! ».
 
 Scénario « supprimer un tour resserre les rangs ; supprimer l'entretien emporte ses tours » :
     Poser « EensA1_20130306_Ens_24 », qui donne le e.
@@ -509,25 +509,25 @@ Scénario « un document par étape : la transcription d'origine, la traduction,
         La traduction du tour devient « Je vais bien, merci. ».
         La version corel du tour devient « Je vais bien (.) merci. ».
     Le b vaut le document du e et de « base ».
-    Vérifier que le b contient "Transcription d'origine, chaque tour dans sa langue\par".
-    Vérifier que le b contient "Nom du fichier : EensA1_20130306_Ens_27".
+    Vérifier que le b contient « Transcription d'origine, chaque tour dans sa langue\par ».
+    Vérifier que le b contient « Nom du fichier : EensA1_20130306_Ens_27 ».
     Remarque : la parole telle quelle, sans la pause de la version COREL, sans traduction.
-    Vérifier que le b contient "?\tab Bonjour, comment allez-vous ?\par".
-    Vérifier que le b contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
+    Vérifier que le b contient « ?\tab Bonjour, comment allez-vous ?\par ».
+    Vérifier que le b contient « PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par ».
     Vérifier que le b ne contient pas « Je vais bien ».
     Le f vaut le document du e et de « traduction ».
-    Vérifier que le f contient "Traduction en fran\u231?ais\par".
-    Vérifier que le f contient "PA\tab Je vais bien, merci.\par".
-    Vérifier que le f contient "?\tab Bonjour, comment allez-vous ?\par".
+    Vérifier que le f contient « Traduction en fran\u231?ais\par ».
+    Vérifier que le f contient « PA\tab Je vais bien, merci.\par ».
+    Vérifier que le f contient « ?\tab Bonjour, comment allez-vous ?\par ».
     Vérifier que le f ne contient pas « ederim ».
-    Le c vaut le document COREL du e.
-    Vérifier que le c contient "?\tab Bonjour, (.) comment allez-vous ?\par".
-    Vérifier que le c contient "\tab [Je vais bien (.) merci.]\par".
+    Le c vaut le document corel du e.
+    Vérifier que le c contient « ?\tab Bonjour, (.) comment allez-vous ?\par ».
+    Vérifier que le c contient « \tab [Je vais bien (.) merci.]\par ».
     Vérifier que le c ne contient pas « Transcription d'origine ».
     Remarque : un tour pas encore traduit garde sa parole dans le document de traduction.
     Pour chaque tour conservé dont le rang = 2 :
         La traduction du tour devient absente.
-    Vérifier que le document du e et de « traduction » contient "PA\tab \u304?yiyim".
+    Vérifier que le document du e et de « traduction » contient « PA\tab \u304?yiyim ».
 
 Remarque : Drogman 0.7 : l'analyse (thèmes, codages, recherche), à la manière des logiciels d'analyse qualitative.
 Pour inventer un intitulé :
@@ -604,13 +604,13 @@ Scénario « le document d'analyse : chaque thème, son poids, ses extraits, le 
     Vérifier que le poids du th = « 2 extrait(s), dans 2 entretien(s) ».
     Vérifier que le poids du second = « 1 extrait(s), dans 1 entretien(s) ».
     Le d vaut le document d'analyse de « Analyse thématique ».
-    Vérifier que le d commence par "{\rtf1\ansi".
-    Vérifier que le d contient "\b ACCUEIL\b0  (2 extrait(s), dans 2 entretien(s))\par".
-    Vérifier que le d contient "Le premier contact avec l'\u233?cole\par".
-    Vérifier que le d contient "\i EensA1_20130306_Ens_32, 00:00:01, ?\i0\par".
-    Vérifier que le d contient "\u304?yiyim\par".
-    Vérifier que le d contient "EensA1_20130306_Ens_32 : accueil 1 ; langue 1\par".
-    Vérifier que le d contient "EensA1_20130306_Ens_33 : accueil 1\par".
+    Vérifier que le d commence par « {\rtf1\ansi ».
+    Vérifier que le d contient « \b ACCUEIL\b0  (2 extrait(s), dans 2 entretien(s))\par ».
+    Vérifier que le d contient « Le premier contact avec l'\u233?cole\par ».
+    Vérifier que le d contient « \i EensA1_20130306_Ens_32, 00:00:01, ?\i0\par ».
+    Vérifier que le d contient « \u304?yiyim\par ».
+    Vérifier que le d contient « EensA1_20130306_Ens_32 : accueil 1 ; langue 1\par ».
+    Vérifier que le d contient « EensA1_20130306_Ens_33 : accueil 1\par ».
     Vérifier que le d finit par « } ».
 
 Scénario « les codages suivent les tours : joints, ils passent au tour qui reste ; supprimés, ils partent avec lui » :
@@ -679,3 +679,12 @@ Scénario « un thème se crée par l'écran ; la recherche demande un mot » :
     On ferme l'écran des entretiens.
     Ouvrir l'écran des entretiens.
     Vérifier que le nombre de thèmes conservés = 1.
+
+Remarque : Drogman 0.8 : un enregistrement trop lourd devient un MP3. Hors de l'application, rien ne compresse : seuls les cas
+Remarque : où il n'y a rien à faire s'éprouvent ici ; la conversion elle-même l'est dans l'atelier (tests/drogman).
+Scénario « alléger : rien à faire sans enregistrement ; le poids se lit en mégaoctets » :
+    Poser « EensA1_20130306_Ens_40 », qui donne le e.
+    Alléger le e, qui donne l'avis.
+    Vérifier que l'avis = « ».
+    Vérifier que le poids lisible de 950400000 = « 950 Mo ».
+    Vérifier que le poids lisible de 43200000 = « 43 Mo ».

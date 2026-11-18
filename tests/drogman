@@ -100,6 +100,24 @@ lancer analyse2 "Analyse;Exporter l'analyse;Exporter les extraits en CSV"
 verifier "$(ls "$d/maison/Documents/Drogman/" | grep -c '^Analyse .*\.rtf$')" "1" "l'analyse en RTF est écrite"
 verifier "$(grep -c 'ACCUEIL' "$d"/maison/Documents/Drogman/Analyse*.rtf)" "1" "le thème dans l'analyse"
 verifier "$(grep -c 'Je vais bien, merci.' "$d"/maison/Documents/Drogman/Extraits*.csv)" "1" "l'extrait dans le CSV"
+# un enregistrement trop lourd (0.8) : 17 minutes de WAV, 32 Mo, deviennent un MP3 à l'enregistrement de l'entretien
+python3 -c "
+import struct,sys
+n=16000*60*17
+sys.stdout.buffer.write(b'RIFF'+struct.pack('<I',36+2*n)+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,16000,32000,2,16)+b'data'+struct.pack('<I',2*n))
+bloc=bytes(32000)
+for _ in range(60*17): sys.stdout.buffer.write(bloc)" > "$d/lourd.wav"
+jouer 'Le e vaut un nouvel entretien :
+    Le code vaut « Lourd_01 ».
+    Le jour vaut 07.03.2013.
+    L'"'"'enregistrement vaut le fichier « lourd.wav ».
+Conserver le e.' > /dev/null
+lancer lourd "ligne:Lourd_01;Enregistrer"
+verifier "$(grep -c 'erreur' "$d/lourd.txt")" "0" "un entretien lourd s'enregistre sans erreur"
+verifier "$(jouer 'Pour chaque entretien conservé dont le code = « Lourd_01 » :
+    Afficher le format de l'"'"'enregistrement de l'"'"'entretien.
+    Si la taille de l'"'"'enregistrement de l'"'"'entretien < 9000000, afficher « léger ».')" "MP3
+léger" "l'enregistrement lourd est devenu un MP3 léger"
 lancer transcrire "ligne:EensA1_20130306_Ens_01;Transcrire;confirmer"
 verifier "$(grep -c 'erreur' "$d/transcrire.txt")" "0" "Transcrire tourne jusqu'au bout"
 # un son muet ne donne aucun segment : le refus (« Rien n'a été transcrit ») annule tout, les tours d'avant restent

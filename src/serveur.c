@@ -2804,7 +2804,7 @@ Interface serveur_interface(Serveur *s) {
                     serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0,
                     serveur_ecran_signaler, NULL, serveur_ecran_choix, NULL,   /* NULL : pas de courriel (§ 22.27) */
                     serveur_ecran_minuterie, NULL,   /* NULL : pas de commande dans le navigateur (§ 15.10) */
-                    NULL, NULL, NULL };   /* NULL : pas de segments, de voix ni d'écoute dans le navigateur (3.39 à 3.41) */
+                    NULL, NULL, NULL, NULL };   /* NULL : ni segments, ni voix, ni écoute, ni MP3 dans le navigateur (3.39 à 3.43) */
     return i;
 }
 

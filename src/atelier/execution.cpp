@@ -453,6 +453,23 @@ static char *iface_transcrire_segments(void *contexte, const unsigned char *octe
     return grym_dupliquer(json.toUtf8().constData());
 }
 
+// « x en MP3 » (3.43) : le son allégé, dans le fil de la machine.
+static int iface_compresser(void *contexte, const unsigned char *octets, size_t taille, unsigned char **sortie,
+                            size_t *taille_sortie, char **erreur) {
+    (void)contexte;
+    QString probleme;
+    const QByteArray mp3 = compresser_en_mp3(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille), &probleme);
+    if (mp3.isEmpty()) {
+        *erreur = grym_dupliquer((probleme.isEmpty() ? QString("le son ne se lit pas.") : probleme).toUtf8().constData());
+        return 0;
+    }
+    *sortie = static_cast<unsigned char *>(malloc((size_t)mp3.size()));
+    if (!*sortie) { *erreur = grym_dupliquer("la mémoire manque."); return 0; }
+    memcpy(*sortie, mp3.constData(), (size_t)mp3.size());
+    *taille_sortie = (size_t)mp3.size();
+    return 1;
+}
+
 // « Écouter x, de d à f. » (3.41) : le son copié, joué dans le fil de la fenêtre, sans attendre.
 static void iface_jouer(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin) {
     (void)contexte;
@@ -768,7 +785,8 @@ void Travail::run() {
                    iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel, iface_ecran_minuterie, iface_commande,
                    iface_transcrire_segments,   // « les segments de x » (3.39)
                    iface_separer_voix,          // « les voix de x » (3.40)
-                   iface_jouer};                // « Écouter x » (3.41)
+                   iface_jouer,                 // « Écouter x » (3.41)
+                   iface_compresser};           // « x en MP3 » (3.43)
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)

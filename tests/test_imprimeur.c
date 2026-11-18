@@ -193,6 +193,8 @@ int main(void) {
     COMP("Le x vaut le fichier « a.wav ».\nLes a valent les voix du x.\nLes b valent les 3 voix du x.\n",
          "_le x << _fichier « a.wav »\n_les a << _voix x\n_les b << _n_voix(3) x\n");
     /* écouter (3.41) */
+    FIXE("Le x vaut le fichier « a.wav ».\nLe y vaut le x en MP3.\n");   /* 3.43 */
+    COMP("Le x vaut le fichier « a.wav ».\nLe y vaut le x en MP3.\n", "_le x << _fichier « a.wav »\n_le y << x _en_MP3\n");
     FIXE("Amorcer la transcription avec « Bulle », en toute langue parmi « fr, tr ».\n");   /* 3.42 */
     COMP("Amorcer la transcription avec « Bulle », en toute langue parmi « fr, tr ».\n",
          "_amorcer « Bulle » _toute_langue _parmi_langues « fr, tr »\n");

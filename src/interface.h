@@ -287,6 +287,10 @@ typedef struct {
      * la seconde fin (fin < 0 : jusqu'au bout), sans attendre ; octets NULL : l'écoute en cours s'arrête. NULL : l'interface
      * ne joue rien (console, navigateur). */
     void (*jouer)(void *contexte, const unsigned char *octets, size_t taille, double debut, double fin);
+    /* « x en MP3 » (3.43) : un son allégé, en MP3 mono ; rend 1 et *sortie (malloc), *taille_sortie, ou 0 avec *erreur.
+     * NULL : l'interface ne compresse pas (console, navigateur) ; le son reste tel quel. */
+    int (*compresser)(void *contexte, const unsigned char *octets, size_t taille, unsigned char **sortie,
+                      size_t *taille_sortie, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

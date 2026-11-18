@@ -1,4 +1,4 @@
-Remarque : Drogman 0.7 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.8 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -160,12 +160,12 @@ Pour verser un segment et un entretien :
     Si le nombre de mots = 0 :
         Remarque : un segment sans mots : un tour à lui, son texte tel quel, la voix de son milieu.
         Clore l'entretien et la langue en cours.
-        Chercher la voix de ((le d0 + le f0) ÷ 2), qui donne la v.
+        Chercher la voix de ((le d0 + le f0) ÷ 2), qui donne le parleur.
         Le texte en cours devient le champ « texte » du segment.
         La version en cours devient le champ « texte » du segment.
         Le début en cours devient le d0.
         La fin en cours devient le f0.
-        Si la v > 0, la voix en cours devient la v.
+        Si le parleur > 0, la voix en cours devient le parleur.
         Clore l'entretien et la langue en cours.
     Sinon :
         Pour chaque mot du champ « mots » du segment :
@@ -173,12 +173,12 @@ Pour verser un segment et un entretien :
             Le f vaut le nombre lu du champ « fin » du mot.
             Si le d est absent, le d devient le d0.
             Si le f est absent, le f devient le d.
-            Chercher la voix de ((le d + le f) ÷ 2), qui donne la v.
-            Si la v = 0, la v devient la voix en cours.
-            Si le texte en cours ≠ « » et la v ≠ la voix en cours, clore l'entretien et la langue en cours.
+            Chercher la voix de ((le d + le f) ÷ 2), qui donne le parleur.
+            Si le parleur = 0, le parleur devient la voix en cours.
+            Si le texte en cours ≠ « » et le parleur ≠ la voix en cours, clore l'entretien et la langue en cours.
             Si le texte en cours = « » :
                 Le début en cours devient le d.
-                La voix en cours devient la v.
+                La voix en cours devient le parleur.
             Sinon :
                 Si le d − la fin en cours ≥ 0,5, la version en cours devient la version en cours suivi de " (.)".
                 Le texte en cours devient le texte en cours suivi de " ".
@@ -228,7 +228,7 @@ Pour trouver le sigle d'un dossier et une voix :
         Les paires valent les morceaux de (la correspondance du dossier en remplaçant « ; » par « , ») séparés par « , ».
         Pour chaque paire parmi les paires :
             Les ps valent les mots de (la paire en remplaçant « = » par " " en remplaçant « : » par " ").
-            Si le nombre de ps = 2 et le premier élément des ps = ("" suivi de voix), le s devient le dernier élément des ps en majuscules.
+            Si le nombre de ps = 2 et le premier élément des ps = (« » suivi de voix), le s devient le dernier élément des ps en majuscules.
     Rendre le s.
 
 Remarque : la durée d'un entretien, d'après la fin de son dernier tour, à la façon du modèle : « 00h45 ».
@@ -280,22 +280,25 @@ Remarque : numéro Unicode) : ceux du français et du turc, les guillemets et le
 Remarque : passerait telle quelle, en UTF-8, et Word la montrerait mal : la table se complète ici (0.5 : l'espagnol, le
 Remarque : portugais, l'allemand, les guillemets anglais, l'euro, les espaces insécables que Google rend dans ses traductions).
 Le RTF d'un texte :
-    Le r vaut le texte en remplaçant "\" par "\\" en remplaçant « { » par "\{" en remplaçant « } » par "\}".
-    Les codes valent la table où « à » vaut 224, « â » vaut 226, « ä » vaut 228, « ç » vaut 231, « è » vaut 232, « é » vaut 233, « ê » vaut 234, « ë » vaut 235, « î » vaut 238, « ï » vaut 239, « ô » vaut 244, « ö » vaut 246, « ù » vaut 249, « û » vaut 251, « ü » vaut 252, « ÿ » vaut 255, « À » vaut 192, « Â » vaut 194, « Ç » vaut 199, « È » vaut 200, « É » vaut 201, « Ê » vaut 202, « Î » vaut 206, « Ô » vaut 212, « Ö » vaut 214, « Ù » vaut 217, « Û » vaut 219, « Ü » vaut 220, « œ » vaut 339, « Œ » vaut 338, « ğ » vaut 287, « Ğ » vaut 286, « ı » vaut 305, « İ » vaut 304, « ş » vaut 351, « Ş » vaut 350, "«" vaut 171, "»" vaut 187, « ’ » vaut 8217, « … » vaut 8230, « ° » vaut 176, « – » vaut 8211, « — » vaut 8212, « á » vaut 225, « í » vaut 237, « ó » vaut 243, « ú » vaut 250, « ñ » vaut 241, « ì » vaut 236, « ò » vaut 242, « ã » vaut 227, « õ » vaut 245, « ß » vaut 223, « æ » vaut 230, « Á » vaut 193, « Í » vaut 205, « Ó » vaut 211, « Ú » vaut 218, « Ñ » vaut 209, « Ä » vaut 196, « Ë » vaut 203, « Ï » vaut 207, « Æ » vaut 198, « ‘ » vaut 8216, « “ » vaut 8220, « ” » vaut 8221, « € » vaut 8364, « ¿ » vaut 191, « ¡ » vaut 161.
-    Remarque : les espaces insécables, hors de la table (une clé entre guillemets perd ses espaces de bord).
-    Le r devient le r en remplaçant " " par "\u160?" en remplaçant " " par "\u8239?".
+    Le r vaut le texte en remplaçant « \ » par « \\ » en remplaçant « { » par « \{ » en remplaçant « } » par « \} ».
+    Les codes valent la table où « à » vaut 224, « â » vaut 226, « ä » vaut 228, « ç » vaut 231, « è » vaut 232, « é » vaut 233, « ê » vaut 234, « ë » vaut 235, « î » vaut 238, « ï » vaut 239, « ô » vaut 244, « ö » vaut 246, « ù » vaut 249, « û » vaut 251, « ü » vaut 252, « ÿ » vaut 255, « À » vaut 192, « Â » vaut 194, « Ç » vaut 199, « È » vaut 200, « É » vaut 201, « Ê » vaut 202, « Î » vaut 206, « Ô » vaut 212, « Ö » vaut 214, « Ù » vaut 217, « Û » vaut 219, « Ü » vaut 220, « œ » vaut 339, « Œ » vaut 338, « ğ » vaut 287, « Ğ » vaut 286, « ı » vaut 305, « İ » vaut 304, « ş » vaut 351, « Ş » vaut 350, « « » vaut 171, "»" vaut 187, « ’ » vaut 8217, « … » vaut 8230, « ° » vaut 176, « – » vaut 8211, « — » vaut 8212, « á » vaut 225, « í » vaut 237, « ó » vaut 243, « ú » vaut 250, « ñ » vaut 241, « ì » vaut 236, « ò » vaut 242, « ã » vaut 227, « õ » vaut 245, « ß » vaut 223, « æ » vaut 230, « Á » vaut 193, « Í » vaut 205, « Ó » vaut 211, « Ú » vaut 218, « Ñ » vaut 209, « Ä » vaut 196, « Ë » vaut 203, « Ï » vaut 207, « Æ » vaut 198, « ‘ » vaut 8216, « “ » vaut 8220, « ” » vaut 8221, « € » vaut 8364, « ¿ » vaut 191 et « ¡ » vaut 161.
+    Remarque : les espaces insécables, hors de la table : un texte fait d'une seule espace insécable perd son contenu (les
+    Remarque : guillemets ôtent les espaces de bord), d'où le caractère pris au milieu d'un autre texte.
+    L'insécable vaut le 2e caractère de « a b ».
+    La fine vaut le 2e caractère de « a b ».
+    Le r devient le r en remplaçant (l'insécable) par « \u160? » en remplaçant (la fine) par « \u8239? ».
     Pour chaque c parmi les clés des codes :
-        Le r devient le r en remplaçant (c) par ("\u" suivi de la valeur de c dans les codes suivi de « ? »).
+        Le r devient le r en remplaçant (c) par (« \u » suivi de la valeur de c dans les codes suivi de « ? »).
     Rendre le r.
 
 Remarque : un paragraphe du RTF, avec la tabulation après le sigle.
 Le paragraphe RTF d'un texte :
-    Rendre "\pard\tx1134\sb0\sa120 " suivi du RTF du texte suivi de "\par" suivi d'un saut de ligne.
+    Rendre "\pard\tx1134\sb0\sa120 " suivi du RTF du texte suivi de « \par » suivi d'un saut de ligne.
 
 Remarque : un tour de parole du document : « SIGLE<tab>parole », et dessous, s'il y en a un, « <tab>[dessous] ».
 Le bloc RTF d'un sigle et d'un dit et d'un dessous :
-    Le r vaut "\pard\tx1134\sb0\sa120 " suivi du RTF du sigle suivi de "\tab " suivi du RTF du dit suivi de "\par" suivi d'un saut de ligne.
-    Si le dessous est présent, le r devient le r suivi de "\pard\tx1134\sb0\sa120 \tab [" suivi du RTF du dessous suivi de "]\par" suivi d'un saut de ligne.
+    Le r vaut "\pard\tx1134\sb0\sa120 " suivi du RTF du sigle suivi de "\tab " suivi du RTF du dit suivi de « \par » suivi d'un saut de ligne.
+    Si le dessous est présent, le r devient le r suivi de « \pard\tx1134\sb0\sa120 \tab [ » suivi du RTF du dessous suivi de « ]\par » suivi d'un saut de ligne.
     Rendre le r.
 
 Remarque : la transcription COREL d'un entretien, en RTF, selon le modèle : Arial 10, aligné à gauche, une tabulation à 2 cm
@@ -307,9 +310,9 @@ Remarque : « base », la transcription d'origine, chaque tour dans sa langue ; 
 Remarque : tours français, la traduction des autres ; un tour pas encore traduit garde sa parole d'origine) ; « corel », la
 Remarque : transcription COREL décrite plus haut.
 Le document d'un e et d'une étape :
-    Le r vaut "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417" suivi d'un saut de ligne.
-    Le r devient le r suivi de "{\footer\pard\qr\f0\fs20\chpgn\par}" suivi de "\f0\fs20" suivi d'un saut de ligne.
-    Le r devient le r suivi du paragraphe RTF de "Université de Fribourg, Département des Sciences de l'éducation et de la formation, Prof. Tania Ogay".
+    Le r vaut « {\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417 » suivi d'un saut de ligne.
+    Le r devient le r suivi de « {\footer\pard\qr\f0\fs20\chpgn\par} » suivi de « \f0\fs20 » suivi d'un saut de ligne.
+    Le r devient le r suivi du paragraphe RTF de « Université de Fribourg, Département des Sciences de l'éducation et de la formation, Prof. Tania Ogay ».
     Le r devient le r suivi du paragraphe RTF de ("Nom du fichier : " suivi du code du e).
     Le quand vaut "Entretien du " suivi du jour du e.
     Si l'heure du e est présente, le quand devient le quand suivi de ", " suivi de l'heure du e.
@@ -324,8 +327,8 @@ Le document d'un e et d'une étape :
         Le réalisé devient le réalisé suivi du lieu du e.
     Si le réalisé ≠ « », le r devient le r suivi du paragraphe RTF du réalisé.
     Si la durée du e est présente, le r devient le r suivi du paragraphe RTF de ("Durée : " suivi de la durée du e).
-    Si l'étape = « base », le r devient le r suivi du paragraphe RTF de "Transcription d'origine, chaque tour dans sa langue".
-    Si l'étape = « traduction », le r devient le r suivi du paragraphe RTF de "Traduction en français".
+    Si l'étape = « base », le r devient le r suivi du paragraphe RTF de « Transcription d'origine, chaque tour dans sa langue ».
+    Si l'étape = « traduction », le r devient le r suivi du paragraphe RTF de « Traduction en français ».
     Le r devient le r suivi du paragraphe RTF de « ».
     Remarque : la traduction jointe, absente : jointe (les entretiens d'avant la 0.3).
     Le joint vaut vrai.
@@ -363,7 +366,7 @@ Le document d'un e et d'une étape :
     Si le sigle d'avant ≠ « », le r devient le r suivi du bloc RTF du sigle d'avant et du dit joint et du dessous joint.
     Rendre le r suivi de « } ».
 
-Le document COREL d'un e :
+Le document corel d'un e :
     Rendre le document du e et de « corel ».
 
 Remarque : la transcription pour NVivo, en texte (UTF-8) : une ligne par tour, « 00:01:22 INT: texte », l'horodatage en tête de
@@ -371,7 +374,7 @@ Remarque : paragraphe, puis le nom de l'intervenant suivi de deux-points et d'un
 Remarque : transcripts », relevée le 17 novembre 2026 ; la mise en page exacte n'y est montrée qu'en images : à éprouver dans
 Remarque : NVivo). La traduction suit la version de base, entre crochets ; les deux-points du texte deviennent des tirets, NVivo
 Remarque : prenant tout ce qui précède « : » pour un nom d'intervenant.
-Le texte NVivo d'un e :
+Le texte nvivo d'un e :
     Le r vaut « ».
     Pour chaque tour conservé dont l'entretien = le e, par rang :
         Le dit vaut la base du tour.
@@ -387,8 +390,8 @@ Pour déposer un fichier et un nom et une extension :
         Le suffixe vaut « ».
         Si le n > 1, le suffixe devient " (" suivi du n suivi de « ) ».
         Essayer :
-            Enregistrer le fichier dans ("~/Documents/Drogman/" suivi du nom suivi du suffixe suivi de extension).
-            Rendre "~/Documents/Drogman/" suivi du nom suivi du suffixe suivi de extension.
+            Enregistrer le fichier dans (« ~/Documents/Drogman/ » suivi du nom suivi du suffixe suivi d'extension).
+            Rendre « ~/Documents/Drogman/ » suivi du nom suivi du suffixe suivi d'extension.
         En cas d'échec :
             Le n devient le n + 1.
     Refuser "Le fichier ne s'écrit pas dans Documents/Drogman : le code de l'entretien sert de nom de fichier, sans « / » ni « : ».".
@@ -446,24 +449,24 @@ Le poids d'un th :
 Remarque : l'analyse en RTF (même mise en page que les transcriptions) : chaque thème, sa description, son poids, puis ses
 Remarque : extraits, « origine<tab>extrait », la note dessous entre crochets ; à la fin, le compte par entretien.
 Le document d'analyse d'un titre :
-    Le r vaut "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417" suivi d'un saut de ligne.
-    Le r devient le r suivi de "{\footer\pard\qr\f0\fs20\chpgn\par}" suivi de "\f0\fs20" suivi d'un saut de ligne.
+    Le r vaut « {\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417 » suivi d'un saut de ligne.
+    Le r devient le r suivi de « {\footer\pard\qr\f0\fs20\chpgn\par} » suivi de « \f0\fs20 » suivi d'un saut de ligne.
     Le r devient le r suivi du paragraphe RTF du titre.
     Pour chaque thème conservé, par nom :
         Le th vaut le thème.
         Le r devient le r suivi du paragraphe RTF de « ».
-        Le r devient le r suivi de "\pard\sb120\sa120\b " suivi du RTF de (le nom du thème en majuscules) suivi de "\b0  (" suivi du RTF du poids du thème suivi de ")\par" suivi d'un saut de ligne.
+        Le r devient le r suivi de "\pard\sb120\sa120\b " suivi du RTF de (le nom du thème en majuscules) suivi de « \b0  ( » suivi du RTF du poids du thème suivi de « )\par » suivi d'un saut de ligne.
         Si la description du thème est présente, le r devient le r suivi du paragraphe RTF de la description du thème.
         Pour chaque codage conservé dont le thème = le th, par origine :
             Le dit vaut « ».
             Si l'extrait du codage est présent, le dit devient l'extrait du codage.
             Le où vaut « ».
             Si l'origine du codage est présente, le où devient l'origine du codage.
-            Le r devient le r suivi de "\pard\li567\sb0\sa60\i " suivi du RTF du où suivi de "\i0\par" suivi d'un saut de ligne.
-            Le r devient le r suivi de "\pard\li567\sb0\sa120 " suivi du RTF du dit suivi de "\par" suivi d'un saut de ligne.
-            Si la note du codage est présente, le r devient le r suivi de "\pard\li567\sb0\sa120 [" suivi du RTF de la note du codage suivi de "]\par" suivi d'un saut de ligne.
+            Le r devient le r suivi de "\pard\li567\sb0\sa60\i " suivi du RTF du où suivi de « \i0\par » suivi d'un saut de ligne.
+            Le r devient le r suivi de "\pard\li567\sb0\sa120 " suivi du RTF du dit suivi de « \par » suivi d'un saut de ligne.
+            Si la note du codage est présente, le r devient le r suivi de « \pard\li567\sb0\sa120 [ » suivi du RTF de la note du codage suivi de « ]\par » suivi d'un saut de ligne.
     Le r devient le r suivi du paragraphe RTF de « ».
-    Le r devient le r suivi de "\pard\sb120\sa120\b " suivi du RTF de "Par entretien" suivi de "\b0\par" suivi d'un saut de ligne.
+    Le r devient le r suivi de "\pard\sb120\sa120\b " suivi du RTF de « Par entretien » suivi de « \b0\par » suivi d'un saut de ligne.
     Pour chaque entretien conservé, par code :
         La ligne vaut « ».
         Pour chaque thème conservé, par nom :
@@ -475,6 +478,25 @@ Le document d'analyse d'un titre :
         Si la ligne = « », la ligne devient « aucun codage ».
         Le r devient le r suivi du paragraphe RTF de (le code de l'entretien suivi de " : " suivi de la ligne).
     Rendre le r suivi de « } ».
+
+Remarque : un poids en mégaoctets, pour un message : « 950 Mo ».
+Le poids lisible d'un nombre :
+    Rendre la partie entière de (le nombre ÷ 1000000 + 0,5) suivi de " Mo".
+
+Remarque : un enregistrement trop lourd (0.8, grammaire 3.43) : plus de 30 Mo dans un autre format que le MP3 (une heure de
+Remarque : WAV pèse plusieurs centaines de mégaoctets), ou plus de 100 Mo quel que soit le format. Il devient un MP3 mono
+Remarque : (environ 29 Mo par heure), bien assez pour la parole et pour la transcription. Rend le message à montrer, ou « ».
+Pour alléger un e :
+    Si l'enregistrement du e est absent, rendre « ».
+    L'avant vaut la taille de l'enregistrement du e.
+    Le lourd vaut faux.
+    Si l'avant > 30000000 et le format de l'enregistrement du e ≠ « MP3 », le lourd devient vrai.
+    Si l'avant > 100000000, le lourd devient vrai.
+    Si le lourd est faux, rendre « ».
+    Le léger vaut l'enregistrement du e en MP3.
+    Si la taille du léger ≥ l'avant, rendre « ».
+    L'enregistrement du e devient le léger.
+    Rendre " Enregistrement allégé en MP3 : " suivi du poids lisible de l'avant suivi de ", puis " suivi du poids lisible de (la taille du léger) suivi de « . ».
 
 Remarque : ce que l'écran des réglages dit de la clé, sans jamais la montrer.
 Le témoin d'un réglage :
@@ -513,7 +535,7 @@ L'écran de l'entretien, « Entretien », pour un entretien, montre :
         un effectif (nombre entier), facultatif, de 1 à 20, avec l'indication « Combien de personnes parlent, interprète compris : aide à séparer les voix »,
         une correspondance (texte), facultative, avec l'indication « Le sigle de chaque voix : 1 INT, 2 PA, 3 INPRET (la voix 1 parle la première) »,
         un bouton « Nommer les voix », actif si l'entretien de l'écran est présent,
-    une traduction jointe (vrai ou faux), facultative, vrai au départ, avec l'indication « La traduction dans la transcription COREL, entre crochets sous chaque tour non français »,
+    une traduction jointe (vrai ou faux), vrai au départ, facultative, avec l'indication « La traduction dans la transcription COREL, entre crochets sous chaque tour non français »,
     le texte l'état de l'entretien de l'écran,
     la liste des tours conservés dont le code de l'entretien = le code ouvert, par rang, avec le rang, la voix, le sigle, la langue, la base et la version corel,
     côte à côte :
@@ -689,7 +711,8 @@ Quand on clique sur « Enregistrer » dans l'écran de l'entretien :
     Enregistrer l'entretien de l'écran.
     Le dossier ouvert devient l'entretien de l'écran.
     Le code ouvert devient le code de l'entretien de l'écran.
-    Signaler « Entretien enregistré. ».
+    Alléger l'entretien de l'écran, qui donne l'avis.
+    Signaler « Entretien enregistré. » suivi de l'avis.
 
 Quand on choisit un tour dans l'écran de l'entretien :
     Ouvrir l'écran du tour pour le tour.
@@ -704,6 +727,7 @@ Quand on clique sur « Transcrire » dans l'écran de l'entretien :
     Le dossier ouvert devient le e.
     Le code ouvert devient le code du e.
     Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien. ».
+    Alléger le e, qui donne l'avis du poids.
     Pour chaque tour conservé dont l'entretien = le e :
         Décoder le tour.
         Supprimer le tour.
@@ -729,7 +753,7 @@ Quand on clique sur « Transcrire » dans l'écran de l'entretien :
     Si le rang courant = 0, refuser « Rien n'a été transcrit : le modèle de transcription manque, ou l'enregistrement est muet. ».
     Nommer le e, qui donne le nommé.
     Si la durée du e est absente, la durée du e devient la durée lue du e.
-    Signaler le rang courant puis « tours de parole transcrits. » suivi de l'avis des voix.
+    Signaler le rang courant puis « tours de parole transcrits. » suivi de l'avis des voix suivi de l'avis du poids.
 
 Remarque : traduire : chaque tour qui n'est pas en français et n'a pas encore de traduction ; une traduction corrigée à la
 Remarque : main n'est jamais remplacée.
@@ -776,7 +800,7 @@ Quand on clique sur « Poser le sigle » dans l'écran de l'entretien :
 
 Quand on clique sur « Exporter COREL » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.
-    Déposer ((le document COREL du e) en fichier) et le code du e et « .rtf », qui donne le chemin.
+    Déposer ((le document corel du e) en fichier) et le code du e et « .rtf », qui donne le chemin.
     Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
     Si le sans > 0, signaler « Transcription COREL écrite dans » puis le chemin suivi de " ; attention : " suivi du sans suivi de " tours sans sigle (« ? »).".
     Sinon, signaler « Transcription COREL écrite dans » puis le chemin.
@@ -796,7 +820,7 @@ Quand on clique sur « Exporter la traduction » dans l'écran de l'entretien :
 
 Quand on clique sur « Exporter NVivo » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.
-    Déposer ((le texte NVivo du e) en fichier) et (le code du e suivi de " NVivo") et « .txt », qui donne le chemin.
+    Déposer ((le texte nvivo du e) en fichier) et (le code du e suivi de " NVivo") et « .txt », qui donne le chemin.
     Signaler « Transcription pour NVivo écrite dans » puis le chemin.
 
 Remarque : supprimer un entretien (0.5) : ses tours, puis lui, et son enregistrement avec lui.
@@ -818,7 +842,7 @@ Quand on clique sur « Supprimer ce tour » dans l'écran du tour :
     Le cran vaut le rang du t.
     Décoder le t.
     Supprimer le t.
-    Décaler le dossier du t et le cran et -1.
+    Décaler le dossier du t et le cran et −1.
     Arrêter l'écoute.
     Signaler « Tour supprimé. ».
     Fermer l'écran.
@@ -864,7 +888,7 @@ Quand on clique sur « Joindre au suivant » dans l'écran du tour :
     Pour chaque codage conservé dont le tour = le suivant :
         Le tour du codage devient le t.
     Supprimer le suivant.
-    Décaler l'entretien du t et le rang du t et -1.
+    Décaler l'entretien du t et le rang du t et −1.
     Signaler « Tours joints. ».
     Arrêter l'écoute.
     Fermer l'écran.

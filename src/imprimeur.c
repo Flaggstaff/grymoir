@@ -873,6 +873,8 @@ static void expression(Impression *im, const Noeud *n) {
         if (!simple) aj(im, ")");
         if (n->entier == 10) {
             aj(im, im->compact ? " _en_IBAN" : " en IBAN");   /* un sigle, en capitales (2.29) */
+        } else if (n->entier == 15) {
+            aj(im, im->compact ? " _en_MP3" : " en MP3");   /* un sigle aussi (3.43) */
         } else if (im->compact) {
             aj(im, " _en_");
             ecrire_nom(im, n->texte2, 0);

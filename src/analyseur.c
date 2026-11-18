@@ -972,7 +972,7 @@ static const char *type_statique(const Noeud *n) {
     case N_REPONSE: return n->texte2;
     case N_MOTIF: case N_SORTE: case N_GABARIT: case N_JSON_ECRIT: case N_COMMANDE: return "texte";
     case N_POSTES: return "vrai ou faux";   /* 3.18 */
-    case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
+    case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier" : n->entier == 15 ? "son"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_ENVOI: case N_CHAMP_JSON: return "texte";   /* 2.42 */
@@ -2008,7 +2008,7 @@ static Noeud *nom_expression(Analyse *a) {
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         /* « vrai » clôt la suite des mots du nom : il se regarde au-delà de f (« t en vrai ou faux ») */
         if (fin < f && fin + 1 < a->n && est_mot(&a->j[fin], "en")) {   /* « nom en majuscules » (§ 4.5) */
-            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes", "format", "iban", "fichier" };
+            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes", "format", "iban", "fichier", "mp3" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
         }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
@@ -4236,7 +4236,8 @@ static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre e
                                            "format technique",     /* pour une machine : QR, XML (2.27) */
                                            "iban",                 /* vérifié, sans espaces (2.29) */
                                            "date locale", "heure locale", "format universel",   /* 2.60 */
-                                           "fichier" };   /* un texte écrit en UTF-8, à enregistrer (2.83) */
+                                           "fichier",   /* un texte écrit en UTF-8, à enregistrer (2.83) */
+                                           "mp3" };     /* un son allégé : MP3 mono (3.43) */
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {
