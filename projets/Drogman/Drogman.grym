@@ -1,4 +1,4 @@
-Remarque : Drogman 0.6 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.7 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -54,9 +54,28 @@ Un réglage, conservé, a :
     une clé google (secret), facultative,
     un vocabulaire (texte), facultatif.
 
+Remarque : l'analyse (0.7), à la manière des logiciels d'analyse qualitative (NVivo, que Dilan n'a pas) : des thèmes, et des
+Remarque : codages, chacun posant un thème sur un tour de parole, avec l'extrait retenu et une note. L'origine dit d'où vient
+Remarque : l'extrait (« EensA1_20130306_Ens_01, 00:01:22, PA »), écrite au moment du codage.
+Un thème, conservé, a :
+    un nom (texte), unique,
+    une description (texte), facultative.
+
+Un codage, conservé, a :
+    un thème (thème),
+    un tour (tour),
+    une origine (texte), facultative,
+    un extrait (texte), facultatif,
+    une note (texte), facultative.
+
 Remarque : l'entretien montré, pour la liste de ses tours (par son code : une liste ne compare pas un lien à absent).
 Le dossier ouvert vaut absent.
 Le code ouvert vaut « ».
+Remarque : le thème montré, pour la liste de ses codages ; le mot cherché dans tous les entretiens.
+Le sujet ouvert vaut « ».
+Le mot voulu vaut « ».
+Remarque : d'où vient le codage en cours de création, pour son écran (un codage nouveau n'a pas encore d'origine à lire).
+Le repère courant vaut « ».
 
 Remarque : pendant « Transcrire » : les voix de l'enregistrement (qui parle quand), parcourues dans l'ordre du temps, la
 Remarque : prochaine à regarder, et le tour en cours de remplissage, mot après mot.
@@ -384,6 +403,79 @@ L'état d'un e :
     Le reste vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente.
     Rendre le n suivi de " tours de parole ; " suivi du sans suivi de " sans sigle ; " suivi de l'étranger suivi de " dans une autre langue que le français, dont " suivi du reste suivi de " à traduire.".
 
+Remarque : les thèmes posés sur un tour, pour son écran : « Thèmes : accueil, langue », ou l'invitation à coder.
+La mention de thèmes d'un t :
+    Le r vaut « ».
+    Pour chaque codage conservé dont le tour = le t :
+        Si le r ≠ « », le r devient le r suivi de ", ".
+        Le r devient le r suivi du nom du thème du codage.
+    Si le r = « », rendre "Aucun thème sur ce tour : « Coder ce tour ».".
+    Rendre "Thèmes : " suivi du r.
+
+Remarque : les codages d'un tour disparaissent avec lui.
+Pour décoder un t :
+    Pour chaque codage conservé dont le tour = le t :
+        Supprimer le codage.
+
+Remarque : d'où vient un extrait : l'entretien, l'heure, le sigle.
+La provenance d'un tour :
+    Rendre le code de l'entretien du tour suivi de ", " suivi de l'horodatage du début du tour suivi de ", " suivi du sigle du tour.
+
+Remarque : l'en-tête de l'écran d'un codage : d'où vient l'extrait.
+Le rappel d'un c et d'un repère :
+    Si le c est absent, rendre le repère.
+    Si l'origine du c est absente, rendre « ».
+    Rendre l'origine du c.
+
+Remarque : ce qu'un tour dit en français : sa traduction s'il en a une, sinon sa parole.
+Le propos d'un tour :
+    Si la traduction du tour est présente, rendre la traduction du tour.
+    Si la base du tour est présente, rendre la base du tour.
+    Rendre « ».
+
+Remarque : le résumé d'un thème : combien d'extraits, dans combien d'entretiens.
+Le poids d'un th :
+    Le n vaut 0.
+    Le k vaut 0.
+    Pour chaque entretien conservé :
+        Le m vaut le nombre de codages conservés dont le thème = le th et l'entretien du tour = l'entretien.
+        Le n devient le n + le m.
+        Si le m > 0, le k devient le k + 1.
+    Rendre le n suivi de " extrait(s), dans " suivi du k suivi de " entretien(s)".
+
+Remarque : l'analyse en RTF (même mise en page que les transcriptions) : chaque thème, sa description, son poids, puis ses
+Remarque : extraits, « origine<tab>extrait », la note dessous entre crochets ; à la fin, le compte par entretien.
+Le document d'analyse d'un titre :
+    Le r vaut "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417" suivi d'un saut de ligne.
+    Le r devient le r suivi de "{\footer\pard\qr\f0\fs20\chpgn\par}" suivi de "\f0\fs20" suivi d'un saut de ligne.
+    Le r devient le r suivi du paragraphe RTF du titre.
+    Pour chaque thème conservé, par nom :
+        Le th vaut le thème.
+        Le r devient le r suivi du paragraphe RTF de « ».
+        Le r devient le r suivi de "\pard\sb120\sa120\b " suivi du RTF de (le nom du thème en majuscules) suivi de "\b0  (" suivi du RTF du poids du thème suivi de ")\par" suivi d'un saut de ligne.
+        Si la description du thème est présente, le r devient le r suivi du paragraphe RTF de la description du thème.
+        Pour chaque codage conservé dont le thème = le th, par origine :
+            Le dit vaut « ».
+            Si l'extrait du codage est présent, le dit devient l'extrait du codage.
+            Le où vaut « ».
+            Si l'origine du codage est présente, le où devient l'origine du codage.
+            Le r devient le r suivi de "\pard\li567\sb0\sa60\i " suivi du RTF du où suivi de "\i0\par" suivi d'un saut de ligne.
+            Le r devient le r suivi de "\pard\li567\sb0\sa120 " suivi du RTF du dit suivi de "\par" suivi d'un saut de ligne.
+            Si la note du codage est présente, le r devient le r suivi de "\pard\li567\sb0\sa120 [" suivi du RTF de la note du codage suivi de "]\par" suivi d'un saut de ligne.
+    Le r devient le r suivi du paragraphe RTF de « ».
+    Le r devient le r suivi de "\pard\sb120\sa120\b " suivi du RTF de "Par entretien" suivi de "\b0\par" suivi d'un saut de ligne.
+    Pour chaque entretien conservé, par code :
+        La ligne vaut « ».
+        Pour chaque thème conservé, par nom :
+            Le th vaut le thème.
+            Le m vaut le nombre de codages conservés dont le thème = le th et l'entretien du tour = l'entretien.
+            Si le m > 0 :
+                Si la ligne ≠ « », la ligne devient la ligne suivi de " ; ".
+                La ligne devient la ligne suivi du nom du thème suivi de " " suivi du m.
+        Si la ligne = « », la ligne devient « aucun codage ».
+        Le r devient le r suivi du paragraphe RTF de (le code de l'entretien suivi de " : " suivi de la ligne).
+    Rendre le r suivi de « } ».
+
 Remarque : ce que l'écran des réglages dit de la clé, sans jamais la montrer.
 Le témoin d'un réglage :
     Si le réglage est présent et la clé google du réglage est présente, rendre « Une clé Google est enregistrée. ».
@@ -399,6 +491,7 @@ L'écran des entretiens, « Drogman », montre :
     la liste des entretiens conservés, par jour décroissant, avec le code, le jour, le lieu et l'intervieweur,
     côte à côte :
         un bouton « Nouvel entretien », principal,
+        un bouton « Analyse »,
         un bouton « Réglages »,
         un bouton « Fermer », qui ferme l'écran.
 
@@ -430,7 +523,7 @@ L'écran de l'entretien, « Entretien », pour un entretien, montre :
         un bouton « Poser le sigle », actif si l'entretien de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Transcrire », à confirmer par « Transcrire l'enregistrement ? Les tours déjà là sont remplacés. Comptez quelques minutes pour une heure d'entretien. », actif si l'entretien de l'écran est présent,
+        un bouton « Transcrire », à confirmer par « Transcrire l'enregistrement ? Les tours déjà là sont remplacés, leurs corrections et leurs codages perdus. Comptez quelques minutes pour une heure d'entretien. », actif si l'entretien de l'écran est présent,
         un bouton « Traduire », actif si l'entretien de l'écran est présent,
     côte à côte :
         un bouton « Exporter la transcription », actif si l'entretien de l'écran est présent,
@@ -449,15 +542,52 @@ L'écran du tour, « Tour de parole », pour un tour, montre :
     une base (texte), facultative, sur plusieurs lignes, avec l'indication "La parole transcrite, dans sa langue ; une barre oblique « / » marque où couper",
     une traduction (texte), facultative, sur plusieurs lignes, avec l'indication « En français ; vide pour un tour français »,
     une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)) »,
+    le texte la mention de thèmes du tour de l'écran,
     côte à côte :
         un bouton « ▶ Réécouter », actif si l'enregistrement de l'entretien du tour de l'écran est présent,
         un bouton « ■ Arrêter »,
+        un bouton « Coder ce tour »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Traduire ce tour »,
         un bouton « Joindre au suivant », à confirmer par « Joindre ce tour et le suivant en un seul ? »,
         un bouton « Couper au / »,
         un bouton « Supprimer ce tour », à confirmer par « Supprimer ce tour de parole ? »,
+        un bouton « Fermer », qui ferme l'écran.
+
+L'écran de l'analyse, « Analyse », montre :
+    le texte « Thèmes », en petites capitales,
+    la liste des thèmes conservés, par nom, avec le nom et la description,
+    côte à côte :
+        un bouton « Nouveau thème », principal,
+        un bouton « Exporter l'analyse »,
+        un bouton « Exporter les extraits en CSV »,
+    le texte « Chercher dans tous les entretiens », en petites capitales,
+    côte à côte :
+        un mot cherché (texte), facultatif, avec l'indication « Un mot ou un bout de phrase, dans la parole ou sa traduction »,
+        un bouton « Chercher »,
+    la liste des tours conservés dont la base contient le mot voulu ou la traduction contient le mot voulu, par rang, avec l'entretien, le rang, le sigle, la base et la traduction,
+    côte à côte :
+        un bouton « Fermer », qui ferme l'écran.
+
+L'écran du thème, « Thème », pour un thème, montre :
+    un nom (texte), avec l'indication « L'accueil à l'école, la langue à la maison… »,
+    une description (texte), facultative, sur plusieurs lignes, avec l'indication « Ce que le thème couvre, et ce qu'il ne couvre pas »,
+    le texte « Extraits », en petites capitales,
+    la liste des codages conservés dont le nom du thème = le sujet ouvert, par origine, avec l'origine, l'extrait et la note,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Supprimer le thème », à confirmer par « Supprimer ce thème et tous ses codages ? Les tours de parole restent. », actif si le thème de l'écran est présent,
+        un bouton « Fermer », qui ferme l'écran.
+
+L'écran du codage, « Codage », pour un codage, montre :
+    le texte le rappel du codage de l'écran et du repère courant,
+    un thème (thème),
+    un extrait (texte), facultatif, sur plusieurs lignes, avec l'indication « Le passage retenu : tout le tour, ou la phrase qui compte »,
+    une note (texte), facultative, sur plusieurs lignes, avec l'indication « Ton commentaire d'analyse »,
+    côte à côte :
+        un bouton « Enregistrer », principal, qui enregistre et ferme l'écran,
+        un bouton « Supprimer ce codage », à confirmer par « Retirer ce thème de ce tour ? », actif si le codage de l'écran est présent,
         un bouton « Fermer », qui ferme l'écran.
 
 L'écran des réglages, « Réglages », montre :
@@ -477,6 +607,80 @@ Quand on choisit un entretien dans l'écran des entretiens :
     Le dossier ouvert devient l'entretien.
     Le code ouvert devient le code de l'entretien.
     Ouvrir l'écran de l'entretien pour l'entretien.
+
+Quand on clique sur « Analyse » dans l'écran des entretiens :
+    Le mot voulu devient « ».
+    Ouvrir l'écran de l'analyse.
+
+Quand on clique sur « Nouveau thème » dans l'écran de l'analyse :
+    Le sujet ouvert devient « ».
+    Ouvrir l'écran du thème.
+
+Quand on choisit un thème dans l'écran de l'analyse :
+    Le sujet ouvert devient le nom du thème.
+    Ouvrir l'écran du thème pour le thème.
+
+Remarque : chercher : un mot vide ne trouve rien (il serait dans tous les tours).
+Quand on clique sur « Chercher » dans l'écran de l'analyse :
+    Si le mot cherché de l'écran est absent, refuser « Écris le mot à chercher. ».
+    Le mot voulu devient le mot cherché de l'écran.
+
+Quand on choisit un tour dans l'écran de l'analyse :
+    Ouvrir l'écran du tour pour le tour.
+
+Quand on clique sur « Exporter l'analyse » dans l'écran de l'analyse :
+    Si le nombre de codages conservés = 0, refuser "Rien à exporter : pose d'abord un thème sur un tour, par « Coder ce tour ».".
+    Déposer ((le document d'analyse de ("Analyse thématique, " suivi d'aujourd'hui)) en fichier) et ("Analyse " suivi d'aujourd'hui en format technique) et « .rtf », qui donne le chemin.
+    Signaler « Analyse écrite dans » puis le chemin.
+
+Remarque : les extraits en CSV, pour un tableur : une ligne par codage.
+Quand on clique sur « Exporter les extraits en CSV » dans l'écran de l'analyse :
+    Si le nombre de codages conservés = 0, refuser "Rien à exporter : pose d'abord un thème sur un tour, par « Coder ce tour ».".
+    Le n vaut 1.
+    Le fait vaut faux.
+    Le chemin vaut « ».
+    Tant que le n < 100 et le fait est faux :
+        Le suffixe vaut « ».
+        Si le n > 1, le suffixe devient " (" suivi du n suivi de « ) ».
+        Le chemin devient "~/Documents/Drogman/Extraits " suivi d'aujourd'hui en format technique suivi du suffixe suivi de « .csv ».
+        Essayer :
+            Exporter les codages conservés, par origine, avec le thème, l'origine, l'extrait et la note, dans (le chemin).
+            Le fait devient vrai.
+        En cas d'échec :
+            Le n devient le n + 1.
+    Si le fait est faux, refuser « Les extraits ne s'écrivent pas dans Documents/Drogman. ».
+    Signaler « Extraits écrits dans » puis le chemin.
+
+Quand on clique sur « Enregistrer » dans l'écran du thème :
+    Enregistrer le thème de l'écran.
+    Le sujet ouvert devient le nom du thème de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Supprimer le thème » dans l'écran du thème :
+    Le th vaut le thème de l'écran.
+    Pour chaque codage conservé dont le thème = le th :
+        Supprimer le codage.
+    Supprimer le th.
+    Le sujet ouvert devient « ».
+    Fermer l'écran.
+
+Quand on choisit un codage dans l'écran du thème :
+    Ouvrir l'écran du codage pour le codage.
+
+Quand on clique sur « Supprimer ce codage » dans l'écran du codage :
+    Supprimer le codage de l'écran.
+    Fermer l'écran.
+
+Remarque : coder un tour (0.7) : un codage nouveau, sur ce tour, l'extrait proposé (ce que le tour dit en français) ; il
+Remarque : reste à choisir le thème.
+Quand on clique sur « Coder ce tour » dans l'écran du tour :
+    Si le nombre de thèmes conservés = 0, refuser "Crée d'abord un thème : écran « Drogman », « Analyse », « Nouveau thème ».".
+    Le t vaut le tour de l'écran.
+    Le repère courant devient la provenance du t.
+    Ouvrir l'écran du codage pour un nouveau codage :
+        Le tour vaut le t.
+        L'origine vaut la provenance du t.
+        L'extrait vaut le propos du t.
 
 Quand on clique sur « Réglages » dans l'écran des entretiens :
     Ouvrir l'écran des réglages.
@@ -501,11 +705,14 @@ Quand on clique sur « Transcrire » dans l'écran de l'entretien :
     Le code ouvert devient le code du e.
     Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien. ».
     Pour chaque tour conservé dont l'entretien = le e :
+        Décoder le tour.
         Supprimer le tour.
     Le mots vaut « ».
     Pour chaque réglage conservé :
         Si le vocabulaire du réglage est présent, le mots devient le vocabulaire du réglage.
-    Amorcer la transcription avec le mots, en toute langue.
+    Remarque : cette version : le français et le turc seulement (0.7, grammaire 3.42) ; un passage que Whisper prend pour une
+    Remarque : autre langue est repris dans la plus probable des deux.
+    Amorcer la transcription avec le mots, en toute langue parmi « fr, tr ».
     Préparer l'écoute.
     L'avis des voix vaut « ».
     Essayer :
@@ -596,6 +803,7 @@ Remarque : supprimer un entretien (0.5) : ses tours, puis lui, et son enregistre
 Quand on clique sur « Supprimer l'entretien » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.
     Pour chaque tour conservé dont l'entretien = le e :
+        Décoder le tour.
         Supprimer le tour.
     Supprimer le e.
     Le dossier ouvert devient absent.
@@ -608,6 +816,7 @@ Quand on clique sur « Supprimer ce tour » dans l'écran du tour :
     Le t vaut le tour de l'écran.
     Le dossier du t vaut l'entretien du t.
     Le cran vaut le rang du t.
+    Décoder le t.
     Supprimer le t.
     Décaler le dossier du t et le cran et -1.
     Arrêter l'écoute.
@@ -651,6 +860,9 @@ Quand on clique sur « Joindre au suivant » dans l'écran du tour :
     La version corel du t devient la jonction de la version corel du t et de la version corel du suivant.
     La traduction du t devient la jonction de la traduction du t et de la traduction du suivant.
     La fin du t devient la fin du suivant.
+    Remarque : les codages du tour absorbé passent à celui qui reste.
+    Pour chaque codage conservé dont le tour = le suivant :
+        Le tour du codage devient le t.
     Supprimer le suivant.
     Décaler l'entretien du t et le rang du t et -1.
     Signaler « Tours joints. ».

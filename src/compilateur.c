@@ -1400,7 +1400,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
         return;
     case P_AMORCER:   /* « Amorcer la transcription avec t. » (2.80) */
         expression(c, ph->enfants[0]);
-        emettre(c, ph->forme ? I_AMORCER_LANGUES : I_AMORCER, 0, ph->ligne, ph->colonne);
+        if (ph->forme == 2) expression(c, ph->enfants[1]);   /* les langues attendues (3.42) */
+        emettre(c, ph->forme ? I_AMORCER_LANGUES : I_AMORCER, ph->forme == 2, ph->ligne, ph->colonne);
         return;
     case P_SIGNALER:   /* « Signaler « … » puis x. » (§ 22.22) */
     case P_REFUSER:   /* « Refuser « … » puis x. » (§ 18.1) */

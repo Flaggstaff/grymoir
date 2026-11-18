@@ -304,6 +304,7 @@ int main(void) {
                  "_pour_chaque s _parmi _segments x\n    _afficher _champ « texte » s\n_fin\n", NULL);   /* 3.39 */
     ALLER_RETOUR("_le x << _fichier « a.wav »\n_le n << 2\n_les a << _voix x\n_les b << _n_voix(n + 1) x\n"
                  "_pour_chaque p _parmi _voix x\n    _afficher _champ « voix » p\n_fin\n", NULL);   /* 3.40 */
+    ALLER_RETOUR("_amorcer « Bulle » _toute_langue _parmi_langues « fr, tr »\n", NULL);   /* 3.42 */
     ALLER_RETOUR("_le x << _fichier « a.wav »\n_écouter x\n_écouter x _dès 1 + 0,5 _jusqu 3\n_arrêter_écoute\n", NULL);   /* 3.41 */
     ALLER_RETOUR("_les arguments << _liste « -n » ; « a »\n_afficher _commande(« echo » ; arguments)\n_le x << _commande(« date »)\n", NULL);
     ERR("_afficher _commande(« echo » ; 3)\n", 1, 11, "« _commande » s'écrit ainsi : _commande(« rigctl »), _commande(« rigctl » ; arguments).");

@@ -9002,11 +9002,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_AMORCER:
         case I_AMORCER_LANGUES: {   /* « Amorcer la transcription avec t[, en toute langue]. » (2.80, 2.86) : absent retire l'amorce */
+            char *langues = NULL;   /* « parmi « fr, tr » » (3.42) : opérande 1, les langues attendues, dépilées d'abord */
+            if (code == I_AMORCER_LANGUES && op == 1) {
+                Valeur vl = depiler(&pile);
+                langues = vl.type == V_ABSENT ? NULL : texte_valeur(m, &vl);
+                valeur_liberer(&vl);
+            }
             Valeur v = depiler(&pile);
             char *t = v.type == V_ABSENT ? NULL : texte_valeur(m, &v);
             valeur_liberer(&v);
-            if (code == I_AMORCER_LANGUES) {   /* l'interface lit U+001D en tête : la langue parlée, reconnue (interface.h) */
-                char *l = grym_formater("\x1d%s", t ? t : "");
+            if (code == I_AMORCER_LANGUES) {   /* l'interface lit U+001D en tête : la langue parlée, reconnue (interface.h) ;
+                                                  puis, s'il y en a, les langues attendues, closes par U+001E (3.42) */
+                char *l = langues && *langues ? grym_formater("\x1d%s\x1e%s", langues, t ? t : "") : grym_formater("\x1d%s", t ? t : "");
+                free(langues);
                 free(t);
                 t = l;
             }

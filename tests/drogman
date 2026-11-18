@@ -82,6 +82,24 @@ verifier "$([ -s "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf" ] && e
 verifier "$(grep -c 'PA\\tab \\u304?yiyim, te\\u351?ekk\\u252?r ederim.\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "le tour turc, en RTF : la parole d'origine"
 verifier "$(grep -c '\\tab \[Je vais bien (.) merci.\]\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "dessous, sa version COREL faite sur la traduction"
 verifier "$(sed -n 2p "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01 NVivo.txt")" "00:00:04 PA: İyiyim, teşekkür ederim. [Je vais bien, merci.]" "la ligne NVivo du tour turc"
+# l'analyse (0.7) : un thème et un codage posés par la console ; l'écran de l'analyse, celui du thème ; les deux exports
+jouer 'Le th vaut un nouveau thème :
+    Le nom vaut « accueil ».
+Conserver le th.
+Pour chaque tour conservé dont le rang = 2 :
+    Le c vaut un nouveau codage :
+        Le thème vaut le th.
+        Le tour vaut le tour.
+        L'"'"'origine vaut « EensA1_20130306_Ens_01, 00:00:04, PA ».
+        L'"'"'extrait vaut « Je vais bien, merci. ».
+    Conserver le c.' > "$d/analyse-pose.txt" 2>&1
+verifier "$(cat "$d/analyse-pose.txt")" "" "un thème et un codage posés"
+lancer analyse "Analyse;ligne:accueil"
+verifier "$(grep -c 'erreur' "$d/analyse.txt")" "0" "l'écran de l'analyse et celui du thème s'ouvrent sans erreur"
+lancer analyse2 "Analyse;Exporter l'analyse;Exporter les extraits en CSV"
+verifier "$(ls "$d/maison/Documents/Drogman/" | grep -c '^Analyse .*\.rtf$')" "1" "l'analyse en RTF est écrite"
+verifier "$(grep -c 'ACCUEIL' "$d"/maison/Documents/Drogman/Analyse*.rtf)" "1" "le thème dans l'analyse"
+verifier "$(grep -c 'Je vais bien, merci.' "$d"/maison/Documents/Drogman/Extraits*.csv)" "1" "l'extrait dans le CSV"
 lancer transcrire "ligne:EensA1_20130306_Ens_01;Transcrire;confirmer"
 verifier "$(grep -c 'erreur' "$d/transcrire.txt")" "0" "Transcrire tourne jusqu'au bout"
 # un son muet ne donne aucun segment : le refus (« Rien n'a été transcrit ») annule tout, les tours d'avant restent

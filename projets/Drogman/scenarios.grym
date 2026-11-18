@@ -528,3 +528,154 @@ Scénario « un document par étape : la transcription d'origine, la traduction,
     Pour chaque tour conservé dont le rang = 2 :
         La traduction du tour devient absente.
     Vérifier que le document du e et de « traduction » contient "PA\tab \u304?yiyim".
+
+Remarque : Drogman 0.7 : l'analyse (thèmes, codages, recherche), à la manière des logiciels d'analyse qualitative.
+Pour inventer un intitulé :
+    Le th vaut un nouveau thème :
+        Le nom vaut intitulé.
+    Conserver le th.
+    Rendre le th.
+
+Pour coder un passage et un th et un morceau :
+    Le c vaut un nouveau codage :
+        Le thème vaut th.
+        Le tour vaut passage.
+        L'origine vaut la provenance du passage.
+        L'extrait vaut morceau.
+    Conserver le c.
+
+Scénario « coder un tour depuis son écran : l'origine et l'extrait proposés, le thème choisi » :
+    Poser « EensA1_20130306_Ens_30 », qui donne le e.
+    Transcrire le e.
+    Inventer « accueil », qui donne le th.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « Je vais bien, merci. ».
+    On choisit le e dans l'écran des entretiens.
+    Le deuxième vaut absent.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le deuxième devient le tour.
+    On choisit le deuxième dans l'écran de l'entretien.
+    On clique sur « Coder ce tour » dans l'écran du tour.
+    On choisit « accueil » dans le thème de l'écran du codage.
+    On écrit « à relire » dans la note de l'écran du codage.
+    On clique sur « Enregistrer » dans l'écran du codage.
+    On ferme l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de codages conservés = 1.
+    Pour chaque codage conservé :
+        Vérifier que le nom du thème du codage = « accueil ».
+        Vérifier que l'origine du codage = « EensA1_20130306_Ens_30, 00:00:04, PA ».
+        Remarque : l'extrait proposé : ce que le tour dit en français.
+        Vérifier que l'extrait du codage = « Je vais bien, merci. ».
+        Vérifier que la note du codage = « à relire ».
+    Vérifier que la mention de thèmes du deuxième = « Thèmes : accueil ».
+
+Scénario « coder sans aucun thème : un refus qui dit où en créer » :
+    Poser « EensA1_20130306_Ens_31 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On clique sur « Coder ce tour » dans l'écran du tour.
+    On voit l'erreur « Crée d'abord un thème » dans l'écran du tour.
+    On ferme l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de codages conservés = 0.
+
+Scénario « le document d'analyse : chaque thème, son poids, ses extraits, le compte par entretien » :
+    Poser « EensA1_20130306_Ens_32 », qui donne le e.
+    Poser « EensA1_20130306_Ens_33 », qui donne l'autre.
+    Transcrire le e.
+    Transcrire l'autre.
+    Inventer « accueil », qui donne le th.
+    Inventer « langue », qui donne le second.
+    La description du th devient « Le premier contact avec l'école ».
+    Pour chaque tour conservé dont le rang = 1 :
+        Coder le tour et le th et « Bonjour ».
+    Pour chaque tour conservé dont l'entretien = le e et le rang = 2 :
+        Coder le tour et le second et « İyiyim ».
+    Vérifier que le poids du th = « 2 extrait(s), dans 2 entretien(s) ».
+    Vérifier que le poids du second = « 1 extrait(s), dans 1 entretien(s) ».
+    Le d vaut le document d'analyse de « Analyse thématique ».
+    Vérifier que le d commence par "{\rtf1\ansi".
+    Vérifier que le d contient "\b ACCUEIL\b0  (2 extrait(s), dans 2 entretien(s))\par".
+    Vérifier que le d contient "Le premier contact avec l'\u233?cole\par".
+    Vérifier que le d contient "\i EensA1_20130306_Ens_32, 00:00:01, ?\i0\par".
+    Vérifier que le d contient "\u304?yiyim\par".
+    Vérifier que le d contient "EensA1_20130306_Ens_32 : accueil 1 ; langue 1\par".
+    Vérifier que le d contient "EensA1_20130306_Ens_33 : accueil 1\par".
+    Vérifier que le d finit par « } ».
+
+Scénario « les codages suivent les tours : joints, ils passent au tour qui reste ; supprimés, ils partent avec lui » :
+    Poser « EensA1_20130306_Ens_34 », qui donne le e.
+    Transcrire le e.
+    Inventer « accueil », qui donne le th.
+    Pour chaque tour conservé dont le rang = 2 :
+        Coder le tour et le th et « İyiyim ».
+    Pour chaque tour conservé dont le rang = 3 :
+        Coder le tour et le th et « ça va bien ».
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On clique sur « Joindre au suivant » dans l'écran du tour.
+    On confirme.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de codages conservés = 2.
+    Vérifier que le nombre de codages conservés dont le tour = le premier = 1.
+    On choisit le e dans l'écran des entretiens.
+    On choisit le premier dans l'écran de l'entretien.
+    On clique sur « Supprimer ce tour » dans l'écran du tour.
+    On confirme.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de codages conservés = 1.
+    On choisit le e dans l'écran des entretiens.
+    On clique sur « Supprimer l'entretien » dans l'écran de l'entretien.
+    On confirme.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de codages conservés = 0.
+    Vérifier que le nombre de thèmes conservés = 1.
+
+Scénario « supprimer un thème emporte ses codages, pas les tours » :
+    Poser « EensA1_20130306_Ens_35 », qui donne le e.
+    Transcrire le e.
+    Inventer « accueil », qui donne le th.
+    Pour chaque tour conservé dont le rang = 1 :
+        Coder le tour et le th et « Bonjour ».
+    On clique sur « Analyse » dans l'écran des entretiens.
+    On choisit le th dans l'écran de l'analyse.
+    On clique sur « Supprimer le thème » dans l'écran du thème.
+    On confirme.
+    On ferme l'écran de l'analyse.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de thèmes conservés = 0.
+    Vérifier que le nombre de codages conservés = 0.
+    Vérifier que le nombre de tours conservés = 3.
+
+Scénario « un thème se crée par l'écran ; la recherche demande un mot » :
+    On clique sur « Analyse » dans l'écran des entretiens.
+    On clique sur « Nouveau thème » dans l'écran de l'analyse.
+    On écrit « langue à la maison » dans le nom de l'écran du thème.
+    On clique sur « Enregistrer » dans l'écran du thème.
+    On clique sur « Chercher » dans l'écran de l'analyse.
+    On voit l'erreur « Écris le mot à chercher » dans l'écran de l'analyse.
+    On écrit « teşekkür » dans le mot cherché de l'écran de l'analyse.
+    On clique sur « Chercher » dans l'écran de l'analyse.
+    On ferme l'écran de l'analyse.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de thèmes conservés = 1.

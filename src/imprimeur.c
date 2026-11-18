@@ -2814,6 +2814,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "_amorcer " : "Amorcer la transcription avec ");
         expression(im, n->enfants[0]);
         if (n->forme) aj(im, c ? " _toute_langue" : ", en toute langue");   /* 2.86 */
+        if (n->forme == 2) { aj(im, c ? " _parmi_langues " : " parmi "); expression(im, n->enfants[1]); }   /* 3.42 */
         aj(im, c ? "\n" : ".\n");
         return;
     case P_SIGNALER:   /* « Signaler « … ». » ; « _signaler « … » » (§ 22.22) */

@@ -1540,6 +1540,21 @@ static void essais_amorcer(void) {   /* 2.80 : le vocabulaire du transcripteur, 
     PROG("Amorcer la transcription avec « CQ ».\nAfficher « ok ».", "ok");   /* sans transcripteur : rien */
     PROG("Le mot d'un nombre :\n    Amorcer la transcription avec « x ».\n    Rendre « y ».\nAfficher le mot de 2.",
          "~Un calcul n'amorce rien");
+    /* 3.42 : les langues attendues, entre U+001D et U+001E */
+    {
+        const char *src2 =
+            "L'écran de veille montre :\n    un bouton « Amorcer »,\n    un bouton « Fermer ».\n"
+            "Quand on clique sur « Amorcer » dans l'écran de veille :\n"
+            "    Amorcer la transcription avec « Bulle », en toute langue parmi « fr, tr ».\n"
+            "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+            "Ouvrir l'écran de veille.\n";
+        const char *ev2[] = { "clic Amorcer", "clic Fermer" };
+        const char *rep2[] = { "" };
+        ECRANS(src2, ev2, rep2,
+               "[ouvrir Veille ; bouton Amorcer ; bouton Fermer]\n"
+               "[amorce \x1d" "fr, tr\x1e" "Bulle]\n"
+               "[fermer]\n");
+    }
     PROG("Amorcer les voix.", "~Amorcer la transcription avec");
 }
 

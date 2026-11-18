@@ -3175,6 +3175,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 mot(r, "en", &r->e[toute]);
                 mot(r, "toute", &r->e[toute]);
                 mot(r, "langue", &r->e[toute]);
+                const size_t parmi = chercher(r, toute + 1, f, "parmi_langues");   /* _parmi_langues « fr, tr » (3.42) */
+                if (parmi < f) {
+                    mot(r, "parmi", &r->e[parmi]);
+                    expression(r, parmi + 1, f);
+                }
             }
             point(r, f);
         } else if (!strcmp(c, "refuser") || !strcmp(c, "signaler")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) ; _signaler (§ 22.22) */

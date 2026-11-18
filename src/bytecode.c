@@ -297,7 +297,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_TABLE || code == I_TABLE_LIRE || code == I_TABLE_ECRIRE || code == I_TABLE_LISTE
         || code == I_COURRIEL || code == I_MATH || code == I_TRIER || code == I_PERMIS
         || code == I_LIGNES || code == I_JSON || code == I_MINUTERIE || code == I_COMMANDE || code == I_VERIFIER || code == I_GESTE
-        || code == I_NATIF || code == I_ECOUTER;
+        || code == I_NATIF || code == I_ECOUTER || code == I_AMORCER_LANGUES;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -484,7 +484,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_APPARENCE:   /* le logo ; avec 0x100 (2.13), aussi la police, la couleur libre, le fond */
                 besoin = (op & 0x100 ? 4 : 1) + (op & 0x200 ? 1 : 0); effet = -besoin; break;
             case I_REFUSER: case I_SIGNALER: besoin = (long)op; effet = -(long)op; break;
-            case I_AMORCER: case I_AMORCER_LANGUES: case I_SIGNER: besoin = 1; effet = -1; break;
+            case I_AMORCER: case I_SIGNER: besoin = 1; effet = -1; break;
+            case I_AMORCER_LANGUES: besoin = op == 1 ? 2 : 1; effet = -besoin; break;   /* 1 : les langues attendues (3.42) */
             case I_ECOUTER: besoin = op == 1 ? 3 : op == 0 ? 1 : 0; effet = -besoin; break;   /* 3.41 */
             case I_LANGUE: besoin = 1; effet = 0; break;
             case I_WSJTX: besoin = op ? 1 : 0; effet = op ? 0 : 1; break;

@@ -64,6 +64,8 @@ extern "C" {
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <QScrollBar>
 #include <QScrollArea>
 #include <QCalendarWidget>
@@ -636,6 +638,29 @@ int main(int argc, char **argv) {
             QString e2;
             const QString js = transcrire_segments_son(wav(16000, 1, 16, 2.0), MODELE_ESSAI, &e2, QString(QChar(0x1d)));
             VERIFIER(e2.isEmpty() && QJsonDocument::fromJson(js.toUtf8()).isArray());
+            // « en toute langue parmi « fr, tr » » (3.42) : chaque segment dans l'une des langues attendues
+            {
+                QString e4;
+                const QString am = QString(QChar(0x1d)) + "fr, tr" + QChar(0x1e) + "Bulle";
+                QByteArray son = wav(16000, 1, 16, 2.0);
+                const QByteArray essai = qgetenv("DROGMAN_SEGMENTS_ESSAI");   // un vrai son, à la main
+                if (!essai.isEmpty()) { QFile f(QString::fromUtf8(essai)); if (f.open(QIODevice::ReadOnly)) son = f.readAll(); }
+                const QJsonDocument jd = QJsonDocument::fromJson(transcrire_segments_son(son, MODELE_ESSAI, &e4, am).toUtf8());
+                bool dedans = jd.isArray();
+                for (const QJsonValue &v : jd.array()) {
+                    const QString l = v.toObject().value("langue").toString();
+                    dedans = dedans && (l == "fr" || l == "tr");
+                }
+                VERIFIER(e4.isEmpty() && dedans);
+                if (!essai.isEmpty()) fprintf(stderr, "segments (fr, tr) : %d\n", (int)jd.array().size());
+                if (!essai.isEmpty()) {
+                    QString e5;
+                    const QJsonDocument libre = QJsonDocument::fromJson(transcrire_segments_son(son, MODELE_ESSAI, &e5, QString(QChar(0x1d))).toUtf8());
+                    QStringList ls;
+                    for (const QJsonValue &v : libre.array()) ls << v.toObject().value("langue").toString();
+                    fprintf(stderr, "langues sans restriction : %s\n", qPrintable(ls.join(" ")));
+                }
+            }
             QString e3;
             VERIFIER(transcrire_segments_son(wav(16000, 1, 16, 1.0), QString(), &e3).isEmpty() && e3.contains("introuvable"));
             liberer_transcription();

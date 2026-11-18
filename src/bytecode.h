@@ -153,7 +153,8 @@ typedef enum {
     I_PORT_SERIE,       /* dépile la vitesse, la question, puis le port ; empile la réponse, un texte (2.82) */
     I_DERNIERE_SAUVEGARDE, /* remplace un préfixe par le chemin de sa copie datée la plus récente, ou absent (2.85) */
     I_HISTORIQUE,       /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
-    I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) */
+    I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) ; opérande 1 : les langues
+                           attendues, dépilées d'abord (3.42) */
     I_ECOUTER,          /* « Écouter x » (3.41) : opérande 0, dépile un son ; 1, dépile la fin, le début (en secondes) et le
                            son ; 2, ne dépile rien et arrête l'écoute */
     I_LANGUE,           /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */

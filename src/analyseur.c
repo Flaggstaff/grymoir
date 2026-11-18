@@ -12949,6 +12949,17 @@ static Noeud *phrase(Analyse *a, int colonne) {
             a->i += 4;
             n->forme = 1;
             n->fin = fin_jeton(&a->j[a->i - 1]);
+            /* « , en toute langue parmi « fr, tr » » (3.42) : les langues attendues, par leur code ISO 639-1 ; un passage
+             * reconnu dans une autre langue est repris dans la plus probable de celles-ci */
+            if (est_mot(cour(a), "parmi")) {
+                avancer(a);
+                attendre(a, A_TEXTE);
+                Noeud *l = valeur(a);
+                if (!l) { noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, l);
+                n->forme = 2;
+                n->fin = l->fin;
+            }
         }
         if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
         return n;

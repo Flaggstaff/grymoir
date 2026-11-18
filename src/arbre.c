@@ -570,6 +570,7 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case P_AMORCER:   /* (amorcer t) (2.80) */
         chaine_ajouter(c, n->forme ? "(amorcer-toute-langue " : "(amorcer ");
         decrire(n->enfants[0], c);
+        if (n->forme == 2) { chaine_ajouter(c, " parmi "); decrire(n->enfants[1], c); }   /* 3.42 */
         chaine_ajouter(c, ")");
         return;
     case P_SIGNALER:   /* (signaler « … ») (§ 22.22) */

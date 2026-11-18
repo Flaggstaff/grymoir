@@ -165,7 +165,8 @@ typedef enum {
     P_APPARENCE,     /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : entier : couleur, rang
                         dans la palette (0 bleue, 1 verte, 2 turquoise, 3 violette, 4 grise), −1 si non écrite ;
                         texte : chemin du logo tel qu'écrit, ou NULL */
-    P_AMORCER,       /* « Amorcer la transcription avec t. » (2.80) : un enfant, le texte qui amorce le transcripteur */
+    P_AMORCER,       /* « Amorcer la transcription avec t. » (2.80) : un enfant, le texte qui amorce le transcripteur ; forme 1 : « , en
+                        toute langue » ; forme 2 : « , en toute langue parmi l » (3.42), enfants[1] : les codes des langues */
     P_SIGNER,        /* « Signer le journal avec t. » (2.87) : un enfant, l'auteur des lignes suivantes du journal */
     P_ECOUTER,       /* « Écouter x. », « Écouter x, de d à f. », « Arrêter l'écoute. » (3.41) : forme 0, un enfant (le son) ;
                         forme 1, trois (le son, le début et la fin, en secondes) ; forme 2, aucun (l'écoute s'arrête) */

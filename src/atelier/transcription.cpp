@@ -280,6 +280,7 @@ static whisper_full_params parametres(bool rapide, const QString &amorce, QByteA
     // « en toute langue » (2.86) : l'amorce commence par U+001D ; Whisper reconnaît la langue parlée et l'écrit telle
     // quelle (« auto ») ; sinon, le français imposé, comme avant
     const bool toute_langue = amorce.startsWith(QChar(0x1d));
+    const int clos = toute_langue ? amorce.indexOf(QChar(0x1e)) : -1;   // les langues attendues (3.42), avant U+001E
     p.language = toute_langue ? "auto" : "fr";
     p.translate = false;
     p.n_max_text_ctx = 0;   // « -mc 0 » : sans s'appuyer sur son propre texte, il ne s'y enferme pas
@@ -291,7 +292,7 @@ static whisper_full_params parametres(bool rapide, const QString &amorce, QByteA
     // L'amorce (2.80) : le vocabulaire, donné comme texte précédent à chaque fenêtre de 30 secondes (carry_initial_prompt).
     // whisper.cpp (v1.9.5) ne met aucun texte précédent si n_max_text_ctx vaut 0 : il vaut ici la taille de l'amorce,
     // plus la marque qui la précède, si bien que le texte déjà transcrit n'y entre toujours pas (« -mc 0 » tenu).
-    *amorce8_garde = (toute_langue ? amorce.mid(1) : amorce).trimmed().toUtf8();
+    *amorce8_garde = (toute_langue ? amorce.mid(clos >= 0 ? clos + 1 : 1) : amorce).trimmed().toUtf8();
     const QByteArray &amorce8 = *amorce8_garde;
     if (!amorce8.isEmpty()) {
         std::vector<whisper_token> jetons(1024);
@@ -448,14 +449,42 @@ QString transcrire_segments_son(const QByteArray &octets, const QString &modele,
     whisper_full_params p = parametres(false, amorce, &amorce8);
     p.token_timestamps = true;   // l'heure de chaque morceau de mot
     const whisper_token fin = whisper_token_eot(ctx);
+    // « en toute langue parmi « fr, tr » » (3.42) : les langues attendues, que Whisper connaît
+    std::vector<int> attendues;
+    if (amorce.startsWith(QChar(0x1d)) && amorce.indexOf(QChar(0x1e)) > 0) {
+        const QString liste = amorce.mid(1, amorce.indexOf(QChar(0x1e)) - 1);
+        for (const QString &c : liste.split(QRegularExpression("[^A-Za-z]+"), Qt::SkipEmptyParts)) {
+            const int l = whisper_lang_id(c.toLower().toUtf8().constData());
+            if (l >= 0) attendues.push_back(l);
+        }
+    }
     QString json = "[";
     bool premier = true;
     for (const auto &mc : morceaux) {
         if (fermeture) { *erreur = "L'application se ferme."; return QString(); }
         const double decalage = (double)mc.first / 16000;
-        if (whisper_full(ctx, p, pcm.data() + mc.first, (int)(mc.second - mc.first)) != 0) {
+        const float *son = pcm.data() + mc.first;
+        const int taille = (int)(mc.second - mc.first);
+        p.language = attendues.size() == 1 ? whisper_lang_str(attendues[0]) : p.language;
+        if (whisper_full(ctx, p, son, taille) != 0) {
             *erreur = "La transcription a échoué.";
             return QString();
+        }
+        // un morceau reconnu hors des langues attendues (trois mots de turc pris pour de l'azéri) : la plus probable des
+        // langues attendues, d'après Whisper lui-même, puis le morceau transcrit de nouveau dans cette langue
+        if (attendues.size() > 1 && std::find(attendues.begin(), attendues.end(), whisper_full_lang_id(ctx)) == attendues.end()) {
+            int choix = attendues[0];
+            std::vector<float> probas((size_t)whisper_lang_max_id() + 1, 0.0f);
+            if (whisper_pcm_to_mel(ctx, son, taille, p.n_threads) == 0 && whisper_encode(ctx, 0, p.n_threads) == 0
+                && whisper_lang_auto_detect(ctx, 0, p.n_threads, probas.data()) >= 0)
+                for (const int l : attendues)
+                    if (probas[(size_t)l] > probas[(size_t)choix]) choix = l;
+            whisper_full_params q = p;
+            q.language = whisper_lang_str(choix);
+            if (whisper_full(ctx, q, son, taille) != 0) {
+                *erreur = "La transcription a échoué.";
+                return QString();
+            }
         }
         // la langue du morceau : reconnue (« en toute langue »), ou celle imposée
         const int id = whisper_full_lang_id(ctx);
