@@ -1,4 +1,4 @@
-Remarque : Drogman 0.5 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.6 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -283,7 +283,11 @@ Remarque : la transcription COREL d'un entretien, en RTF, selon le modèle : Ari
 Remarque : après chaque sigle, paragraphes 0 avant et 6 points après, le numéro de page en bas à droite ; l'en-tête, puis
 Remarque : chaque tour, « SIGLE<tab>version COREL ». La traduction d'un tour non français suit sur sa propre ligne, entre
 Remarque : crochets, après la tabulation (confirmé par Dilan le 17 novembre 2026). L'en-tête suit le modèle ligne à ligne.
-Le document COREL d'un e :
+Remarque : un document par étape (0.6, Dilan, 18 novembre 2026), tous trois avec l'en-tête du modèle et sa mise en page :
+Remarque : « base », la transcription d'origine, chaque tour dans sa langue ; « traduction », tout en français (la parole des
+Remarque : tours français, la traduction des autres ; un tour pas encore traduit garde sa parole d'origine) ; « corel », la
+Remarque : transcription COREL décrite plus haut.
+Le document d'un e et d'une étape :
     Le r vaut "{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss Arial;}}\paperw11906\paperh16838\margl1417\margr1417\margt1417\margb1417" suivi d'un saut de ligne.
     Le r devient le r suivi de "{\footer\pard\qr\f0\fs20\chpgn\par}" suivi de "\f0\fs20" suivi d'un saut de ligne.
     Le r devient le r suivi du paragraphe RTF de "Université de Fribourg, Département des Sciences de l'éducation et de la formation, Prof. Tania Ogay".
@@ -301,6 +305,8 @@ Le document COREL d'un e :
         Le réalisé devient le réalisé suivi du lieu du e.
     Si le réalisé ≠ « », le r devient le r suivi du paragraphe RTF du réalisé.
     Si la durée du e est présente, le r devient le r suivi du paragraphe RTF de ("Durée : " suivi de la durée du e).
+    Si l'étape = « base », le r devient le r suivi du paragraphe RTF de "Transcription d'origine, chaque tour dans sa langue".
+    Si l'étape = « traduction », le r devient le r suivi du paragraphe RTF de "Traduction en français".
     Le r devient le r suivi du paragraphe RTF de « ».
     Remarque : la traduction jointe, absente : jointe (les entretiens d'avant la 0.3).
     Le joint vaut vrai.
@@ -318,11 +324,13 @@ Le document COREL d'un e :
         Le dit vaut la base du tour.
         Le dessous vaut absent.
         Le français vaut la langue du tour = « fr ».
-        Si le français est vrai :
-            Si la version corel du tour est présente, le dit devient la version corel du tour.
-        Sinon :
-            Si le joint est vrai, le dessous devient la traduction du tour.
-            Si le joint est vrai et la version corel du tour est présente, le dessous devient la version corel du tour.
+        Si l'étape = « corel » :
+            Si le français est vrai :
+                Si la version corel du tour est présente, le dit devient la version corel du tour.
+            Sinon :
+                Si le joint est vrai, le dessous devient la traduction du tour.
+                Si le joint est vrai et la version corel du tour est présente, le dessous devient la version corel du tour.
+        Si l'étape = « traduction » et le français est faux et la traduction du tour est présente, le dit devient la traduction du tour.
         Si le dit est absent, le dit devient « ».
         Si le sigle d'avant ≠ « » et le sigle du tour ≠ « ? » et le sigle du tour = le sigle d'avant et le français = le français d'avant :
             Le dit joint devient le dit joint suivi de " " suivi du dit.
@@ -335,6 +343,9 @@ Le document COREL d'un e :
             Le dessous joint devient le dessous.
     Si le sigle d'avant ≠ « », le r devient le r suivi du bloc RTF du sigle d'avant et du dit joint et du dessous joint.
     Rendre le r suivi de « } ».
+
+Le document COREL d'un e :
+    Rendre le document du e et de « corel ».
 
 Remarque : la transcription pour NVivo, en texte (UTF-8) : une ligne par tour, « 00:01:22 INT: texte », l'horodatage en tête de
 Remarque : paragraphe, puis le nom de l'intervenant suivi de deux-points et d'une espace (aide de NVivo 14, « Import
@@ -422,6 +433,8 @@ L'écran de l'entretien, « Entretien », pour un entretien, montre :
         un bouton « Transcrire », à confirmer par « Transcrire l'enregistrement ? Les tours déjà là sont remplacés. Comptez quelques minutes pour une heure d'entretien. », actif si l'entretien de l'écran est présent,
         un bouton « Traduire », actif si l'entretien de l'écran est présent,
     côte à côte :
+        un bouton « Exporter la transcription », actif si l'entretien de l'écran est présent,
+        un bouton « Exporter la traduction », actif si l'entretien de l'écran est présent,
         un bouton « Exporter COREL », actif si l'entretien de l'écran est présent,
         un bouton « Exporter NVivo », actif si l'entretien de l'écran est présent,
         un bouton « Supprimer l'entretien », à confirmer par « Supprimer cet entretien, son enregistrement et tous ses tours de parole ? C'est définitif. », actif si l'entretien de l'écran est présent,
@@ -560,6 +573,19 @@ Quand on clique sur « Exporter COREL » dans l'écran de l'entretien :
     Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
     Si le sans > 0, signaler « Transcription COREL écrite dans » puis le chemin suivi de " ; attention : " suivi du sans suivi de " tours sans sigle (« ? »).".
     Sinon, signaler « Transcription COREL écrite dans » puis le chemin.
+
+Remarque : un document par étape (0.6) : la transcription d'origine, puis la traduction, à côté de la transcription COREL.
+Quand on clique sur « Exporter la transcription » dans l'écran de l'entretien :
+    Le e vaut l'entretien de l'écran.
+    Déposer ((le document du e et de « base ») en fichier) et (le code du e suivi de " transcription") et « .rtf », qui donne le chemin.
+    Signaler « Transcription d'origine écrite dans » puis le chemin.
+
+Quand on clique sur « Exporter la traduction » dans l'écran de l'entretien :
+    Le e vaut l'entretien de l'écran.
+    Le reste vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente.
+    Déposer ((le document du e et de « traduction ») en fichier) et (le code du e suivi de " traduction") et « .rtf », qui donne le chemin.
+    Si le reste > 0, signaler « Traduction écrite dans » puis le chemin suivi de " ; attention : " suivi du reste suivi de " tours pas encore traduits, laissés dans leur langue.".
+    Sinon, signaler « Traduction écrite dans » puis le chemin.
 
 Quand on clique sur « Exporter NVivo » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.

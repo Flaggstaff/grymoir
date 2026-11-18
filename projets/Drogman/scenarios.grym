@@ -499,3 +499,32 @@ Scénario « une voix posée sur un tour qui n'en avait pas prend le sigle de la
     Pour chaque tour conservé dont le rang = 2 :
         Vérifier que le sigle du tour = « PA ».
         Vérifier que la langue du tour = « az ».
+
+Remarque : Drogman 0.6 : un document par étape.
+Scénario « un document par étape : la transcription d'origine, la traduction, la transcription COREL » :
+    Poser « EensA1_20130306_Ens_27 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « Je vais bien, merci. ».
+        La version corel du tour devient « Je vais bien (.) merci. ».
+    Le b vaut le document du e et de « base ».
+    Vérifier que le b contient "Transcription d'origine, chaque tour dans sa langue\par".
+    Vérifier que le b contient "Nom du fichier : EensA1_20130306_Ens_27".
+    Remarque : la parole telle quelle, sans la pause de la version COREL, sans traduction.
+    Vérifier que le b contient "?\tab Bonjour, comment allez-vous ?\par".
+    Vérifier que le b contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
+    Vérifier que le b ne contient pas « Je vais bien ».
+    Le f vaut le document du e et de « traduction ».
+    Vérifier que le f contient "Traduction en fran\u231?ais\par".
+    Vérifier que le f contient "PA\tab Je vais bien, merci.\par".
+    Vérifier que le f contient "?\tab Bonjour, comment allez-vous ?\par".
+    Vérifier que le f ne contient pas « ederim ».
+    Le c vaut le document COREL du e.
+    Vérifier que le c contient "?\tab Bonjour, (.) comment allez-vous ?\par".
+    Vérifier que le c contient "\tab [Je vais bien (.) merci.]\par".
+    Vérifier que le c ne contient pas « Transcription d'origine ».
+    Remarque : un tour pas encore traduit garde sa parole dans le document de traduction.
+    Pour chaque tour conservé dont le rang = 2 :
+        La traduction du tour devient absente.
+    Vérifier que le document du e et de « traduction » contient "PA\tab \u304?yiyim".
