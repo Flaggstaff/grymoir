@@ -6,6 +6,7 @@
 #include <QByteArray>
 #include <QString>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -43,7 +44,10 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
 
 // « les segments de x » (3.39) : le son coupé aux pauses, chaque morceau transcrit à part, avec sa propre langue (sous
 // « en toute langue ») ; un tableau JSON de segments {"début", "fin", "langue", "texte", "mots"}, ou vide avec *erreur.
-QString transcrire_segments_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce = QString());
+// « avancement », s'il est donné, est appelé avant chaque morceau (combien sont faits, combien en tout) et à la fin, dans
+// le fil de l'appelant (18 novembre 2026).
+QString transcrire_segments_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce = QString(),
+                                const std::function<void(int, int)> &avancement = {});
 // Les morceaux d'un son en 16 kHz mono, coupés aux pauses : [début, fin[ en échantillons (exposé pour les essais).
 std::vector<std::pair<size_t, size_t>> morceaux_aux_pauses(const std::vector<float> &pcm);
 

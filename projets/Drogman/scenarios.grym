@@ -750,3 +750,92 @@ Scénario « sous le filtre À vérifier, Suivant saute aux tours qui ont un dou
     Vérifier que le rang du voisin = 1.
     Avancer le deuxième et 1, qui donne l'autre.
     Vérifier que le rang de l'autre = 3.
+
+Remarque : l'anonymisation (0.10) : la base garde les vrais noms, les documents écrivent le remplacement. Un nom n'est
+Remarque : remplacé que suivi d'autre chose qu'une lettre, la casse compte, le nom le plus long passe d'abord.
+Scénario « l'anonymisation : les documents écrivent le remplacement, la base garde le nom » :
+    Poser « EensA1_20130306_Ens_40 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le sigle du tour devient « INT ».
+        La base du tour devient « Mehmet, Mehmetan et Mehmet Yılmaz. MEHMET ! Mehmet'in ».
+        La version corel du tour devient « Mehmet, Mehmetan et Mehmet Yılmaz. MEHMET ! Mehmet'in ».
+    On clique sur « Anonymisation » dans l'écran des entretiens.
+    On clique sur « Nouveau nom » dans l'écran des pseudonymes.
+    On écrit « Mehmet » dans le nom réel de l'écran du pseudonyme.
+    On écrit « Baba » dans le remplacement de l'écran du pseudonyme.
+    On clique sur « Enregistrer » dans l'écran du pseudonyme.
+    On clique sur « Nouveau nom » dans l'écran des pseudonymes.
+    On écrit « Mehmet Yılmaz » dans le nom réel de l'écran du pseudonyme.
+    On écrit « Monsieur Y » dans le remplacement de l'écran du pseudonyme.
+    On clique sur « Enregistrer » dans l'écran du pseudonyme.
+    On ferme l'écran des pseudonymes.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de pseudonymes conservés = 2.
+    Le d vaut le document corel du e.
+    Vérifier que le d contient « INT\tab Baba, Mehmetan et Monsieur Y. MEHMET ! Baba'in ».
+    Remarque : l'en-tête aussi : « Mehmet Yılmaz, le père (PA) ».
+    Vérifier que le d contient « Monsieur Y, le p\u232?re (PA) ».
+    Vérifier que le d ne contient pas « Mehmet Y ».
+    Vérifier que le texte nvivo du e contient « INT: Baba, Mehmetan et Monsieur Y. MEHMET ! Baba'in ».
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que la version corel du tour = « Mehmet, Mehmetan et Mehmet Yılmaz. MEHMET ! Mehmet'in ».
+    Remarque : un nom retiré de la table n'est plus remplacé.
+    Le court vaut absent.
+    Pour chaque pseudonyme conservé dont le nom réel = « Mehmet » :
+        Le court devient le pseudonyme.
+    On clique sur « Anonymisation » dans l'écran des entretiens.
+    On choisit le court dans l'écran des pseudonymes.
+    On clique sur « Supprimer ce nom » dans l'écran du pseudonyme.
+    On confirme.
+    On ferme l'écran des pseudonymes.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le document corel du e contient « INT\tab Mehmet, Mehmetan et Monsieur Y. ».
+
+Scénario « les extraits en CSV passent par l'anonymisation, guillemets doublés » :
+    Poser « EensA1_20130306_Ens_41 », qui donne le e.
+    Transcrire le e.
+    Le th vaut un nouveau thème :
+        Le nom vaut « accueil ».
+    Conserver le th.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le c vaut un nouveau codage :
+            Le thème vaut le th.
+            Le tour vaut le tour.
+            L'origine vaut « EensA1_20130306_Ens_41, 00:00:01, INT ».
+            L'extrait vaut « Mehmet dit "merci" ; fin. ».
+        Conserver le c.
+    Le p vaut un nouveau pseudonyme :
+        Le nom réel vaut « Mehmet ».
+        Le remplacement vaut « Baba ».
+        Le calibre vaut 6.
+    Conserver le p.
+    Le t vaut le tableau des extraits de « Thème;Origine;Extrait;Note ».
+    Vérifier que le t contient « Thème;Origine;Extrait;Note ».
+    Vérifier que le t contient « "accueil";"EensA1_20130306_Ens_41, 00:00:01, INT";"Baba dit ""merci"" ; fin.";"" ».
+
+Remarque : la protection des corrections (0.10) : « Transcrire » refuse d'effacer un tour relu ; « Tout retranscrire » le
+Remarque : ferait, après le mot tapé (ici, sans enregistrement, il s'arrête au refus suivant).
+Scénario « Transcrire refuse d'effacer un tour relu ; Tout retranscrire passe outre » :
+    Poser « EensA1_20130306_Ens_42 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On écrit « int » dans le sigle de l'écran du tour.
+    On clique sur « Enregistrer » dans l'écran du tour.
+    On clique sur « Transcrire » dans l'écran de l'entretien.
+    On confirme.
+    On voit l'erreur « 1 tours relus ou corrigés et 0 codages seraient perdus » dans l'écran de l'entretien.
+    On clique sur « Tout retranscrire » dans l'écran de l'entretien.
+    On confirme.
+    On voit l'erreur « Choisis d'abord l'enregistrement » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés = 3.
+    Vérifier que le nombre de tours conservés dont la retouche est vraie = 1.

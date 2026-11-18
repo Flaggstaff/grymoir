@@ -54,6 +54,7 @@ if [ -d construction/voix ]; then
 fi
 mkdir -p "$appdir/usr/share/doc/grymoir"
 cp LICENCE LICENCE-fr.md docs/notes-de-version.md "$appdir/usr/share/doc/grymoir/" 2>/dev/null || true
+cp vendor/shine/COPYING "$appdir/usr/share/doc/grymoir/Shine-LGPL-2.txt"   # Shine (LGPL 2) : sa licence avec chaque copie
 printf '[Desktop Entry]\nType=Application\nName=GrymoiR\nComment=Le langage de programmation en français\nExec=grym-atelier\nIcon=grymoir\nCategories=Development;\n' \
     > "$appdir/usr/share/applications/grymoir.desktop"
 cp outils/icone-application.png "$appdir/usr/share/icons/hicolor/256x256/apps/grymoir.png"

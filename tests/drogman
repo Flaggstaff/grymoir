@@ -131,9 +131,33 @@ verifier "$(jouer 'Pour chaque entretien conservé dont le code = « Lourd_01 »
     Afficher le format de l'"'"'enregistrement de l'"'"'entretien.
     Si la taille de l'"'"'enregistrement de l'"'"'entretien < 9000000, afficher « léger ».')" "MP3
 léger" "l'enregistrement lourd est devenu un MP3 léger"
+# l'anonymisation (0.10) : un nom dans la table, et les documents exportés écrivent son remplacement, CSV compris
+jouer 'Le p vaut un nouveau pseudonyme :
+    Le nom réel vaut « Dilan ».
+    Le remplacement vaut « X1 ».
+    Le calibre vaut 5.
+Conserver le p.
+Pour chaque codage conservé :
+    La note du codage devient « Dilan relance. ».' > /dev/null
+lancer anonyme "Anonymisation;ligne:Dilan"
+verifier "$(grep -c 'erreur' "$d/anonyme.txt")" "0" "l'écran de l'anonymisation et celui d'un nom s'ouvrent sans erreur"
+lancer anonyme2 "ligne:EensA1_20130306_Ens_01;Exporter COREL"
+verifier "$(grep -c 'par X1 (INT)' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01 (2).rtf")" "1" "le document COREL anonymisé"
+verifier "$(grep -c 'Dilan' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01 (2).rtf")" "0" "le nom réel n'y est plus"
+lancer anonyme3 "Analyse;Exporter les extraits en CSV"
+verifier "$(grep -c '"accueil";"EensA1_20130306_Ens_01, 00:00:04, PA";"Je vais bien, merci.";"X1 relance."' "$d"/maison/Documents/Drogman/Extraits*\(2\).csv)" "1" "les extraits en CSV, anonymisés"
+verifier "$(head -c 3 "$d"/maison/Documents/Drogman/Extraits*\(2\).csv | od -An -tx1 | tr -d ' ')" "efbbbf" "le CSV commence par la marque que lit Excel"
+# la protection des corrections (0.10) : le tour 1, relu par « Suivant », arrête « Transcrire » ; « Tout retranscrire »,
+# le mot tapé, transcrit : la fenêtre d'avancement s'ouvre et se ferme. Un son muet ne donne aucun segment : le refus
+# (« Rien n'a été transcrit ») annule tout, les tours d'avant restent, et la copie COREL de l'état d'avant, écrite dans le
+# même événement, ne reste pas non plus. Le modèle d'essai ne reconnaissant rien, la copie gardée après une
+# retranscription réussie ne s'éprouve pas ici.
 lancer transcrire "ligne:EensA1_20130306_Ens_01;Transcrire;confirmer"
-verifier "$(grep -c 'erreur' "$d/transcrire.txt")" "0" "Transcrire tourne jusqu'au bout"
-# un son muet ne donne aucun segment : le refus (« Rien n'a été transcrit ») annule tout, les tours d'avant restent
+verifier "$(grep -c 'erreur' "$d/transcrire.txt")" "0" "Transcrire, devant un tour relu, s'arrête sans erreur"
+verifier "$(ls "$d/maison/Documents/Drogman/" | grep -c 'avant retranscription')" "0" "et n'a rien touché"
+lancer retranscrire "ligne:EensA1_20130306_Ens_01;Tout retranscrire;taper:remplacer;confirmer"
+verifier "$(grep -c 'erreur' "$d/retranscrire.txt")" "0" "Tout retranscrire tourne jusqu'au bout"
+verifier "$(ls "$d/maison/Documents/Drogman/" | grep -c 'avant retranscription.rtf')" "0" "le refus annule aussi la copie d'avant, devenue inutile"
 verifier "$(jouer 'Afficher le nombre de tours conservés.')" "2" "un refus n'efface pas les tours d'avant"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]

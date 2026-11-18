@@ -41,6 +41,10 @@ printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprog
 # application fabriquée le garde
 mkdir -p "$app/Contents/Resources/modeles"
 cp "$(outils/modele-transcription)" "$app/Contents/Resources/modeles/"
+# Shine, l'encodeur MP3 (LGPL 2) : sa licence avec chaque copie, à côté de celle de GrymoiR
+mkdir -p "$app/Contents/Resources/Licences"
+cp LICENCE LICENCE-fr.md "$app/Contents/Resources/Licences/"
+cp vendor/shine/COPYING "$app/Contents/Resources/Licences/Shine-LGPL-2.txt"
 # la séparation des voix (grammaire 3.40) : sherpa-onnx et ses modèles, téléchargés par CMake dans construction/voix
 if [ -d construction/voix ]; then
     mkdir -p "$app/Contents/Resources/voix"

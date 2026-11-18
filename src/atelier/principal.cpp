@@ -11,6 +11,7 @@
 
 #include <QScreen>
 #include <memory>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QPainter>
@@ -357,6 +358,9 @@ int main(int argc, char **argv) {
                         QMouseEvent b(QEvent::MouseButtonRelease, p, ag->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                         QApplication::sendEvent(ag, &b);
                     }
+                } else if (l.startsWith(QString::fromUtf8("taper:"))) {   // « taper:remplacer » : le mot d'une confirmation « en tapant » (18 novembre 2026)
+                    for (QLineEdit *z : e->findChildren<QLineEdit *>("mot-confirmation"))
+                        if (z->isVisible()) { z->setText(l.mid(6)); emit z->textEdited(l.mid(6)); break; }
                 } else if (l == QString::fromUtf8("confirmer")) {   // le bouton de la question ouverte par un bouton « à confirmer » (2.65)
                     for (QPushButton *b : e->findChildren<QPushButton *>("confirmer"))
                         if (b->isVisible() && b->isEnabled()) { b->click(); break; }

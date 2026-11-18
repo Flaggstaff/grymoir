@@ -15,6 +15,8 @@ lit plus. GrymoiR encode à 64 kbit/s, qui tombe juste (`src/atelier/son.cpp`).
 
 Seul l'atelier le compile (`CMakeLists.txt`, bibliothèque `grym_shine`) ; `grym` en console ne l'a pas.
 
-**Licence, à décider par le mainteneur** : Shine est sous LGPL 2, GrymoiR sous EUPL 1.2. La LGPL demande que l'utilisateur
-puisse remplacer la bibliothèque : ses sources sont ici, inchangées, et l'atelier se reconstruit avec. Ajouté le
-18 novembre 2026 sur demande ; non vérifié par un juriste.
+**Licence** : Shine est sous LGPL 2, GrymoiR sous EUPL 1.2. La LGPL (article 6) demande que l'utilisateur puisse remplacer
+la bibliothèque : ses sources sont ici, inchangées, et l'atelier se reconstruit avec ; et que chaque copie dise que Shine
+est là et joigne sa licence : l'atelier la montre (Aide, « Licences des composants »), chaque application fabriquée
+l'emporte dans son dossier « Licences » (`src/atelier/fabrication.cpp`), et `LICENCE-fr.md` le dit. Décidé par le
+mainteneur le 18 novembre 2026 (garder Shine, régler la mention) ; non vérifié par un juriste.

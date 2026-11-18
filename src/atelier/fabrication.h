@@ -25,6 +25,8 @@ QString identite_refusee(const QString &nom, const QString &version);
 // L'icône pour Windows : un fichier .ico qui embarque l'image en PNG, 256 pixels (Windows Vista et après).
 bool ecrire_ico(const QImage &image, const QString &chemin);
 
+// L'avis joint à chaque application : elle contient Shine (LGPL 2), où est sa licence, où sont ses sources.
+QString avis_des_licences();
 bool preparer_programme(const QString &projet, const QString &principal, const QString &nom, const QString &vers,
                         QString *erreur);
 

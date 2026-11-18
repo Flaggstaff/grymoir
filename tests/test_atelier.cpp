@@ -17,6 +17,7 @@
 #include <thread>
 #include <QThread>
 #include "transcription.h"
+QString texte_avancement(int fait, int total, qint64 passe_ms);   // src/atelier/execution.cpp
 #include "voix.h"
 #include <QFontMetrics>
 #include "relecture.h"
@@ -663,6 +664,25 @@ int main(int argc, char **argv) {
             }
             QString e3;
             VERIFIER(transcrire_segments_son(wav(16000, 1, 16, 1.0), QString(), &e3).isEmpty() && e3.contains("introuvable"));
+            // l'avancement (18 novembre 2026) : appelé avant chaque morceau, puis une fois à la fin, « tout sur tout »
+            {
+                QByteArray parle = wav(16000, 1, 16, 4.0);
+                for (qsizetype i = 44; i + 1 < parle.size(); i += 2) {   // un bourdon, pour qu'il y ait au moins un morceau
+                    const qint16 v = (qint16)(8000 * std::sin((double)(i - 44) / 2 * 2 * 3.14159265 * 220 / 16000));
+                    parle[i] = (char)(v & 0xff);
+                    parle[i + 1] = (char)((v >> 8) & 0xff);
+                }
+                QString e6;
+                std::vector<std::pair<int, int>> appels;
+                transcrire_segments_son(parle, MODELE_ESSAI, &e6, QString(QChar(0x1d)),
+                                        [&appels](int f, int t) { appels.push_back({f, t}); });
+                VERIFIER(e6.isEmpty() && appels.size() >= 2 && appels.front().first == 0 && appels.back().first == appels.back().second
+                         && appels.back().second == (int)appels.size() - 1);
+            }
+            VERIFIER(texte_avancement(0, 85, 0) == QString::fromUtf8("Transcription : morceau 1 sur 85"));
+            VERIFIER(texte_avancement(10, 85, 100000) == QString::fromUtf8("Transcription : morceau 11 sur 85 ; encore environ 13 min"));
+            VERIFIER(texte_avancement(84, 85, 840000) == QString::fromUtf8("Transcription : morceau 85 sur 85 ; encore moins d'une minute"));
+            VERIFIER(texte_avancement(85, 85, 850000) == QString::fromUtf8("Transcription : morceau 85 sur 85"));
             liberer_transcription();
         }
         // « x en MP3 » (3.43) : dix secondes de WAV deviennent un MP3 bien plus léger, que le décodeur relit à la même durée
@@ -2973,6 +2993,13 @@ int main(int argc, char **argv) {
                  && QFile::exists(vers + "/images/logo.png"));
         VERIFIER(!QFile::exists(vers + "/association.grymd") && !QFile::exists(vers + "/association.grymb")
                  && !QFile::exists(vers + "/projet.grymatelier") && !QFile::exists(vers + "/.cache"));
+        // Shine (LGPL 2) : l'avis et la licence voyagent à côté du programme (18 novembre 2026)
+        {
+            QFile avis(d.filePath("app/Licences/LISEZ-MOI.txt"));
+            VERIFIER(avis.open(QIODevice::ReadOnly) && avis.readAll().contains("Shine"));
+            QFile lgpl(d.filePath("app/Licences/Shine-LGPL-2.txt"));
+            VERIFIER(lgpl.open(QIODevice::ReadOnly) && lgpl.readAll().contains("GNU LIBRARY GENERAL PUBLIC LICENSE"));
+        }
         QFile a(vers + "/application.txt");
         VERIFIER(a.open(QIODevice::ReadOnly));
         const QString texte = QString::fromUtf8(a.readAll());

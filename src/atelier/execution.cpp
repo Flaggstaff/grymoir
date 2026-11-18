@@ -38,6 +38,8 @@
 #include <QButtonGroup>
 #include <functional>
 #include <QPlainTextEdit>
+#include <QProgressDialog>
+#include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
 #include <thread>
@@ -440,12 +442,62 @@ static char *iface_transcrire(void *contexte, const unsigned char *octets, size_
     return grym_dupliquer(texte.toUtf8().constData());
 }
 
+// L'avancement d'un long calcul de la machine (18 novembre 2026) : la transcription d'un entretien, la séparation de ses
+// voix, son allègement en MP3 durent des minutes, et la fenêtre, libre, ne montrait rien. Une petite fenêtre du fil de
+// l'interface dit ce qui se fait ; elle ne bloque rien et n'interrompt rien (pas de bouton : un calcul interrompu
+// laisserait l'événement à moitié fait). Demandée depuis le fil de la machine, elle se ferme quand le calcul rend la main.
+static QPointer<QProgressDialog> fenetre_avancement;   // lue et écrite dans le fil de l'interface seulement
+static void montrer_avancement(const QString &texte, int fait, int total) {
+    QMetaObject::invokeMethod(qApp, [texte, fait, total] {
+        if (!fenetre_avancement) {
+            auto *d = new QProgressDialog(QApplication::activeWindow());
+            d->setWindowTitle(QString::fromUtf8("Un instant…"));
+            d->setCancelButton(nullptr);
+            d->setWindowModality(Qt::NonModal);
+            d->setWindowFlag(Qt::WindowCloseButtonHint, false);
+            d->setMinimumDuration(0);
+            d->setAutoClose(false);
+            d->setAutoReset(false);
+            d->setMinimumWidth(460);
+            fenetre_avancement = d;
+        }
+        fenetre_avancement->setRange(0, total);   // 0 sur 0 : une barre qui va et vient, la durée n'est pas connue
+        fenetre_avancement->setValue(fait);
+        fenetre_avancement->setLabelText(texte);
+        fenetre_avancement->show();
+    }, Qt::QueuedConnection);
+}
+struct Avancement {   // montre à la construction, ferme à la destruction, quel que soit le chemin de sortie
+    explicit Avancement(const QString &texte) { montrer_avancement(texte, 0, 0); }
+    ~Avancement() {
+        QMetaObject::invokeMethod(qApp, [] {
+            if (fenetre_avancement) { fenetre_avancement->close(); fenetre_avancement->deleteLater(); }
+        }, Qt::QueuedConnection);
+    }
+};
+// Le texte d'un avancement : « Transcription : morceau 12 sur 85 », et, dès que trois morceaux sont faits, le temps qui
+// reste, estimé d'après le temps passé (une règle de trois : les morceaux n'ont pas tous la même longueur).
+QString texte_avancement(int fait, int total, qint64 passe_ms) {
+    QString t = QString::fromUtf8("Transcription : morceau %1 sur %2").arg(qMin(fait + 1, total)).arg(total);
+    if (fait >= 3 && fait < total) {
+        const qint64 reste_s = passe_ms * (total - fait) / fait / 1000;
+        t += reste_s < 60 ? QString::fromUtf8(" ; encore moins d'une minute")
+                          : QString::fromUtf8(" ; encore environ %1 min").arg((reste_s + 59) / 60);
+    }
+    return t;
+}
+
 // « les segments de x » (3.39) : comme la transcription, dans le fil de la machine ; un tableau JSON.
 static char *iface_transcrire_segments(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
     QString probleme;
     const QString amorce = contexte ? static_cast<Travail *>(contexte)->amorce : QString();
+    Avancement fenetre(QString::fromUtf8("Lecture de l'enregistrement…"));
+    QElapsedTimer chrono;
     const QString json = transcrire_segments_son(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
-                                                 modele_de_transcription(), &probleme, amorce);
+                                                 modele_de_transcription(), &probleme, amorce, [&chrono](int fait, int total) {
+                                                     if (!chrono.isValid()) chrono.start();
+                                                     montrer_avancement(texte_avancement(fait, total, chrono.elapsed()), fait, qMax(total, 1));
+                                                 });
     if (!probleme.isEmpty()) {
         *erreur = grym_dupliquer(probleme.toUtf8().constData());
         return nullptr;
@@ -458,6 +510,7 @@ static int iface_compresser(void *contexte, const unsigned char *octets, size_t 
                             size_t *taille_sortie, char **erreur) {
     (void)contexte;
     QString probleme;
+    Avancement fenetre(QString::fromUtf8("Allègement de l'enregistrement en MP3…"));
     const QByteArray mp3 = compresser_en_mp3(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille), &probleme);
     if (mp3.isEmpty()) {
         *erreur = grym_dupliquer((probleme.isEmpty() ? QString("le son ne se lit pas.") : probleme).toUtf8().constData());
@@ -481,6 +534,7 @@ static void iface_jouer(void *contexte, const unsigned char *octets, size_t tail
 static char *iface_separer_voix(void *contexte, const unsigned char *octets, size_t taille, long nombre, char **erreur) {
     (void)contexte;
     QString probleme;
+    Avancement fenetre(QString::fromUtf8("Séparation des voix : qui parle quand…"));
     const QString json = separer_voix_son(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille), (int)nombre,
                                           &probleme);
     if (!probleme.isEmpty()) {

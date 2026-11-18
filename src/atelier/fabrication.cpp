@@ -53,6 +53,17 @@ static bool copier(const QString &de, const QString &vers, QString *erreur) {
     return true;
 }
 
+// Ce que chaque application dit de Shine, l'encodeur MP3 de « x en MP3 » (3.43).
+QString avis_des_licences() {
+    return QString::fromUtf8(
+        "Cette application est faite avec GrymoiR (https://github.com/Flaggstaff/grymoir, licence EUPL 1.2).\n\n"
+        "Elle contient Shine, un encodeur MP3 (https://github.com/toots/shine), utilisé pour alléger les enregistrements.\n"
+        "Shine et son usage sont couverts par la GNU Library General Public License, version 2 : son texte est dans\n"
+        "« Shine-LGPL-2.txt », à côté de ce fichier.\n\n"
+        "Les sources de Shine, telles qu'elles sont employées ici, et de quoi refaire l'application avec un Shine modifié,\n"
+        "sont dans le dépôt de GrymoiR, dossier « vendor/shine ».\n");
+}
+
 bool preparer_programme(const QString &projet, const QString &principal, const QString &nom, const QString &vers,
                         QString *erreur) {
     if (!QFileInfo(QDir(projet).filePath(principal)).isFile()) {
@@ -66,6 +77,16 @@ bool preparer_programme(const QString &projet, const QString &principal, const Q
     f.write(QString("Remarque : une application fabriquée par l'atelier de GrymoiR.\nnom : %1\nprogramme : %2\nversion : %3\n")
                 .arg(nom, principal, id.version).toUtf8());
     if (!id.editeur.isEmpty()) f.write(QString::fromUtf8("éditeur : %1\n").arg(id.editeur).toUtf8());
+    // Les licences des composants embarqués (18 novembre 2026) : Shine (LGPL 2, article 6) demande que chaque copie dise
+    // qu'il est là, donne le texte de sa licence et l'endroit où prendre ses sources ; le dossier « Licences » voyage à
+    // côté du programme.
+    const QString licences = QFileInfo(vers).dir().filePath("Licences");
+    QDir().mkpath(licences);
+    QFile avis(licences + "/LISEZ-MOI.txt");
+    if (avis.open(QIODevice::WriteOnly)) avis.write(avis_des_licences().toUtf8());
+    QFile::remove(licences + "/Shine-LGPL-2.txt");
+    if (QFile::copy(":/licences/shine/COPYING", licences + "/Shine-LGPL-2.txt"))
+        QFile::setPermissions(licences + "/Shine-LGPL-2.txt", QFile::ReadOwner | QFile::WriteOwner | QFile::ReadGroup | QFile::ReadOther);
     return true;
 }
 

@@ -429,7 +429,8 @@ static QString secondes(double s) {
     return QString::number(std::round(s * 100) / 100, 'g', 12);
 }
 
-QString transcrire_segments_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce) {
+QString transcrire_segments_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce,
+                                const std::function<void(int, int)> &avancement) {
     if (modele.isEmpty()) {
         *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
         return QString();
@@ -460,8 +461,10 @@ QString transcrire_segments_son(const QByteArray &octets, const QString &modele,
     }
     QString json = "[";
     bool premier = true;
+    int faits = 0;
     for (const auto &mc : morceaux) {
         if (fermeture) { *erreur = "L'application se ferme."; return QString(); }
+        if (avancement) avancement(faits++, (int)morceaux.size());
         const double decalage = (double)mc.first / 16000;
         const float *son = pcm.data() + mc.first;
         const int taille = (int)(mc.second - mc.first);
@@ -538,6 +541,7 @@ QString transcrire_segments_son(const QByteArray &octets, const QString &modele,
             free(e);
         }
     }
+    if (avancement) avancement((int)morceaux.size(), (int)morceaux.size());
     return json + "]";
 }
 

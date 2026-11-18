@@ -554,17 +554,18 @@ Fenetre::Fenetre() {
         guide->activateWindow();
     });
     // Les polices et les icônes du thème voyagent avec leur licence (OFL 1.1 ; ISC et MIT) : elles se lisent ici.
-    menu_aide->addAction("Licences des polices et des icônes", this, [] {
+    // Shine, l'encodeur MP3 (LGPL 2), y est aussi depuis le 18 novembre 2026 : sa licence demande d'être citée et jointe.
+    menu_aide->addAction("Licences des composants", this, [] {
         auto *d = new QTextBrowser;
         d->setAttribute(Qt::WA_DeleteOnClose);
         d->setWindowFlag(Qt::Window);
-        d->setWindowTitle("Licences des polices et des icônes");
+        d->setWindowTitle("Licences des composants");
         QString t;
-        for (const char *f : {":/licences/atkinson/OFL-Next.txt", ":/licences/atkinson/OFL-Mono.txt", ":/licences/lucide/LICENSE"}) {
+        for (const char *f : {":/licences/atkinson/OFL-Next.txt", ":/licences/atkinson/OFL-Mono.txt", ":/licences/lucide/LICENSE", ":/licences/shine/COPYING"}) {
             QFile l(f);
             if (l.open(QIODevice::ReadOnly)) t += QString::fromUtf8(l.readAll()) + "\n\n────────\n\n";
         }
-        d->setPlainText("Polices : Atkinson Hyperlegible Next et Mono. Icônes : Lucide.\n\n" + t);
+        d->setPlainText("Polices : Atkinson Hyperlegible Next et Mono. Icônes : Lucide.\n\n" + avis_des_licences() + "\n────────\n\n" + t);
         d->resize(640, 720);
         d->show();
     });

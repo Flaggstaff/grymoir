@@ -42,3 +42,8 @@ bibliothèque native inclut, peut être copié dans son code sous la même excep
 Les dossiers `vendor/` gardent la licence de leurs auteurs, indiquée dans chacun : SQLite et SQLite3MC, Monocypher,
 QR Code generator, Mbed TLS (Apache-2.0), les polices Atkinson Hyperlegible (OFL 1.1), les icônes Lucide. L'atelier s'appuie sur Qt 6
 (LGPL v3) et sur whisper.cpp (MIT) ; une application fabriquée qui les embarque respecte aussi leurs licences.
+
+**Shine**, l'encodeur MP3 de `x en MP3` (`vendor/shine`), est sous GNU Library General Public License, version 2
+(`vendor/shine/COPYING`). L'atelier et toute application fabriquée le contiennent : l'atelier montre sa licence
+(Aide, « Licences des composants »), et chaque application fabriquée l'emporte dans son dossier « Licences », avec
+l'adresse de ce dépôt, où sont ses sources et de quoi refaire l'exécutable avec un Shine modifié.
