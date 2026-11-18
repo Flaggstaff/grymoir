@@ -1,13 +1,15 @@
-Remarque : Drogman 0.11 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.12 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
 Remarque : était l'interprète officiel auprès de la Porte ottomane.
 Remarque : la transcription se fait sur l'ordinateur (Whisper, grammaire § 15.8, « les segments de », 3.39), comme la
-Remarque : séparation des voix (sherpa-onnx, « les voix de », 3.40) : le son ne part nulle part. Seule la traduction sort de l'ordinateur, et seulement le texte des tours non français : chez DeepL d'abord, chez Google (Cloud Translation) si DeepL refuse ou se tait (0.11).
+Remarque : séparation des voix (sherpa-onnx, « les voix de », 3.40) : le son ne part nulle part. Seule la traduction sort de
+Remarque : l'ordinateur, et seulement le texte des tours non français : chez DeepL d'abord, chez Google (Cloud Translation)
+Remarque : si DeepL refuse ou se tait (0.11).
 
-Remarque : la base est chiffrée (grammaire § 16.18) : elle garde des entretiens de recherche et les clés de DeepL et de Google ; Drogman
-Remarque : demande son mot de passe à chaque lancement, et le fait choisir au premier.
+Remarque : la base est chiffrée (grammaire § 16.18) : elle garde des entretiens de recherche et les clés de DeepL et de
+Remarque : Google ; Drogman demande son mot de passe à chaque lancement, et le fait choisir au premier.
 La base est chiffrée.
 
 Remarque : un entretien, et son en-tête COREL : le code (le nom du fichier, « EensA1_20130306_Ens_01 »), le jour, l'heure,
@@ -610,13 +612,14 @@ Pour déposer un fichier et un nom et une extension :
 
 Remarque : le nombre de tours d'un entretien, et ceux qui attendent encore leur sigle, pour l'écran.
 L'état d'un e :
-    Si le e est absent, rendre "Nouvel entretien : remplis l'en-tête, choisis l'enregistrement, puis « Enregistrer ».".
+    Si le e est absent, rendre "Nouvel entretien : commence par l'onglet « 1 · Fiche et enregistrement ».".
     Le n vaut le nombre de tours conservés dont l'entretien = le e.
-    Si le n = 0, rendre "Pas encore transcrit : « Transcrire ».".
+    Si le n = 0, rendre "Pas encore transcrit : onglet « 2 · Transcrire ».".
+    Le flou vaut le nombre de tours conservés dont l'entretien = le e et le doute est présent.
     Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
     L'étranger vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr ».
     Le reste vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente.
-    Rendre le n suivi de " tours de parole ; " suivi du sans suivi de " sans sigle ; " suivi de l'étranger suivi de " dans une autre langue que le français, dont " suivi du reste suivi de " à traduire.".
+    Rendre "Tours de parole : " suivi du n suivi de " ; à vérifier : " suivi du flou suivi de " ; sans sigle : " suivi du sans suivi de " ; dans une autre langue que le français : " suivi de l'étranger suivi de ", dont à traduire : " suivi du reste suivi de « . ».
 
 Remarque : où en est un entretien (0.11), en cinq étapes : la fiche et l'enregistrement, la transcription, la relecture
 Remarque : (des mots peu sûrs, des tours sans sigle), la traduction, les documents. Le stade est court, pour la liste de
@@ -638,9 +641,9 @@ Le conseil d'un e :
     Si le n = 0, rendre "À faire maintenant, étape 2 : onglet « 2 · Transcrire », bouton « Transcrire ».".
     Le flou vaut le nombre de tours conservés dont l'entretien = le e et le doute est présent.
     Le sans vaut le nombre de tours conservés dont l'entretien = le e et le sigle = « ? ».
-    Si le flou + le sans > 0, rendre "À faire maintenant, étape 3 : onglet « 3 · Relire » : " suivi du flou suivi de " tours à vérifier, " suivi du sans suivi de " sans sigle. Un clic sur un tour l'ouvre et le fait entendre.".
+    Si le flou + le sans > 0, rendre "À faire maintenant, étape 3 : onglet « 3 · Relire » : " suivi du flou suivi de " à vérifier, " suivi du sans suivi de " sans sigle. Un clic sur un tour l'ouvre et le fait entendre.".
     Le reste vaut le nombre de tours conservés dont l'entretien = le e et la langue ≠ « fr » et la traduction est absente.
-    Si le reste > 0, rendre "À faire maintenant, étape 4 : onglet « 4 · Traduire » : " suivi du reste suivi de " tours à traduire.".
+    Si le reste > 0, rendre "À faire maintenant, étape 4 : onglet « 4 · Traduire » : " suivi du reste suivi de " à traduire.".
     Rendre "Tout est relu et traduit : étape 5, onglet « 5 · Exporter ».".
 
 Pour situer un dossier :
@@ -823,7 +826,7 @@ L'écran de l'entretien, « Entretien », pour un entretien, montre :
             le texte le témoin de « Traduction »,
             un bouton « Traduire », actif si l'entretien de l'écran est présent,
         l'onglet « 5 · Exporter » :
-            le texte « Un document par étape, écrit dans Documents/Drogman ; les noms de la table d'anonymisation y sont remplacés. »,
+            le texte « Quatre documents, écrits dans Documents/Drogman ; les noms de la table d'anonymisation y sont remplacés. La transcription : la parole d'origine, chaque tour dans sa langue. La traduction : tout en français. COREL : la version à rendre, avec les notations. NVivo : un texte simple, une ligne par tour, pour un logiciel d'analyse. »,
             une traduction jointe (vrai ou faux), vrai au départ, facultative, avec l'indication « Dans la transcription COREL, entre crochets sous chaque tour non français »,
             côte à côte :
                 un bouton « Exporter la transcription », actif si l'entretien de l'écran est présent,
@@ -1100,7 +1103,7 @@ Pour dérouler un e :
     Pour chaque s parmi les segments de l'enregistrement du e :
         Verser le s et le e.
     Finir le e.
-    Si le rang courant = 0, refuser « Rien n'a été transcrit : le modèle de transcription manque, ou l'enregistrement est muet. ».
+    Si le rang courant = 0, refuser « Rien n'a été transcrit : l'enregistrement est muet, ou le modèle de transcription manque à cette installation. ».
     Nommer le e, qui donne le nommé.
     Marquer le e.
     Si la durée du e est absente, la durée du e devient la durée lue du e.
@@ -1118,7 +1121,7 @@ Quand on clique sur « Transcrire » dans l'écran de l'entretien :
     Le travail vaut le nombre de tours conservés dont l'entretien = le e et la retouche est vraie.
     Le codé vaut le nombre de codages conservés dont l'entretien du tour = le e.
     Si le travail + le codé > 0, refuser le travail suivi de " tours relus ou corrigés et " suivi du codé suivi de " codages seraient perdus : « Transcrire » ne les efface pas. Pour recommencer quand même : « Tout retranscrire ».".
-    Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien. ».
+    Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien (onglet 1), puis Enregistrer. ».
     L'avis de copie devient « ».
     Dérouler le e.
 
@@ -1127,7 +1130,7 @@ Quand on clique sur « Tout retranscrire » dans l'écran de l'entretien :
     Le e vaut l'entretien de l'écran.
     Le dossier ouvert devient le e.
     Le code ouvert devient le code du e.
-    Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien. ».
+    Si l'enregistrement du e est absent, refuser « Choisis d'abord l'enregistrement de l'entretien (onglet 1), puis Enregistrer. ».
     L'avis de copie devient « ».
     Si le nombre de tours conservés dont l'entretien = le e > 0 :
         Déposer ((le document corel du e) en fichier) et (le code du e suivi de " avant retranscription") et « .rtf », qui donne le chemin.
@@ -1157,6 +1160,8 @@ Quand on clique sur « Traduire » dans l'écran de l'entretien :
                 La panne devient le motif de l'échec.
     Marquer le e.
     Si la panne ≠ « » et le n = 0, refuser la panne.
+    Si le n = 0 et l'étrangère = « », refuser « Rien à traduire : la fiche dit cet entretien tout en français (onglet 1, langue étrangère). ».
+    Si le n = 0, refuser « Rien à traduire : tous les tours sont en français, ou déjà traduits. ».
     Le détail vaut " (" suivi du compte deepl suivi de " par DeepL, " suivi de (le n − le compte deepl) suivi de " par Google)".
     Si la panne ≠ « », signaler le n puis « tours traduits » suivi du détail suivi de « , puis arrêt : » suivi de la panne.
     Sinon, signaler le n puis « tours traduits » suivi du détail suivi de « . ».

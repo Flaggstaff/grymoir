@@ -138,11 +138,11 @@ Scénario « le texte pour NVivo : une ligne par tour, l'heure, le sigle, deux-p
     Remarque : les deux-points du texte tombent : NVivo prendrait « Il dit » pour un intervenant.
     Vérifier que le 3e élément des lignes = « 01:02:05 ?: Il dit - ça va bien. ».
 
-Scénario « l'état d'un entretien compte les tours sans sigle et ceux d'une autre langue » :
+Scénario « l'état d'un entretien compte les tours à vérifier, sans sigle, et ceux d'une autre langue » :
     Poser « EensA1_20130306_Ens_07 », qui donne le e.
-    Vérifier que l'état du e = "Pas encore transcrit : « Transcrire ».".
+    Vérifier que l'état du e = "Pas encore transcrit : onglet « 2 · Transcrire ».".
     Transcrire le e.
-    Vérifier que l'état du e = « 3 tours de parole ; 3 sans sigle ; 1 dans une autre langue que le français, dont 1 à traduire. ».
+    Vérifier que l'état du e = « Tours de parole : 3 ; à vérifier : 1 ; sans sigle : 3 ; dans une autre langue que le français : 1, dont à traduire : 1. ».
 
 Scénario « un nouvel entretien s'enregistre par l'écran » :
     On clique sur « Nouvel entretien » dans l'écran des entretiens.
@@ -859,12 +859,12 @@ Scénario « un entretien avance d'étape en étape : le stade, le conseil, l'é
     Vérifier que le conseil du e contient « étape 1 : choisis l'enregistrement ».
     Transcrire le e.
     Vérifier que le stade du e = « 3 · à relire ».
-    Vérifier que le conseil du e contient "étape 3 : onglet « 3 · Relire » : 1 tours à vérifier, 3 sans sigle".
+    Vérifier que le conseil du e contient "étape 3 : onglet « 3 · Relire » : 1 à vérifier, 3 sans sigle".
     Pour chaque tour conservé :
         Le sigle du tour devient « INT ».
         Le doute du tour devient absent.
     Vérifier que le stade du e = « 4 · à traduire ».
-    Vérifier que le conseil du e contient "étape 4 : onglet « 4 · Traduire » : 1 tours à traduire".
+    Vérifier que le conseil du e contient "étape 4 : onglet « 4 · Traduire » : 1 à traduire".
     On choisit le e dans l'écran des entretiens.
     On ferme l'écran de l'entretien.
     On ferme l'écran des entretiens.
@@ -910,3 +910,17 @@ Scénario « la configuration range ses réglages ; le nouvel entretien propose 
         La dernière sauvegarde du réglage devient 01.10.2026.
     Vérifier que l'alerte de sauvegarde d'aujourd'hui et d'absent contient « ⚠ Dernière sauvegarde le ».
     Vérifier que l'alerte de sauvegarde d'aujourd'hui et de « disque plein » contient « a échoué : disque plein ».
+
+Remarque : traduire quand il n'y a rien à traduire (0.12) : un refus qui dit pourquoi, pas « 0 tours traduits ».
+Scénario « Traduire sans rien à traduire : un refus qui le dit » :
+    Poser « EensA1_20130306_Ens_53 », qui donne le e.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        La traduction du tour devient « Je vais bien, merci. ».
+    On choisit le e dans l'écran des entretiens.
+    On clique sur « Traduire » dans l'écran de l'entretien.
+    On voit l'erreur « Rien à traduire : tous les tours sont en français, ou déjà traduits » dans l'écran de l'entretien.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés dont la traduction est présente = 1.
