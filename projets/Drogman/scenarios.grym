@@ -23,6 +23,7 @@ Pour transcrire un entretien :
     Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":1.9,"douteux":false},{"mot":"comment","début":2.4,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien.
     Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien.
     Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien.
+    Finir l'entretien.
 
 Scénario « un segment devient un tour, avec sa langue, ses heures et sa version COREL » :
     Poser « EensA1_20130306_Ens_01 », qui donne le e.
@@ -141,7 +142,7 @@ Scénario « l'état d'un entretien compte les tours sans sigle et ceux d'une au
     Poser « EensA1_20130306_Ens_07 », qui donne le e.
     Vérifier que l'état du e = "Pas encore transcrit : « Transcrire ».".
     Transcrire le e.
-    Vérifier que l'état du e = "3 tours de parole ; 3 sans sigle ; 1 dans une autre langue que le français.".
+    Vérifier que l'état du e = "3 tours de parole ; 3 sans sigle ; 1 dans une autre langue que le français, dont 1 à traduire.".
 
 Scénario « un nouvel entretien s'enregistre par l'écran » :
     On clique sur « Nouvel entretien » dans l'écran des entretiens.
@@ -177,6 +178,7 @@ Pour transcrire à trois voix un entretien :
     Verser « {"début":1.5,"fin":3.2,"langue":"fr","texte":"Bonjour, comment allez-vous ?","mots":[{"mot":"Bonjour,","début":1.5,"fin":2.1,"douteux":false},{"mot":"comment","début":2.2,"fin":2.5,"douteux":false},{"mot":"allez-vous ?","début":2.5,"fin":3.2,"douteux":false}]} » et l'entretien.
     Verser « {"début":4,"fin":7.5,"langue":"tr","texte":"İyiyim, teşekkür ederim.","mots":[{"mot":"İyiyim,","début":4,"fin":4.8,"douteux":false},{"mot":"teşekkür","début":5.9,"fin":6.6,"douteux":true},{"mot":"ederim.","début":6.6,"fin":7.5,"douteux":false}]} » et l'entretien.
     Verser « {"début":3725.5,"fin":3727,"langue":"fr","texte":"Il dit : ça va bien.","mots":[]} » et l'entretien.
+    Finir l'entretien.
 
 Scénario « les voix coupent un segment en deux tours, et la correspondance pose les sigles » :
     Poser « EensA1_20130306_Ens_09 », qui donne le e.
@@ -375,3 +377,125 @@ Scénario « le sigle d'un tour enregistré s'écrit en majuscules » :
     Ouvrir l'écran des entretiens.
     Pour chaque tour conservé dont le rang = 1 :
         Vérifier que le sigle du tour = « INT ».
+
+Remarque : Drogman 0.5 (18 novembre 2026) : la relecture d'ensemble.
+Pour monologuer un entretien :
+    Préparer l'écoute.
+    Entendre « {"début":0,"fin":9,"voix":1} ».
+    Entendre « {"début":9.5,"fin":12,"voix":2} ».
+    Verser « {"début":1,"fin":2,"langue":"fr","texte":"Alors voilà,","mots":[{"mot":"Alors","début":1,"fin":1.4,"douteux":false},{"mot":"voilà,","début":1.5,"fin":2,"douteux":false}]} » et l'entretien.
+    Verser « {"début":2.8,"fin":4,"langue":"fr","texte":"c'était difficile.","mots":[{"mot":"c'était","début":2.8,"fin":3.3,"douteux":false},{"mot":"difficile.","début":3.3,"fin":4,"douteux":false}]} » et l'entretien.
+    Verser « {"début":4.2,"fin":6,"langue":"tr","texte":"Evet, zordu.","mots":[{"mot":"Evet,","début":4.2,"fin":5,"douteux":false},{"mot":"zordu.","début":5,"fin":6,"douteux":false}]} » et l'entretien.
+    Verser « {"début":6.3,"fin":8,"langue":"tr","texte":"Çok zordu.","mots":[{"mot":"Çok","début":6.3,"fin":7,"douteux":false},{"mot":"zordu.","début":7,"fin":8,"douteux":false}]} » et l'entretien.
+    Verser « {"début":9.6,"fin":11,"langue":"fr","texte":"D'accord.","mots":[{"mot":"D'accord.","début":9.6,"fin":11,"douteux":false}]} » et l'entretien.
+    Finir l'entretien.
+
+Scénario « une voix qui parle sur plusieurs segments garde un seul tour, avec la pause entre eux ; la langue qui change le coupe » :
+    Poser « EensA1_20130306_Ens_20 », qui donne le e.
+    Monologuer le e.
+    Vérifier que le nombre de tours conservés = 3.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que la base du tour = « Alors voilà, c'était difficile. ».
+        Remarque : 0,8 seconde entre « voilà, » et « c'était » : la petite pause, d'un segment à l'autre.
+        Vérifier que la version corel du tour = « Alors voilà, (.) c'était difficile. ».
+        Vérifier que le début du tour = 1.
+        Vérifier que la fin du tour = 4.
+        Vérifier que la voix du tour = 1.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que la langue du tour = « tr ».
+        Vérifier que la base du tour = « Evet, zordu. Çok zordu. ».
+        Vérifier que la voix du tour = 1.
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que la voix du tour = 2.
+
+Scénario « sans voix connues, chaque segment reste un tour » :
+    Poser « EensA1_20130306_Ens_21 », qui donne le e.
+    Préparer l'écoute.
+    Verser « {"début":1,"fin":2,"langue":"fr","texte":"Alors voilà,","mots":[{"mot":"Alors","début":1,"fin":1.4,"douteux":false},{"mot":"voilà,","début":1.5,"fin":2,"douteux":false}]} » et le e.
+    Verser « {"début":2.8,"fin":4,"langue":"fr","texte":"c'était difficile.","mots":[{"mot":"c'était","début":2.8,"fin":3.3,"douteux":false},{"mot":"difficile.","début":3.3,"fin":4,"douteux":false}]} » et le e.
+    Finir le e.
+    Vérifier que le nombre de tours conservés = 2.
+
+Scénario « le document COREL réunit les tours qui se suivent sous le même sigle, et suit l'en-tête du modèle » :
+    Poser « EensA1_20130306_Ens_22 », qui donne le e.
+    La famille du e devient « Deniz Yılmaz ».
+    L'heure du e devient 14:30.
+    Transcrire le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        La langue du tour devient « fr ».
+        La version corel du tour devient « très bien ».
+    Pour chaque tour conservé dont l'entretien = le e :
+        Le sigle du tour devient « INT ».
+    Le d vaut le document COREL du e.
+    Vérifier que le d contient "Universit\u233? de Fribourg, D\u233?partement des Sciences de l'\u233?ducation et de la formation, Prof. Tania Ogay\par".
+    Vérifier que le d contient "Entretien du 06.03.2013, 14:30\par".
+    Vérifier que le d contient "(Famille de Deniz Y\u305?lmaz)\par".
+    Vérifier que le d contient "INT\tab Bonjour, (.) comment allez-vous ? tr\u232?s bien Il dit : \u231?a va bien.\par".
+    Remarque : un tour sans sigle ne se réunit à rien.
+    Pour chaque tour conservé dont le rang = 3 :
+        Le sigle du tour devient « ? ».
+    Vérifier que le document COREL du e contient "INT\tab Bonjour, (.) comment allez-vous ? tr\u232?s bien\par".
+    Vérifier que le document COREL du e contient "?\tab Il dit : \u231?a va bien.\par".
+
+Scénario « deux tours turcs du même sigle : la parole réunie, puis les versions COREL réunies dessous » :
+    Poser « EensA1_20130306_Ens_23 », qui donne le e.
+    Transcrire à trois voix le e.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « Je vais bien, ».
+    Pour chaque tour conservé dont le rang = 3 :
+        Le sigle du tour devient « PA ».
+        La traduction du tour devient « merci. ».
+        La version corel du tour devient « MERCI. ».
+    Le d vaut le document COREL du e.
+    Vérifier que le d contient "PA\tab \u304?yiyim, te\u351?ekk\u252?r ederim.\par".
+    Vérifier que le d contient "\tab [Je vais bien, MERCI.]\par".
+
+Scénario « le RTF écrit l'espagnol et les espaces insécables » :
+    Vérifier que le RTF de « señora ¿qué? » = "se\u241?ora \u191?qu\u233??".
+    Vérifier que le RTF de « oui ! » = "oui\u160?!".
+
+Scénario « supprimer un tour resserre les rangs ; supprimer l'entretien emporte ses tours » :
+    Poser « EensA1_20130306_Ens_24 », qui donne le e.
+    Poser « EensA1_20130306_Ens_25 », qui donne l'autre.
+    Transcrire le e.
+    Transcrire l'autre.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont l'entretien = le e et le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On clique sur « Supprimer ce tour » dans l'écran du tour.
+    On confirme.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre de tours conservés dont l'entretien = le e = 2.
+    Pour chaque tour conservé dont l'entretien = le e et le rang = 1 :
+        Vérifier que la langue du tour = « tr ».
+    On choisit le e dans l'écran des entretiens.
+    On clique sur « Supprimer l'entretien » dans l'écran de l'entretien.
+    On confirme.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Vérifier que le nombre d'entretiens conservés = 1.
+    Vérifier que le nombre de tours conservés = 3.
+
+Scénario « une voix posée sur un tour qui n'en avait pas prend le sigle de la correspondance ; la langue se corrige » :
+    Poser « EensA1_20130306_Ens_26 », qui donne le e.
+    La correspondance du e devient « 1 INT, 2 PA ».
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le deuxième vaut absent.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le deuxième devient le tour.
+    On choisit le deuxième dans l'écran de l'entretien.
+    On écrit « 2 » dans la voix de l'écran du tour.
+    On écrit « AZ » dans la langue de l'écran du tour.
+    On clique sur « Enregistrer » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le sigle du tour = « PA ».
+        Vérifier que la langue du tour = « az ».
