@@ -1,6 +1,6 @@
 # GrymoiR : manuel du mainteneur
 
-Version 1.15, révisée le 15 novembre 2026 (rédigée le 24 septembre 2026).
+Version 1.16, révisée le 18 novembre 2026 (rédigée le 24 septembre 2026).
 Référence : Charte de GrymoiR v1.38, art. 14 ; grammaire 1.38 ; `docs/vm.md` 1.33.
 Toute modification passe par une révision numérotée. Ce manuel se révise à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
 
@@ -73,6 +73,8 @@ Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `tes
 L'icône de l'atelier : sa source est `outils/icone/grymoir-atelier.svg` ; après l'avoir modifiée, `outils/icone/fabriquer` (Python, avec `pip install cairosvg pillow`) refait `GrymoiR.icns` (macOS) et `grymoir-atelier.png` (fenêtre, sous Linux et Windows), tous deux versionnés.
 
 Pour installer GrymoiR sur un Mac comme un logiciel ordinaire : `./paquet-mac` fabrique `GrymoiR.dmg` (atelier, bibliothèques Qt par `macdeployqt`, outil `grym`, exemple « Amis du Tilleul »). Au premier lancement sans projet retenu, l'atelier recopie l'exemple dans `Documents/GrymoiR` (jamais d'écrasement) et l'ouvre ; à tout moment, Fichier > Ouvrir l'exemple « Amis du Tilleul » fait de même, même si un projet est déjà retenu ; ses données se créent au premier « Lancer ». Signature ad hoc seulement : l'application tourne sur le Mac qui l'a construite ; la distribuer sans avertissement de macOS demande une signature et une notarisation Apple.
+
+Pour publier une version (les trois paquets et leurs empreintes dans une publication GitHub) : `git tag v3.4.0 && git push origin v3.4.0` (`.github/workflows/publication.yml`). **Republier sous le même numéro**, quand les liens du site doivent tenir : `git tag -f v3.3.0 && git push -f origin v3.3.0` ; les fichiers de la publication sont remplacés (mêmes noms), les empreintes changent, et `docs/notes-de-version.md` le dit sous le titre de la version (« Republiée le … »). `VERSION` de `src/grym.c` ne bouge pas.
 
 Pour Windows : `./paquet-windows`, dans MSYS2 (UCRT64), fabrique `paquet/GrymoiR-installation.exe` avec Inno Setup ; GitHub le fait à chaque changement du code (Actions > installateur-windows > Artifacts). L'installation se fait pour l'utilisateur seul, sans droits d'administrateur, dans `%LOCALAPPDATA%\Programs\GrymoiR` : `bin\grym-atelier.exe` et ses bibliothèques, `bin\grym.exe`, et deux exemples dans `Resources\Exemples` (« Amis du Tilleul », « Gestion de projet »), là où l'atelier les cherche. La désinstallation ne touche pas `Documents\GrymoiR`. Sous Windows, `fopen` lit un chemin dans le codage du système, pas en UTF-8 : un chemin accentué (`C:\Users\Noé\données.grym`) ne s'ouvrirait pas. Le cœur n'appelle donc jamais `fopen` ni `remove` directement, mais `grym_fopen` et `grym_supprimer` (`src/chemins.c`), qui passent par l'API « large » de Windows (`_wfopen`) ; c'est une règle pour tout code nouveau. Chaque exécutable porte aussi un manifeste (`outils/windows/grymoir.manifest`) qui met le processus en UTF-8, pour les arguments de la ligne de commande. Le script vérifie le tout en lançant un programme, un fichier utilisé et une base dans un dossier « Essai à Noé ». Constaté le 10 octobre 2026 : l'essai « Gestion de projet » échouait sous Windows (« « données » introuvable ») ; sous Wine, l'ancien code échoue et le nouveau passe, dans le même environnement. Windows 10 1903 au moins. Pas de signature : au premier lancement, Windows SmartScreen avertit (« Informations complémentaires », puis « Exécuter quand même »).
 
@@ -311,3 +313,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.13 | 2026-11-10 | § 2 : `outils/essais-du-serveur` |
 | 1.14 | 2026-11-12 | § 4.10 et § 6 : la sorte d'un échec se pose avec son motif (`grym_echec`, grammaire 3.24) ; `tests/sortes` |
 | 1.15 | 2026-11-15 | § 4.3 : l'analyse lit jusqu'à trois fois ; seuls les avertissements dépendent des types déduits (grammaire 3.35) |
+| 1.16 | 2026-11-18 | § 2 : publier une version ; la republier sous le même numéro |

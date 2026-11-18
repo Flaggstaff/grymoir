@@ -6,6 +6,8 @@
 #   grym-<version>-linux-x86_64            l'outil en ligne de commande seul
 #   SHA256SUMS.txt
 # Pour publier : git tag v3.0.0 && git push origin v3.0.0 ; ou à la main (Actions > publication > Run workflow).
+# Pour republier sous le même numéro (les liens ne changent pas, les empreintes si) : déplacer le tag,
+#   git tag -f v3.3.0 && git push -f origin v3.3.0 ; les fichiers de la publication sont alors remplacés.
 # Les avertissements de macOS (Gatekeeper) et de Windows (SmartScreen) au premier lancement sont attendus : rien
 # n'est signé par un certificat payant (docs/notes-de-version.md).
 name: publication
@@ -110,5 +112,12 @@ jobs:
           cd paquets
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
-          gh release create "$VERSION" * --repo "$GITHUB_REPOSITORY" --title "GrymoiR ${VERSION#v}" \
-            --notes-file ../docs/notes-de-version.md $([ "$GITHUB_REF_TYPE" = tag ] || echo --target "$GITHUB_SHA")
+          # Une version republiée sous le même numéro (18 novembre 2026 : la 3.3.0, pour que les liens du site tiennent) :
+          # la publication existe déjà, ses fichiers sont remplacés un à un (mêmes noms, mêmes adresses), ses notes aussi.
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$VERSION" * --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --notes-file ../docs/notes-de-version.md
+          else
+            gh release create "$VERSION" * --repo "$GITHUB_REPOSITORY" --title "GrymoiR ${VERSION#v}" \
+              --notes-file ../docs/notes-de-version.md $([ "$GITHUB_REF_TYPE" = tag ] || echo --target "$GITHUB_SHA")
+          fi

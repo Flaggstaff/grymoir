@@ -3,6 +3,22 @@
 Publiée le 15 novembre 2026. Le langage passe à la grammaire 3.38. Tout ce qui s'écrivait en 3.2 s'écrit encore :
 rien n'est retiré, et les avertissements nouveaux ne refusent rien.
 
+**Republiée le 18 novembre 2026, sous le même numéro** (les liens de téléchargement ne changent pas ; les empreintes,
+si) : grammaire 3.43. `grym --version` dit toujours 3.3.0 : la grammaire, en tête de `docs/grammaire.md`, départage.
+
+- **Le son** : `les segments de x` (3.39), la transcription coupée aux silences, avec l'heure de chaque passage, sa
+  langue et ses mots peu sûrs ; `les voix de x` (3.40), qui parle quand (sherpa-onnx ; macOS et Linux, pas encore
+  Windows) ; `Écouter x, de d à f.` et `Arrêter l'écoute.` (3.41) ; `…, en toute langue parmi « fr, tr ».` (3.42) ;
+  `x en MP3` (3.43), un son allégé pour la parole.
+- **L'atelier** : une fenêtre d'avancement pendant une transcription, une séparation des voix, un allègement en MP3 ;
+  Aide, « Licences des composants ».
+- **Shine**, l'encodeur MP3 (`vendor/shine`, LGPL 2), entre dans l'atelier ; chaque application fabriquée emporte un
+  dossier « Licences » (`LICENCE-fr.md`).
+- **Drogman** (`projets/Drogman`), une application nouvelle : la transcription d'entretiens de recherche, la traduction
+  vers le français, la mise en forme COREL, l'analyse par thèmes ; 46 scénarios.
+- **Pas encore** : rien de cela n'a transcrit une vraie parole chez Claude (le modèle n'y est pas) ; la séparation des
+  voix sous Windows ; un `.dmg` ou un installateur essayés sur une machine vierge.
+
 - **L'écran d'un objet** (3.25, 3.29, 3.30) : `L'écran du patient, « Patient », montre :` reçoit le patient qu'on
   ouvre (`Ouvrir l'écran du patient pour le patient choisi.`), lie ses zones aux champs du même nom, et son titre
   calculé le lit. `pour un nouvel acte : bloc` ouvre l'écran sur un objet neuf. Un document reçoit son objet de même
