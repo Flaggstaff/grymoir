@@ -688,3 +688,65 @@ Scénario « alléger : rien à faire sans enregistrement ; le poids se lit en m
     Vérifier que l'avis = « ».
     Vérifier que le poids lisible de 950400000 = « 950 Mo ».
     Vérifier que le poids lisible de 43200000 = « 43 Mo ».
+
+Remarque : Drogman 0.9 : relire à la chaîne, les mots peu sûrs, les filtres.
+Scénario « les mots peu sûrs se gardent, les marques disent ce qui reste, un tour relu perd son doute » :
+    Poser « EensA1_20130306_Ens_50 », qui donne le e.
+    Transcrire le e.
+    Marquer le e.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que le doute du tour est absent.
+        Vérifier que la marque du tour = « . sans-sigle ».
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le doute du tour = « teşekkür ».
+        Vérifier que la marque du tour = « . doute sans-sigle à-traduire ».
+        Vérifier que la mention de doute du tour = « Mots peu sûrs à la transcription : teşekkür ».
+    On choisit le e dans l'écran des entretiens.
+    Le deuxième vaut absent.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le deuxième devient le tour.
+    On choisit le deuxième dans l'écran de l'entretien.
+    On écrit « PA » dans le sigle de l'écran du tour.
+    On clique sur « Enregistrer » dans l'écran du tour.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le doute du tour est absent.
+        Vérifier que la marque du tour = « . à-traduire ».
+
+Scénario « Suivant enregistre le tour et ouvre le suivant ; au bout, il enregistre et ferme » :
+    Poser « EensA1_20130306_Ens_51 », qui donne le e.
+    Transcrire le e.
+    On choisit le e dans l'écran des entretiens.
+    Le premier vaut absent.
+    Pour chaque tour conservé dont le rang = 1 :
+        Le premier devient le tour.
+    On choisit le premier dans l'écran de l'entretien.
+    On écrit « int » dans le sigle de l'écran du tour.
+    On clique sur « Suivant ▶ » dans l'écran du tour.
+    On écrit « pa » dans le sigle de l'écran du tour.
+    On clique sur « Suivant ▶ » dans l'écran du tour.
+    On écrit « inpret » dans le sigle de l'écran du tour.
+    On clique sur « Suivant ▶ » dans l'écran du tour.
+    Remarque : au bout de la liste, le dernier tour est enregistré et son écran se ferme.
+    On ferme l'écran de l'entretien.
+    On ferme l'écran des entretiens.
+    Ouvrir l'écran des entretiens.
+    Pour chaque tour conservé dont le rang = 1 :
+        Vérifier que le sigle du tour = « INT ».
+    Pour chaque tour conservé dont le rang = 2 :
+        Vérifier que le sigle du tour = « PA ».
+    Pour chaque tour conservé dont le rang = 3 :
+        Vérifier que le sigle du tour = « INPRET ».
+
+Scénario « sous le filtre À vérifier, Suivant saute aux tours qui ont un doute » :
+    Poser « EensA1_20130306_Ens_52 », qui donne le e.
+    Transcrire le e.
+    Le deuxième vaut absent.
+    Pour chaque tour conservé dont le rang = 2 :
+        Le deuxième devient le tour.
+    Avancer le deuxième et −1, qui donne le voisin.
+    Vérifier que le rang du voisin = 1.
+    Avancer le deuxième et 1, qui donne l'autre.
+    Vérifier que le rang de l'autre = 3.

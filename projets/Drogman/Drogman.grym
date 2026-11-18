@@ -1,4 +1,4 @@
-Remarque : Drogman 0.8 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
+Remarque : Drogman 0.9 (18 novembre 2026), la transcription d'entretiens de Dilan. Un entretien enregistré devient une suite
 Remarque : de tours de parole : chacun garde sa version de base (la parole transcrite dans sa langue), sa traduction en français
 Remarque : quand la parole n'est pas française, et sa version COREL, celle que l'université demande (modèle « Résumé pour
 Remarque : transcription COREL », Université de Fribourg, Département des sciences de l'éducation et de la formation). Le drogman
@@ -46,7 +46,13 @@ Un tour, conservé, a :
     une langue (texte), facultative,
     une base (texte), facultative,
     une traduction (texte), facultative,
-    une version corel (texte), facultative.
+    une version corel (texte), facultative,
+    un doute (texte), facultatif,
+    une marque (texte), « . » au départ.
+
+Remarque : la relecture (0.9) : le doute garde les mots dont la transcription n'était pas sûre, jusqu'à ce que le tour soit
+Remarque : relu (enregistré dans son écran) ; la marque dit ce qui reste à faire sur le tour (« doute », « sans-sigle »,
+Remarque : « à-traduire »), pour les filtres de la liste.
 
 Remarque : les réglages : la clé de Google (un secret : elle ne se relit jamais, elle part seulement vers Google) ; le
 Remarque : vocabulaire donné à Whisper (noms propres, lieux, termes de l'école) pour qu'il les écrive juste.
@@ -88,6 +94,12 @@ Le début en cours vaut 0.
 La fin en cours vaut 0.
 La voix en cours vaut 0.
 La langue en cours vaut « ».
+Le doute en cours vaut « ».
+Remarque : le filtre de la liste des tours : « » (tous), « doute », « sans-sigle » ou « à-traduire ».
+Le filtre vaut « ».
+Remarque : le tour que « Suivant » ou « Précédent » demande : l'écran du tour se ferme, et celui qui l'avait ouvert rouvre
+Remarque : sur ce tour (un écran ouvert depuis un événement s'ouvrirait par-dessus : cent tours relus, cent fenêtres).
+Le prochain vaut absent.
 
 Remarque : un nombre écrit avec un point (« 3.75 »), comme les segments l'écrivent ; absent ou vide : absent.
 Le nombre lu d'un écrit :
@@ -131,6 +143,8 @@ Pour clore un entretien et une langue :
             Le sigle vaut « ? ».
             La langue vaut langue.
             La base vaut le texte en cours.
+            La marque vaut « . ».
+        Si le doute en cours ≠ « », le doute du t devient le doute en cours.
         Remarque : la version COREL d'un tour non français se fait sur sa traduction (Dilan, 17 novembre 2026) : elle attend
         Remarque : « Traduire » ; celle d'un tour français est proposée tout de suite.
         Si langue = « fr », la version corel du t devient la version en cours.
@@ -138,6 +152,7 @@ Pour clore un entretien et une langue :
         Conserver le t.
         Le texte en cours devient « ».
         La version en cours devient « ».
+        Le doute en cours devient « ».
 
 Remarque : les segments de la transcription deviennent des tours. Chaque mot rejoint la voix qui parle en son milieu ; un
 Remarque : mot hors de toute voix reste avec celle d'avant. Un tour se clôt quand la voix change, quand la langue change, et,
@@ -186,6 +201,9 @@ Pour verser un segment et un entretien :
             Le texte en cours devient le texte en cours suivi du champ « mot » du mot.
             La version en cours devient la version en cours suivi du champ « mot » du mot.
             La fin en cours devient le f.
+            Si le champ « douteux » du mot = « vrai » :
+                Si le doute en cours ≠ « », le doute en cours devient le doute en cours suivi de ", ".
+                Le doute en cours devient le doute en cours suivi du champ « mot » du mot.
 
 Remarque : après le dernier segment : le tour resté ouvert se clôt.
 Pour finir un entretien :
@@ -204,6 +222,16 @@ Pour préparer l'écoute :
     La version en cours devient « ».
     La voix en cours devient 0.
     La langue en cours devient « ».
+    Le doute en cours devient « ».
+
+Remarque : ce qui reste à faire sur chaque tour d'un entretien, pour les filtres (0.9).
+Pour marquer un dossier :
+    Pour chaque tour conservé dont l'entretien = le dossier :
+        Le m vaut « . ».
+        Si le doute du tour est présent, le m devient le m suivi de " doute".
+        Si le sigle du tour = « ? », le m devient le m suivi de " sans-sigle".
+        Si la langue du tour ≠ « fr » et la traduction du tour est absente, le m devient le m suivi de " à-traduire".
+        La marque du tour devient le m.
 
 Remarque : la correspondance (« 1 INT, 2 PA, 3 INPRET », ou « 1=INT ; 2=PA ») donne son sigle à chaque tour d'une voix ;
 Remarque : un tour sans voix, ou d'une voix sans sigle, garde le sien. Rend le nombre de tours nommés.
@@ -498,6 +526,11 @@ Pour alléger un e :
     L'enregistrement du e devient le léger.
     Rendre " Enregistrement allégé en MP3 : " suivi du poids lisible de l'avant suivi de ", puis " suivi du poids lisible de (la taille du léger) suivi de « . ».
 
+Remarque : les mots à vérifier d'un tour, pour son écran.
+La mention de doute d'un tour :
+    Si le doute du tour est absent, rendre « ».
+    Rendre "Mots peu sûrs à la transcription : " suivi du doute du tour.
+
 Remarque : ce que l'écran des réglages dit de la clé, sans jamais la montrer.
 Le témoin d'un réglage :
     Si le réglage est présent et la clé google du réglage est présente, rendre « Une clé Google est enregistrée. ».
@@ -514,34 +547,40 @@ L'écran des entretiens, « Drogman », montre :
     côte à côte :
         un bouton « Nouvel entretien », principal,
         un bouton « Analyse »,
+        un bouton « Sauvegarder »,
         un bouton « Réglages »,
         un bouton « Fermer », qui ferme l'écran.
 
 L'écran de l'entretien, « Entretien », pour un entretien, montre :
     côte à côte :
-        un code (texte), avec l'indication « Le nom du fichier : EensA1_20130306_Ens_01 »,
-        un jour (date),
-        une heure (heure), facultative,
-        une durée (texte), facultative, avec l'indication « 01h05 »,
+        un code (texte), avec l'indication « EensA1_20130306_Ens_01 »,
+        un jour (date), avec l'indication « Le jour de l'entretien »,
+        une heure (heure), facultative, avec l'indication « 14:30 »,
+        une durée (texte), facultative, avec l'indication « 01h05 ; vide : calculée »,
     côte à côte :
         un lieu (texte), facultatif, avec l'indication « Domicile des parents, à l'école »,
         un intervieweur (texte), facultatif, avec l'indication « Prénom, nom de l'intervieweur-euse (INT) »,
         un interprète (texte), facultatif, avec l'indication « Prénom, nom (INPRET) »,
     côte à côte :
-        une présence (texte), facultative, avec l'indication « Avec prénom, nom du père (PA), prénom, nom de la mère (MA), autre (abrév.) »,
-        une famille (texte), facultative, avec l'indication « Famille de : prénom, nom de l'enfant »,
+        une présence (texte), facultative, avec l'indication « Prénom, nom du père (PA), de la mère (MA), autre »,
+        une famille (texte), facultative, avec l'indication « Prénom, nom de l'enfant »,
     un enregistrement (son), facultatif,
     côte à côte :
-        un effectif (nombre entier), facultatif, de 1 à 20, avec l'indication « Combien de personnes parlent, interprète compris : aide à séparer les voix »,
-        une correspondance (texte), facultative, avec l'indication « Le sigle de chaque voix : 1 INT, 2 PA, 3 INPRET (la voix 1 parle la première) »,
+        un effectif (nombre entier), facultatif, de 1 à 20, avec l'indication « Nombre de voix, interprète compris »,
+        une correspondance (texte), facultative, avec l'indication « 1 INT, 2 PA, 3 INPRET : la voix 1 parle la première »,
         un bouton « Nommer les voix », actif si l'entretien de l'écran est présent,
-    une traduction jointe (vrai ou faux), vrai au départ, facultative, avec l'indication « La traduction dans la transcription COREL, entre crochets sous chaque tour non français »,
+    une traduction jointe (vrai ou faux), vrai au départ, facultative, avec l'indication « Dans la transcription COREL, entre crochets sous chaque tour non français »,
     le texte l'état de l'entretien de l'écran,
-    la liste des tours conservés dont le code de l'entretien = le code ouvert, par rang, avec le rang, la voix, le sigle, la langue, la base et la version corel,
+    côte à côte :
+        un bouton « Tous les tours »,
+        un bouton « À vérifier »,
+        un bouton « Sans sigle »,
+        un bouton « À traduire »,
+    la liste des tours conservés dont le code de l'entretien = le code ouvert et la marque contient le filtre, par rang, avec le rang, la voix, le sigle, la langue, la base et la version corel,
     côte à côte :
         un sigle à poser (texte), facultatif, avec l'indication « INT, PA, MA, FRE, SOE, ENS, INPRET… »,
-        un premier rang (nombre entier), facultatif,
-        un dernier rang (nombre entier), facultatif,
+        un premier rang (nombre entier), facultatif, avec l'indication « Du tour… (vide : le premier) »,
+        un dernier rang (nombre entier), facultatif, avec l'indication « au tour… (vide : le dernier) »,
         un bouton « Poser le sigle », actif si l'entretien de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal,
@@ -564,11 +603,14 @@ L'écran du tour, « Tour de parole », pour un tour, montre :
     une base (texte), facultative, sur plusieurs lignes, avec l'indication "La parole transcrite, dans sa langue ; une barre oblique « / » marque où couper",
     une traduction (texte), facultative, sur plusieurs lignes, avec l'indication « En français ; vide pour un tour français »,
     une version corel (texte), facultative, sur plusieurs lignes, avec l'indication « (.) pause, … allongement, °chuchoté°, MAJUSCULES plus fort, (?) inaudible, ((bruit)) »,
+    le texte la mention de doute du tour de l'écran,
     le texte la mention de thèmes du tour de l'écran,
     côte à côte :
         un bouton « ▶ Réécouter », actif si l'enregistrement de l'entretien du tour de l'écran est présent,
         un bouton « ■ Arrêter »,
         un bouton « Coder ce tour »,
+        un bouton « ◀ Précédent »,
+        un bouton « Suivant ▶ »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Traduire ce tour »,
@@ -620,14 +662,28 @@ L'écran des réglages, « Réglages », montre :
         un bouton « Enregistrer », principal,
         un bouton « Fermer », qui ferme l'écran.
 
+Remarque : l'écran d'un tour, rouvert tant que « Suivant » ou « Précédent » demande un autre tour (0.9).
+Pour relire un t :
+    Le prochain devient le t.
+    Tant que le prochain est présent :
+        Le courant vaut le prochain.
+        Le prochain devient absent.
+        Ouvrir l'écran du tour pour le courant.
+        Si le prochain est présent et l'enregistrement de l'entretien du prochain est présent :
+            Le départ vaut le début du prochain − 0,3.
+            Si le départ < 0, le départ devient 0.
+            Écouter l'enregistrement de l'entretien du prochain, de (le départ) à (la fin du prochain + 0,3).
+
 Quand on clique sur « Nouvel entretien » dans l'écran des entretiens :
     Le dossier ouvert devient absent.
     Le code ouvert devient « ».
+    Le filtre devient « ».
     Ouvrir l'écran de l'entretien.
 
 Quand on choisit un entretien dans l'écran des entretiens :
     Le dossier ouvert devient l'entretien.
     Le code ouvert devient le code de l'entretien.
+    Le filtre devient « ».
     Ouvrir l'écran de l'entretien pour l'entretien.
 
 Quand on clique sur « Analyse » dans l'écran des entretiens :
@@ -648,7 +704,7 @@ Quand on clique sur « Chercher » dans l'écran de l'analyse :
     Le mot voulu devient le mot cherché de l'écran.
 
 Quand on choisit un tour dans l'écran de l'analyse :
-    Ouvrir l'écran du tour pour le tour.
+    Relire le tour.
 
 Quand on clique sur « Exporter l'analyse » dans l'écran de l'analyse :
     Si le nombre de codages conservés = 0, refuser "Rien à exporter : pose d'abord un thème sur un tour, par « Coder ce tour ».".
@@ -715,7 +771,7 @@ Quand on clique sur « Enregistrer » dans l'écran de l'entretien :
     Signaler « Entretien enregistré. » suivi de l'avis.
 
 Quand on choisit un tour dans l'écran de l'entretien :
-    Ouvrir l'écran du tour pour le tour.
+    Relire le tour.
 
 Remarque : transcrire (17 novembre 2026) : les tours d'avant s'effacent ; les voix de l'enregistrement se séparent (avec
 Remarque : l'effectif s'il est donné ; si elles ne se séparent pas, la transcription se fait quand même, sans voix) ; puis
@@ -752,6 +808,7 @@ Quand on clique sur « Transcrire » dans l'écran de l'entretien :
     Finir le e.
     Si le rang courant = 0, refuser « Rien n'a été transcrit : le modèle de transcription manque, ou l'enregistrement est muet. ».
     Nommer le e, qui donne le nommé.
+    Marquer le e.
     Si la durée du e est absente, la durée du e devient la durée lue du e.
     Signaler le rang courant puis « tours de parole transcrits. » suivi de l'avis des voix suivi de l'avis du poids.
 
@@ -851,22 +908,91 @@ Remarque : l'écran d'un tour fermé, le son s'arrête.
 Quand on ferme l'écran du tour :
     Arrêter l'écoute.
 
-Remarque : enregistrer un tour (0.3) : une voix changée reprend le sigle que la correspondance lui donne.
-Quand on clique sur « Enregistrer » dans l'écran du tour :
-    Le t vaut le tour de l'écran.
-    L'ancienne voix vaut la voix du t.
-    Enregistrer le tour de l'écran.
-    Remarque : le sigle en majuscules, comme le modèle les écrit (« pa » devient « PA ») ; la langue en minuscules.
+Remarque : un tour enregistré depuis son écran (0.3, 0.9) : le sigle en majuscules, comme le modèle les écrit ; la langue en
+Remarque : minuscules ; une voix changée reprend le sigle que la correspondance lui donne ; relu, le tour n'a plus de doute.
+Pour parfaire un t et une ancienne :
     Le sigle du t devient le sigle du t en majuscules.
     Si la langue du t est présente, la langue du t devient la langue du t en minuscules.
     Si la langue du t est absente, la langue du t devient « fr ».
-    Le changé vaut faux.
-    Si la voix du t est présente et l'ancienne voix est absente, le changé devient vrai.
-    Si la voix du t est présente et l'ancienne voix est présente et la voix du t ≠ l'ancienne voix, le changé devient vrai.
-    Si le changé est vrai :
+    Si la voix du t est présente et la voix du t ≠ l'ancienne :
         Trouver le sigle de l'entretien du t et la voix du t, qui donne le s.
         Si le s est présent, le sigle du t devient le s.
+    Le doute du t devient absent.
+    Le m vaut « . ».
+    Si le sigle du t = « ? », le m devient le m suivi de " sans-sigle".
+    Si la langue du t ≠ « fr » et la traduction du t est absente, le m devient le m suivi de " à-traduire".
+    La marque du t devient le m.
+
+Quand on clique sur « Enregistrer » dans l'écran du tour :
+    Le t vaut le tour de l'écran.
+    L'ancienne vaut 0.
+    Si la voix du t est présente, l'ancienne devient la voix du t.
+    Enregistrer le tour de l'écran.
+    Parfaire le t et l'ancienne.
     Fermer l'écran.
+
+Remarque : relire à la chaîne (0.9) : le tour est enregistré, puis le prochain tour du filtre en cours s'ouvre et se fait
+Remarque : entendre. L'écran du tour s'ouvre ici, tour après tour, tant que « Suivant » ou « Précédent » en demande un.
+Pour avancer un t et un sens :
+    Le dossier du t vaut l'entretien du t.
+    Le cran vaut le rang du t.
+    Le voisin vaut absent.
+    Si le sens > 0 :
+        Pour chaque tour conservé dont l'entretien = le dossier du t et le rang > le cran et la marque contient le filtre, par rang décroissant :
+            Le voisin devient le tour.
+    Sinon :
+        Pour chaque tour conservé dont l'entretien = le dossier du t et le rang < le cran et la marque contient le filtre, par rang :
+            Le voisin devient le tour.
+    Rendre le voisin.
+
+Quand on clique sur « Suivant ▶ » dans l'écran du tour :
+    Le t vaut le tour de l'écran.
+    L'ancienne vaut 0.
+    Si la voix du t est présente, l'ancienne devient la voix du t.
+    Enregistrer le tour de l'écran.
+    Parfaire le t et l'ancienne.
+    Avancer le t et 1, qui donne le voisin.
+    Remarque : au bout de la liste, le tour est enregistré quand même (un refus annulerait l'écriture).
+    Si le voisin est absent, signaler « Tour enregistré. C'était le dernier de la liste. ».
+    Le prochain devient le voisin.
+    Fermer l'écran.
+
+Quand on clique sur « ◀ Précédent » dans l'écran du tour :
+    Le t vaut le tour de l'écran.
+    L'ancienne vaut 0.
+    Si la voix du t est présente, l'ancienne devient la voix du t.
+    Enregistrer le tour de l'écran.
+    Parfaire le t et l'ancienne.
+    Avancer le t et −1, qui donne le voisin.
+    Remarque : au bout de la liste, le tour est enregistré quand même (un refus annulerait l'écriture).
+    Si le voisin est absent, signaler « Tour enregistré. C'était le premier de la liste. ».
+    Le prochain devient le voisin.
+    Fermer l'écran.
+
+Remarque : les filtres de la liste des tours (0.9) : les marques sont refaites, puis la liste ne montre que ce qui reste à faire.
+Quand on clique sur « Tous les tours » dans l'écran de l'entretien :
+    Le filtre devient « ».
+
+Quand on clique sur « À vérifier » dans l'écran de l'entretien :
+    Marquer l'entretien de l'écran.
+    Le filtre devient « doute ».
+
+Quand on clique sur « Sans sigle » dans l'écran de l'entretien :
+    Marquer l'entretien de l'écran.
+    Le filtre devient « sans-sigle ».
+
+Quand on clique sur « À traduire » dans l'écran de l'entretien :
+    Marquer l'entretien de l'écran.
+    Le filtre devient « à-traduire ».
+
+Remarque : sauvegarder (0.9) : une copie de toute la base, nommée par le jour et l'heure, dans Documents/Drogman/Sauvegardes ;
+Remarque : des jours passés, seule la dernière copie de chacun reste. À garder aussi ailleurs que sur cet ordinateur.
+Quand on clique sur « Sauvegarder » dans l'écran des entretiens :
+    Essayer :
+        Sauvegarder la base dans « ~/Documents/Drogman/Sauvegardes/Drogman », une par jour passé.
+        Signaler « Sauvegarde écrite dans Documents/Drogman/Sauvegardes. ».
+    En cas d'échec :
+        Refuser le motif de l'échec.
 
 Remarque : joindre (0.3) : le tour suivant rejoint celui-ci (textes bout à bout, fin reprise), puis disparaît ; les rangs
 Remarque : d'après reculent d'un cran.
@@ -933,6 +1059,7 @@ Quand on clique sur « Couper au / » dans l'écran du tour :
         Le sigle vaut le sigle du t.
         La langue vaut la langue du t.
         La base vaut le après.
+        La marque vaut « . ».
         La version corel vaut le c2.
         La traduction vaut le tr2.
     Si la voix du t est présente, la voix du n devient la voix du t.

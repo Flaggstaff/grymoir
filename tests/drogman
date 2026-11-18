@@ -54,6 +54,7 @@ Le t vaut un nouveau tour :
     Le début vaut 1,5.
     La fin vaut 3,2.
     Le sigle vaut « INT ».
+    La marque vaut « . ».
     La langue vaut « fr ».
     La base vaut « Bonjour, comment allez-vous ? ».
     La version corel vaut « Bonjour, comment allez-vous ? ».
@@ -64,6 +65,7 @@ Le u vaut un nouveau tour :
     Le début vaut 4.
     La fin vaut 7,5.
     Le sigle vaut « PA ».
+    La marque vaut « . ».
     La langue vaut « tr ».
     La base vaut « İyiyim, teşekkür ederim. ».
     La traduction vaut « Je vais bien, merci. ».
@@ -82,6 +84,17 @@ verifier "$([ -s "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf" ] && e
 verifier "$(grep -c 'PA\\tab \\u304?yiyim, te\\u351?ekk\\u252?r ederim.\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "le tour turc, en RTF : la parole d'origine"
 verifier "$(grep -c '\\tab \[Je vais bien (.) merci.\]\\par' "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01.rtf")" "1" "dessous, sa version COREL faite sur la traduction"
 verifier "$(sed -n 2p "$d/maison/Documents/Drogman/EensA1_20130306_Ens_01 NVivo.txt")" "00:00:04 PA: İyiyim, teşekkür ederim. [Je vais bien, merci.]" "la ligne NVivo du tour turc"
+# relire à la chaîne (0.9) : « Suivant » enregistre le tour (son doute s'efface) et ouvre le suivant ; l'application quittée
+# écrans ouverts, le tour relu est bien écrit
+jouer 'Pour chaque tour conservé dont le rang = 1 :
+    Le doute du tour devient « Bonjour ».' > /dev/null
+lancer filtre "ligne:EensA1_20130306_Ens_01;À vérifier"
+lancer suivant "ligne:EensA1_20130306_Ens_01;ligne:INT;Suivant ▶"
+verifier "$(grep -c 'erreur' "$d/suivant.txt")" "0" "le filtre, puis Suivant, sans erreur"
+verifier "$(jouer 'Pour chaque tour conservé dont le rang = 1 :
+    Si le doute du tour est absent, afficher « relu ».')" "relu" "le tour relu par Suivant est écrit, écrans encore ouverts"
+lancer sauvegarde "Sauvegarder"
+verifier "$(ls "$d/maison/Documents/Drogman/Sauvegardes" 2>/dev/null | grep -c '^Drogman')" "1" "la sauvegarde est écrite"
 # l'analyse (0.7) : un thème et un codage posés par la console ; l'écran de l'analyse, celui du thème ; les deux exports
 jouer 'Le th vaut un nouveau thème :
     Le nom vaut « accueil ».
